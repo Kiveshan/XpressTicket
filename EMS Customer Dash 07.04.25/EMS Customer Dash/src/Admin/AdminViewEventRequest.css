@@ -1,0 +1,45 @@
+.approve-btn {
+  background-color: #4caf50;
+  color: white;
+  padding: 0.6rem 1.5rem;
+  margin: 0 0.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.approve-btn:hover {
+  background-color: #45a049;
+}
+.edit-request-btn {
+  background-color: #ff9800;
+  color: white;
+  padding: 0.6rem 1.5rem;
+  margin: 0 0.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.edit-request-btn:hover {
+  background-color: #e68a00;
+}
+.reject-btn {
+  background-color: #f44336;
+  color: white;
+  padding: 0.6rem 1.5rem;
+  margin: 0 0.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.approve-btn:hover {
+  background-color: #45a049;
+}
+
+.image {
+  max-width: 100%; /* Ensure image doesn't overflow container */
+  height: 200px; /* Fixed height for consistency */
+  object-fit: cover; /* Maintain aspect ratio */
+  border-radius: 5px;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 15px;
+}

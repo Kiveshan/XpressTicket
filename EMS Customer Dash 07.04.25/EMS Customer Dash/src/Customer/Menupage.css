@@ -1,0 +1,122 @@
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    margin-top: 50px;
+  }
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #20c997;
+    margin-top: 30px;
+  }
+  .dashboard-logo {
+    height: 120px;
+    margin-bottom: -20px;
+    margin-top: -30px;
+  }
+   .back-button8 {
+    background-color: #20c997;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 25px;
+
+  }
+
+  .back-button8:hover {
+    background-color: #0f5e46;
+  }
+  /* .back-button-container {
+    display: flex;
+    justify-content: flex-start;
+    padding: 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+  
+  } */
+
+ 
+  .profile-section {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+  }
+  .dashboard-main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    gap: 300px;
+    padding: 20px;
+    margin-top: -180px;
+  }
+  .card {
+    border: 2px solid #20c997;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+    height: 250px;
+    width: 400px;
+    margin-top: -110px;
+   
+  }
+  .card:hover {
+    transform: scale(1.05);
+  }
+  .card img {
+    max-width: 300px;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 15px;
+    height: 150px;
+    width: 300px;
+  }
+  .card1 p {
+    font-size: 20px;
+    font-weight: bold;
+  }
+  .card p {
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  /* logOut */
+  .backbutton21{
+    display: flex;
+    background-color: #dc2a2a;
+    color: #ffffff;
+    justify-content: flex-start;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+  margin-top: 55px;
+  margin-left: 1360px;
+  }
+  .backbutton21:hover {
+    background-color: #7d0b0b;
+  }
+  
+  .back-button-container2{
+    display: flex;
+
+    justify-content: flex-start;
+    padding: 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    /* margin-top: 20px; */
+  }
+  /* --------- */

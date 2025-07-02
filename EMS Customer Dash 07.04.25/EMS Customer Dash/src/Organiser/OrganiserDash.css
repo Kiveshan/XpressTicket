@@ -1,0 +1,104 @@
+.dashboard-container1 {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    margin-top: -38px;
+  }
+  .dashboard-header1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #20c997;
+    margin-top: 30px;
+  }
+  .dashboard-logo1 {
+    height: 120px;
+    margin-bottom: -20px;
+    margin-top: -30px;
+  }
+   .backbutton20 {
+    position: fixed;
+    background-color: #20c997;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 25px;
+margin-top: -30px;
+  }
+
+  .backbutton20:hover {
+    background-color: #0c553f;
+  }
+  .back-button-container1 {
+    display: flex;
+    justify-content: flex-start;
+    padding: 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+  
+  }
+
+ 
+  .dashboard-main1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    gap: 300px;
+    padding: 20px;
+    margin-top: -100px;
+  }
+  .card1 {
+    border: 2px solid #20c997;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+    height: 250px;
+    width: 300px;
+    margin-top: -110px;
+   
+  }
+  .card1:hover {
+    transform: scale(1.05);
+  }
+  .card1 img {
+    max-width: 300px;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 15px;
+    height: 150px;
+    width: 250px;
+  }
+  .card1 p {
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  .card-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 equal columns */
+    gap: 20px; /* Space between the cards */
+    margin-top: 5px;
+    justify-content: center; /* Center the grid horizontally */
+    align-items: start; /* Align items at the top */
+}
+
+
+
+/*  */
+.card-container2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 4 equal columns */
+  gap: 20px; /* Space between the cards */
+  margin-top: 20px;
+  justify-content: center; /* Center the grid horizontally */
+  align-items: start; /* Align items at the top */
+}

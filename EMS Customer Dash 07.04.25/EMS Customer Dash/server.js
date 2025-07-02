@@ -1,0 +1,1630 @@
+require('dotenv').config();
+console.log('JWT_SECRET from .env:', process.env.JWT_SECRET ? 'Set' : 'Not set');
+
+const express = require('express');
+const { Pool } = require('pg');
+const cors = require('cors');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const multer = require('multer');
+
+const app = express();
+const port = 5000;
+
+// Middleware
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  exposedHeaders: ['set-cookie']
+}));
+app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// Validate required environment variables
+const requiredEnvVars = [
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'S3_BUCKET_NAME',
+  'JWT_SECRET'
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`❌ Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
+// PostgreSQL connection pool
+const pool = new Pool({
+  user: 'postgres',
+  host: 'localhost',
+  database: 'ems2.0',
+  password: '123456',
+  port: 5433,
+});
+
+// Test database connection
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Database connection failed:', err.stack);
+    process.exit(1);
+  }
+  console.log('✅ Connected to ExpressTicket database');
+  initializeLookupTables();
+  release();
+});
+
+// Ensure faculties/departments tables and seed data
+async function initializeLookupTables() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Create faculties table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.faculties (
+        faculty_id character varying NOT NULL,
+        faculty_name character varying NOT NULL,
+        CONSTRAINT faculties_pkey PRIMARY KEY (faculty_id)
+      );
+    `);
+
+    // Create departments table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.departments (
+        department_id character varying NOT NULL,
+        department_name character varying NOT NULL,
+        faculty_id character varying NOT NULL,
+        CONSTRAINT departments_pkey PRIMARY KEY (department_id),
+        CONSTRAINT departments_faculty_id_fkey FOREIGN KEY (faculty_id)
+          REFERENCES public.faculties (faculty_id) MATCH SIMPLE
+          ON UPDATE NO ACTION
+          ON DELETE NO ACTION
+          NOT VALID
+      );
+    `);
+
+    // Create user_profiles table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.user_profiles (
+        user_id SERIAL NOT NULL,
+        firstname character varying NOT NULL,
+        surname character varying NOT NULL,
+        role character varying NOT NULL DEFAULT 'user',
+        email character varying NOT NULL,
+        cellnumber character varying NOT NULL,
+        institution character varying,
+        faculty_id character varying,
+        department_id character varying,
+        ieee_no integer,
+        vat_no integer,
+        password character varying NOT NULL,
+        CONSTRAINT user_profiles_pkey PRIMARY KEY (user_id),
+        CONSTRAINT user_profiles_department_id_fkey FOREIGN KEY (department_id)
+          REFERENCES public.departments (department_id) MATCH SIMPLE
+          ON UPDATE NO ACTION
+          ON DELETE NO ACTION
+          NOT VALID,
+        CONSTRAINT user_profiles_faculty_id_fkey FOREIGN KEY (faculty_id)
+          REFERENCES public.faculties (faculty_id) MATCH SIMPLE
+          ON UPDATE NO ACTION
+          ON DELETE NO ACTION
+          NOT VALID,
+        CONSTRAINT user_profiles_email_unique UNIQUE (email)
+      );
+    `);
+
+    // Create events table with user_id and status
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.events (
+        event_id SERIAL NOT NULL,
+        name character varying NOT NULL,
+        location character varying NOT NULL,
+        startdate date NOT NULL,
+        enddate date NOT NULL,
+        time time without time zone NOT NULL,
+        endtime time without time zone,
+        duration character varying NOT NULL,
+        deadlinetime time without time zone NOT NULL,
+        deadlinedate date NOT NULL,
+        type character varying NOT NULL,
+        capacity integer NOT NULL,
+        attendees character varying[] NOT NULL,
+        contactnum character varying NOT NULL,
+        email character varying NOT NULL,
+        coverimage character varying NOT NULL,
+        tabs character varying[] NOT NULL,
+        packages character varying[] NOT NULL,
+        description character varying,
+        terms_and_conditions character varying,
+        user_id integer NOT NULL,
+        status character varying NOT NULL DEFAULT 'pending',
+        admin_comment character varying,
+        CONSTRAINT events_pkey PRIMARY KEY (event_id),
+        CONSTRAINT events_user_id_fkey FOREIGN KEY (user_id)
+          REFERENCES public.user_profiles (user_id) MATCH SIMPLE
+          ON UPDATE NO ACTION
+          ON DELETE NO ACTION
+          NOT VALID
+      );
+    `);
+
+    // Create payments table after events
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.payments (
+        payment_id SERIAL NOT NULL,
+        event_id integer NOT NULL,
+        amount real NOT NULL,
+        payment_type character varying NOT NULL DEFAULT 'Unknown',
+        proof_of_payment character varying,
+        CONSTRAINT payments_pkey PRIMARY KEY (payment_id),
+        CONSTRAINT payments_event_id_fkey FOREIGN KEY (event_id)
+          REFERENCES public.events (event_id) ON DELETE CASCADE
+      );
+    `);
+
+    // Seed sample data if no faculties present
+    const { rows } = await client.query('SELECT COUNT(*)::int AS count FROM faculties');
+    if (rows[0].count === 0) {
+      console.log('🔰 Seeding default faculties & departments');
+      const faculties = [
+        { id: 'ENG', name: 'Engineering' },
+        { id: 'SCI', name: 'Sciences' },
+        { id: 'HUM', name: 'Humanities' },
+        { id: 'BUS', name: 'Business' },
+        { id: 'HSC', name: 'Health Sciences' },
+        { id: 'FAI', name: 'Faculty of Artificial Intelligence' }
+      ];
+
+      for (const faculty of faculties) {
+        await client.query(
+          'INSERT INTO faculties (faculty_id, faculty_name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [faculty.id, faculty.name]
+        );
+      }
+
+      const deptSeed = {
+        'ENG': [
+          { id: 'CS', name: 'Computer Science' },
+          { id: 'EE', name: 'Electrical Engineering' },
+          { id: 'ME', name: 'Mechanical Engineering' }
+        ],
+        'SCI': [
+          { id: 'BIO', name: 'Biology' },
+          { id: 'CHEM', name: 'Chemistry' },
+          { id: 'PHY', name: 'Physics' }
+        ],
+        'HUM': [
+          { id: 'HIST', name: 'History' },
+          { id: 'PHIL', name: 'Philosophy' }
+        ],
+        'BUS': [
+          { id: 'MKT', name: 'Marketing' },
+          { id: 'ACC', name: 'Accounting' }
+        ],
+        'HSC': [
+          { id: 'NUR', name: 'Nursing' },
+          { id: 'PT', name: 'Physiotherapy' }
+        ],
+        'FAI': [
+          { id: 'FIM', name: 'Faculty Intelligence Management' }
+        ]
+      };
+
+      for (const [facultyId, departments] of Object.entries(deptSeed)) {
+        for (const dept of departments) {
+          await client.query(
+            'INSERT INTO departments (department_id, department_name, faculty_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+            [dept.id, dept.name, facultyId]
+          );
+        }
+      }
+      console.log('✅ Lookup data seeded');
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error initializing lookup tables:', err);
+  } finally {
+    client.release();
+  }
+}
+
+// AWS S3 Configuration
+const s3Client = new S3Client({
+  region: 'af-south-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+});
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and PDF are allowed.'));
+    }
+  }
+}); 
+
+// Authentication middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Admin middleware
+const authenticateAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'Admin') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Admin access required' });
+  }
+};
+
+// Helper function to split full name into first and last name
+const splitName = (fullName) => {
+  if (!fullName) return { firstName: '', lastName: '' };
+  const names = fullName.trim().split(/\s+/);
+  const lastName = names.pop() || '';
+  const firstName = names.join(' ');
+  return { firstName, lastName };
+};
+
+// Helper function to log incoming requests
+const logRequest = (req) => {
+  console.log('\n=== Incoming Request ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.originalUrl);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Query:', req.query);
+  console.log('Params:', req.params);
+  console.log('======================\n');
+};
+
+// Helper function to generate presigned URL
+async function generatePresignedUrl(key) {
+  if (!key) return null;
+  try {
+    const command = new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: key
+    });
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 900 }); // 15 minutes
+    return url;
+  } catch (error) {
+    console.error('Error generating presigned URL:', error);
+    return null;
+  }
+}
+
+// User registration
+app.post('/api/register', async (req, res) => {
+  logRequest(req);
+  console.log('Starting registration process...');
+
+  const client = await pool.connect();
+  try {
+    console.log('Received registration data:', req.body);
+
+    const { name, email, password, phone, institution, faculty_id, department_id, ieee_number, vat_number } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password) {
+      console.error('Missing required fields');
+      return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    const { firstName, lastName } = splitName(name);
+    console.log('Processed name:', { firstName, lastName });
+
+    // Check if user exists
+    console.log('Checking if user exists...');
+    const userExists = await client.query(
+      'SELECT user_id FROM user_profiles WHERE email = $1',
+      [email]
+    );
+
+    if (userExists.rows.length > 0) {
+      console.log('User already exists:', email);
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Hash password
+    console.log('Hashing password...');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await client.query('BEGIN');
+    console.log('Transaction started');
+
+    try {
+      // Get the next user_id
+      const userIdResult = await client.query('SELECT COALESCE(MAX(user_id), 0) + 1 AS next_user_id FROM user_profiles');
+      const nextUserId = userIdResult.rows[0].next_user_id;
+      console.log('Next user_id:', nextUserId);
+
+      // Insert into user_profiles table
+      const userQuery = `
+        INSERT INTO user_profiles (user_id, firstname, surname, email, password, role, cellnumber, institution, faculty_id, department_id, ieee_no, vat_no)
+        VALUES ($1, $2, $3, $4, $5, 'user', $6, $7, $8, $9, $10, $11)
+        RETURNING user_id, email, role;
+      `;
+
+      const userResult = await client.query(userQuery, [nextUserId, firstName, lastName, email, hashedPassword, phone, institution, faculty_id, department_id, ieee_number, vat_number]);
+      const user = userResult.rows[0];
+      console.log('Generated user_id:', user.user_id);
+      console.log('User created:', user);
+
+      await client.query('COMMIT');
+      console.log('Transaction committed');
+
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          userId: user.user_id,
+          email: user.email,
+          role: user.role,
+          name: `${firstName} ${lastName}`.trim()
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      res.json({ token, message: 'Registration successful' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Transaction error:', error);
+      res.status(500).json({ message: 'Registration failed' });
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: 'An error occurred' });
+  } finally {
+    client.release();
+  }
+});
+
+// User login
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    // Find user by email in user_profiles table
+    const result = await pool.query(
+      `SELECT user_id, email, password, role, 
+              firstname, surname, cellnumber, institution,
+              faculty_id, department_id, ieee_no, vat_no
+       FROM user_profiles
+       WHERE email = $1`,
+      [email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const user = result.rows[0];
+
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Check if user is an admin based on role field
+    const isAdmin = user.role === 'Admin';
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user.user_id,
+        email: user.email,
+        role: user.role || 'user',
+        name: `${user.firstname || ''} ${user.surname || ''}`.trim() || user.email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Return user data without sensitive information
+    const userResponse = {
+      id: user.user_id,
+      email: user.email,
+      role: user.role,
+      isAdmin: isAdmin,
+      firstname: user.firstname,
+      surname: user.surname,
+      name: `${user.firstname || ''} ${user.surname || ''}`.trim(),
+      cellnumber: user.cellnumber,
+      institution: user.institution,
+      faculty_id: user.faculty_id,
+      department_id: user.department_id,
+      ieee_no: user.ieee_no,
+      vat_no: user.vat_no
+    };
+
+    console.log(`User ${user.email} logged in with role: ${user.role}, isAdmin: ${isAdmin}`);
+
+    res.json({
+      token,
+      user: userResponse
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error during login', error: error.message });
+  }
+});
+
+async function generatePresignedUrl(key) {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: key,
+    });
+    return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+  } catch (error) {
+    console.error(`Error generating presigned URL for key ${key}:`, error);
+    return null;
+  }
+}
+
+
+
+
+app.post('/api/events', authenticateToken, upload.fields([
+  { name: 'cover_image', maxCount: 1 },
+  { name: 'proof_of_payment', maxCount: 1 },
+]), async (req, res) => {
+  console.log('Received /api/events request');
+  console.log('Files received:', req.files);
+  console.log('Body:', req.body);
+
+  const client = await pool.connect();
+  try {
+    const {
+      name,
+      description,
+      terms_and_conditions,
+      location,
+      startdate,
+      enddate,
+      time: start_time,
+      endtime: end_time,
+      deadlinedate,
+      deadlinetime,
+      type,
+      capacity,
+      duration,
+      attendees,
+      tabs,
+      packages,
+      sponsorData,
+      payment_type,
+      amount,
+      contactnum,
+      email,
+    } = req.body;
+
+    // Validate required fields
+    const missingFields = [];
+    if (!name || name.trim() === '') missingFields.push('name');
+    if (!location || location.trim() === '') missingFields.push('location');
+    if (!startdate || startdate.trim() === '') missingFields.push('startdate');
+    if (!enddate || enddate.trim() === '') missingFields.push('enddate');
+    if (!start_time || start_time.trim() === '') missingFields.push('time');
+    if (!duration || duration.trim() === '') missingFields.push('duration');
+    if (!deadlinedate || deadlinedate.trim() === '') missingFields.push('deadlinedate');
+    if (!deadlinetime || deadlinetime.trim() === '') missingFields.push('deadlinetime');
+    if (!type || type.trim() === '') missingFields.push('type');
+    if (!capacity || capacity.trim() === '') missingFields.push('capacity');
+    if (!attendees || attendees.trim() === '') missingFields.push('attendees');
+
+    if (missingFields.length > 0) {
+      console.log('Missing fields:', missingFields);
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: `The following fields are missing or empty: ${missingFields.join(', ')}`,
+      });
+    }
+
+    // Validate cover image
+    if (!req.files || !req.files['cover_image'] || !req.files['cover_image'][0]) {
+      console.error('No cover image file received');
+      return res.status(400).json({ error: 'Cover image is required' });
+    }
+    const coverImageFile = req.files['cover_image'][0];
+    console.log('Cover image file:', {
+      originalname: coverImageFile.originalname,
+      mimetype: coverImageFile.mimetype,
+      size: coverImageFile.size,
+      bufferLength: coverImageFile.buffer ? coverImageFile.buffer.length : 'undefined',
+    });
+    if (!['image/jpeg', 'image/png'].includes(coverImageFile.mimetype)) {
+      console.error('Invalid cover image type:', coverImageFile.mimetype);
+      return res.status(400).json({ error: 'Cover image must be JPEG or PNG' });
+    }
+
+    // Validate proof of payment for non-Sponsor payment types
+    if (payment_type !== 'Sponsor') {
+      if (!req.files || !req.files['proof_of_payment'] || !req.files['proof_of_payment'][0]) {
+        console.error('No proof of payment file received for non-Sponsor payment');
+        return res.status(400).json({ error: 'Proof of payment is required for non-Sponsor payment types' });
+      }
+      const proofFile = req.files['proof_of_payment'][0];
+      console.log('Proof of payment file:', {
+        originalname: proofFile.originalname,
+        mimetype: proofFile.mimetype,
+        size: proofFile.size,
+      });
+      if (!['image/jpeg', 'image/png', 'application/pdf'].includes(proofFile.mimetype)) {
+        console.error('Invalid proof of payment type:', proofFile.mimetype);
+        return res.status(400).json({ error: 'Proof of payment must be JPEG, PNG, or PDF' });
+      }
+    }
+
+    // Validate sponsor fields when payment_type is Sponsor
+    if (payment_type === 'Sponsor') {
+      if (!contactnum || contactnum.trim() === '') missingFields.push('contactnum');
+      if (!email || email.trim() === '') missingFields.push('email');
+      if (missingFields.length > 0) {
+        console.log('Missing sponsor fields:', missingFields);
+        return res.status(400).json({
+          error: 'Missing required sponsor fields',
+          details: `The following fields are missing or empty for Sponsor payment: ${missingFields.join(', ')}`,
+        });
+      }
+    }
+
+    const finalContactnum = payment_type === 'Sponsor' ? contactnum || 'N/A' : 'N/A';
+    const finalEmail = payment_type === 'Sponsor' ? email || 'N/A' : 'N/A';
+
+    let parsedAttendees = [];
+    let parsedTabs = [];
+    let parsedPackages = [];
+    try {
+      parsedAttendees = attendees.startsWith('{') ? attendees.slice(1, -1).split(',').filter(item => item.trim()) : JSON.parse(attendees || '[]');
+      parsedTabs = JSON.parse(tabs || '[]').map(tab => JSON.stringify(tab));
+      parsedPackages = JSON.parse(packages || '[]').map(pkg => JSON.stringify(pkg));
+    } catch (e) {
+      console.error('JSON parsing error:', e.message);
+      return res.status(400).json({ error: 'Invalid JSON format for attendees, tabs, or packages', details: e.message });
+    }
+
+    let parsedSponsor = {};
+    try {
+      parsedSponsor = JSON.parse(sponsorData || '{}');
+    } catch (e) {
+      console.error('Sponsor data parsing error:', e.message);
+      return res.status(400).json({ error: 'Invalid sponsorData format', details: e.message });
+    }
+
+    await client.query('BEGIN');
+
+    // Verify S3 configuration
+    console.log('S3 configuration:', {
+      bucket: process.env.S3_BUCKET_NAME,
+      region: 'af-south-1',
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID ? 'Set' : 'Not set',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ? 'Set' : 'Not set',
+    });
+
+    // Upload cover image to S3
+    let coverImageUrl;
+    let coverImageKey;
+    try {
+      const file = req.files['cover_image'][0];
+      const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      coverImageKey = `cover_images/${Date.now()}_${sanitizedFileName}`;
+
+      console.log('Uploading cover image to S3:', {
+        bucket: process.env.S3_BUCKET_NAME,
+        key: coverImageKey,
+        contentType: file.mimetype,
+        bufferLength: file.buffer ? file.buffer.length : 'undefined',
+      });
+
+      const coverImageCommand = new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: coverImageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      });
+
+      await s3Client.send(coverImageCommand);
+      coverImageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${coverImageKey}`;
+      console.log('Cover image uploaded successfully:', coverImageUrl);
+
+      // Verify coverImageUrl
+      if (!coverImageUrl || typeof coverImageUrl !== 'string' || !coverImageUrl.startsWith('https://')) {
+        throw new Error('Invalid cover image URL after upload');
+      }
+    } catch (error) {
+      console.error('Failed to upload cover image to S3:', error);
+      throw new Error(`Cover image upload failed: ${error.message}`);
+    }
+
+    // Insert event with the uploaded cover image URL
+    const queryParams = [
+      name,
+      location,
+      startdate,
+      enddate,
+      start_time,
+      duration,
+      deadlinedate,
+      deadlinetime,
+      type,
+      parseInt(capacity, 10),
+      `{${parsedAttendees.join(',')}}`,
+      finalContactnum,
+      finalEmail,
+      coverImageUrl,
+      parsedTabs,
+      parsedPackages,
+      description || null,
+      terms_and_conditions || null,
+      end_time || null,
+      req.user.userId,
+      'pending',
+    ];
+
+    console.log('Insert query parameters:', queryParams.map((param, idx) => ({
+      index: idx + 1,
+      value: param,
+      type: typeof param,
+    })));
+
+    const eventResult = await client.query(
+      `INSERT INTO events (
+         name, location, startdate, enddate, time, duration, deadlinedate, deadlinetime,
+         type, capacity, attendees, contactnum, email, coverimage, tabs, packages,
+         description, terms_and_conditions, endtime, user_id, status
+      ) VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+      ) RETURNING event_id`,
+      queryParams
+    );
+
+    const event_id = eventResult.rows[0].event_id;
+    console.log('Event created with ID:', event_id);
+
+    // Insert payment
+    const paymentResult = await client.query(
+      `INSERT INTO payments (event_id, amount, payment_type, proof_of_payment)
+       VALUES ($1, $2, $3, $4)
+       RETURNING payment_id`,
+      [event_id, parseFloat(amount) || 0, payment_type || 'Unknown', null]
+    );
+
+    const payment_id = paymentResult.rows[0].payment_id;
+    console.log('Payment created with ID:', payment_id);
+
+    // Upload proof of payment to S3 for non-Sponsor payments
+    let proofOfPaymentUrl = null;
+    let proofOfPaymentKey = null;
+    if (payment_type !== 'Sponsor' && req.files && req.files['proof_of_payment']) {
+      try {
+        const file = req.files['proof_of_payment'][0];
+        const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        proofOfPaymentKey = `proof_of_payment/${event_id}/${Date.now()}_${sanitizedFileName}`;
+
+        console.log('Uploading proof of payment to S3:', {
+          bucket: process.env.S3_BUCKET_NAME,
+          key: proofOfPaymentKey,
+          contentType: file.mimetype,
+          bufferLength: file.buffer ? file.buffer.length : 'undefined',
+        });
+
+        const proofCommand = new PutObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: proofOfPaymentKey,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        });
+
+        await s3Client.send(proofCommand);
+        proofOfPaymentUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${proofOfPaymentKey}`;
+        console.log('Proof of payment uploaded successfully:', proofOfPaymentUrl);
+
+        await client.query(
+          `UPDATE payments SET proof_of_payment = $1 WHERE payment_id = $2`,
+          [proofOfPaymentUrl, payment_id]
+        );
+        console.log('Updated payment with proof of payment URL:', proofOfPaymentUrl);
+      } catch (error) {
+        console.error('Failed to upload proof of payment to S3:', error);
+        // Proof of payment is nullable, so we can continue
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log('Transaction committed');
+
+    const finalEvent = await client.query(
+      `SELECT * FROM events WHERE event_id = $1`,
+      [event_id]
+    );
+
+    // Generate presigned URLs for response
+    const finalCoverImageUrl = coverImageKey ? await generatePresignedUrl(coverImageKey) : coverImageUrl;
+    const finalProofOfPaymentUrl = proofOfPaymentKey ? await generatePresignedUrl(proofOfPaymentKey) : null;
+
+    console.log('Event created:', finalEvent.rows[0]);
+    res.status(200).json({
+      message: 'Event created successfully',
+      coverImageUrl: finalCoverImageUrl,
+      proofOfPaymentUrl: finalProofOfPaymentUrl,
+      event: finalEvent.rows[0],
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating event:', error);
+    res.status(500).json({ error: 'Failed to create event', details: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Update event endpoint
+app.put('/api/events/:eventId', authenticateToken, upload.fields([
+  { name: 'cover_image', maxCount: 1 },
+  { name: 'proof_of_payment', maxCount: 1 },
+]), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const userId = req.user.userId;
+    const {
+      name,
+      description,
+      location,
+      start_date,
+      end_date,
+      start_time,
+      end_time,
+      duration,
+      deadlinetime,
+      deadlinedate,
+      event_type,
+      capacity,
+      attendees,
+      contactnum,
+      email,
+      tabs,
+      packages,
+      terms_and_conditions,
+      status,
+      payment_amount,
+      payment_type
+    } = req.body;
+
+    // Verify the user owns the event or is an admin
+    const ownershipCheck = await client.query(
+      'SELECT event_id FROM events WHERE event_id = $1 AND (user_id = $2 OR $3 = true)',
+      [eventId, userId, req.user.role === 'Admin']
+    );
+
+    if (ownershipCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Not authorized to update this event' });
+    }
+
+    await client.query('BEGIN');
+
+    // Update event details
+    const updateEventQuery = `
+      UPDATE events
+      SET name = COALESCE($1, name),
+          description = COALESCE($2, description),
+          location = COALESCE($3, location),
+          startdate = COALESCE($4, startdate),
+          enddate = COALESCE($5, enddate),
+          time = COALESCE($6, time),
+          endtime = COALESCE($7, endtime),
+          duration = COALESCE($8, duration),
+          deadlinetime = COALESCE($9, deadlinetime),
+          deadlinedate = COALESCE($10, deadlinedate),
+          type = COALESCE($11, type),
+          capacity = COALESCE($12, capacity),
+          attendees = COALESCE($13, attendees),
+          contactnum = COALESCE($14, contactnum),
+          email = COALESCE($15, email),
+          tabs = COALESCE($16, tabs),
+          packages = COALESCE($17, packages),
+          terms_and_conditions = COALESCE($18, terms_and_conditions),
+          status = COALESCE($19, status)
+      WHERE event_id = $20
+      RETURNING *;
+    `;
+
+    let parsedAttendees = attendees;
+    let parsedTabs = tabs;
+    let parsedPackages = packages;
+
+    try {
+      parsedAttendees = attendees ? `{${JSON.parse(attendees || '[]').join(',')}}` : null;
+      parsedTabs = tabs ? JSON.parse(tabs).map(tab => JSON.stringify(tab)) : null;
+      parsedPackages = packages ? JSON.parse(packages).map(pkg => JSON.stringify(pkg)) : null;
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON format for attendees, tabs, or packages', details: e.message });
+    }
+
+    const eventValues = [
+      name, description, location, start_date, end_date,
+      start_time, end_time, duration, deadlinetime, deadlinedate,
+      event_type, parseInt(capacity, 10), parsedAttendees, contactnum, email,
+      parsedTabs, parsedPackages, terms_and_conditions, status, eventId
+    ];
+
+    const eventResult = await client.query(updateEventQuery, eventValues);
+
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Handle cover image upload if provided
+    let coverImageUrl = null;
+    let coverImageKey = null;
+    if (req.files && req.files['cover_image']) {
+      const file = req.files['cover_image'][0];
+      const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      coverImageKey = `cover_images/${eventId}/${Date.now()}_${sanitizedFileName}`;
+
+      const coverImageCommand = new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: coverImageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype
+      });
+
+      await s3Client.send(coverImageCommand);
+      coverImageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${coverImageKey}`;
+      console.log('Cover image uploaded:', coverImageUrl);
+
+      await client.query(
+        'UPDATE events SET coverimage = $1 WHERE event_id = $2',
+        [coverImageUrl, eventId]
+      );
+    }
+
+    // Handle payment if provided
+    let proofOfPaymentUrl = null;
+    let proofOfPaymentKey = null;
+    if (payment_amount && payment_type) {
+      if (payment_type !== 'Sponsor' && req.files && req.files['proof_of_payment']) {
+        const file = req.files['proof_of_payment'][0];
+        const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+        proofOfPaymentKey = `proof_of_payment/${eventId}/${Date.now()}_${sanitizedFileName}`;
+
+        const proofCommand = new PutObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: proofOfPaymentKey,
+          Body: file.buffer,
+          ContentType: file.mimetype
+        });
+
+        await s3Client.send(proofCommand);
+        proofOfPaymentUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${proofOfPaymentKey}`;
+        console.log('Proof of payment uploaded:', proofOfPaymentUrl);
+      }
+
+      const paymentQuery = `
+        INSERT INTO payments (
+          event_id, amount, payment_type, proof_of_payment
+        ) VALUES ($1, $2, $3, $4)
+        ON CONFLICT (event_id) DO UPDATE
+        SET amount = EXCLUDED.amount,
+            payment_type = EXCLUDED.payment_type,
+            proof_of_payment = COALESCE(EXCLUDED.proof_of_payment, payments.proof_of_payment)
+        RETURNING payment_id;
+      `;
+
+      const paymentValues = [
+        eventId,
+        parseFloat(payment_amount) || 0,
+        payment_type,
+        proofOfPaymentKey
+      ];
+
+      await client.query(paymentQuery, paymentValues);
+    }
+
+    await client.query('COMMIT');
+
+    // Get the updated event with all details
+    const { rows: [updatedEvent] } = await client.query(
+      `SELECT e.*, 
+              p.amount as paid_amount, p.payment_type, p.proof_of_payment as payment_proof_key,
+              up.firstname, up.surname, up.email, up.cellnumber
+       FROM events e
+       LEFT JOIN payments p ON e.event_id = p.event_id
+       LEFT JOIN user_profiles up ON e.user_id = up.user_id
+       WHERE e.event_id = $1`,
+      [eventId]
+    );
+
+    // Generate presigned URLs for response
+    const finalCoverImageUrl = updatedEvent.coverimage ? await generatePresignedUrl(updatedEvent.coverimage.split('/').slice(3).join('/')) : '/default-profile-picture.jpg';
+    const finalProofOfPaymentUrl = updatedEvent.payment_proof_key ? await generatePresignedUrl(updatedEvent.payment_proof_key.split('/').slice(3).join('/')) : null;
+
+    res.json({
+      message: 'Event updated successfully',
+      event: {
+        ...updatedEvent,
+        coverimage: finalCoverImageUrl,
+        payment_proof_url: finalProofOfPaymentUrl
+      },
+      coverImageUrl: finalCoverImageUrl,
+      proofOfPaymentUrl: finalProofOfPaymentUrl
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating event:', error);
+    res.status(500).json({
+      error: 'Failed to update event',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+
+//Get all the events for the logged in user 
+app.get('/api/admin/events', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { role } = req.user;
+
+    if (role !== 'Admin') {
+      return res.status(403).json({ error: 'Access denied. Admins only.' });
+    }
+
+    const query = `
+      SELECT 
+        e.event_id AS id,
+        e.name AS event_name,
+        e.description,
+        e.terms_and_conditions,
+        e.location,
+        e.startdate AS start_date,
+        e.enddate AS end_date,
+        e.time AS start_time,
+        e.endtime AS end_time,
+        e.duration,
+        e.deadlinetime AS registration_deadline_time,
+        e.deadlinedate AS registration_deadline_date,
+        e.type AS event_type,
+        e.capacity,
+        e.attendees,
+        e.contactnum,
+        e.email,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.status,
+        e.admin_comment,
+        up.firstname AS organizer_first_name,
+        up.surname AS organizer_last_name,
+        up.email AS organizer_email,
+        up.cellnumber AS organizer_phone
+      FROM events e
+      LEFT JOIN user_profiles up ON e.user_id = up.user_id
+      ORDER BY e.startdate DESC, e.time DESC
+    `;
+
+    const result = await client.query(query);
+
+    const events = await Promise.all(result.rows.map(async (event) => {
+      let coverImageUrl = '/default-profile-picture.jpg';
+
+      if (event.coverimage) {
+        const coverKey = event.coverimage.split('/').slice(3).join('/');
+        try {
+          coverImageUrl = await generatePresignedUrl(coverKey);
+        } catch (e) {
+          console.warn(`Failed to sign cover image for event ${event.id}`, e);
+        }
+      }
+
+      // Parse tabs and packages
+      const parsedTabs = event.tabs?.map(tab => {
+        try {
+          return JSON.parse(tab);
+        } catch {
+          return {};
+        }
+      }) || [];
+
+      const parsedPackages = event.packages?.map(pkg => {
+        try {
+          return JSON.parse(pkg);
+        } catch {
+          return {};
+        }
+      }) || [];
+
+      return {
+        ...event,
+        coverimage: coverImageUrl,
+        tabs: parsedTabs,
+        packages: parsedPackages,
+        organizer: {
+          name: `${event.organizer_first_name || ''} ${event.organizer_last_name || ''}`.trim(),
+          email: event.organizer_email || 'N/A',
+          phone: event.organizer_phone || 'N/A',
+        }
+      };
+    }));
+
+    res.json(events);
+  } catch (err) {
+    console.error('Admin event fetch failed:', err);
+    res.status(500).json({ error: 'Failed to fetch events for admin.' });
+  } finally {
+    client.release();
+  }
+});
+// Get event by ID
+app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const { userId, role } = req.user;
+
+    let query = `
+      SELECT 
+        e.event_id as id,
+        e.name,
+        e.description,
+        e.location,
+        e.startdate as start_date,
+        e.enddate as end_date,
+        e.time as start_time,
+        e.endtime as end_time,
+        e.duration,
+        e.deadlinetime as registration_deadline_time,
+        e.deadlinedate as registration_deadline_date,
+        e.type as event_type,
+        e.capacity,
+        e.attendees,
+        e.contactnum,
+        e.email,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.terms_and_conditions,
+        e.status,
+        e.admin_comment,
+        p.payment_id,
+        p.amount as paid_amount,
+        p.payment_type,
+        p.proof_of_payment as payment_proof_key,
+        up.firstname as organizer_first_name,
+        up.surname as organizer_last_name,
+        up.cellnumber as organizer_phone,
+        up.email as organizer_email
+      FROM events e
+      LEFT JOIN payments p ON e.event_id = p.event_id
+      LEFT JOIN user_profiles up ON e.user_id = up.user_id
+      WHERE e.event_id = $1
+    `;
+    let queryParams = [eventId];
+
+    if (role !== 'Admin') {
+      query += ` AND e.user_id = $2`;
+      queryParams.push(userId);
+    }
+
+    console.log('Executing query for eventId:', eventId, 'userId:', userId, 'role:', role);
+    console.log('Query:', query);
+    console.log('Params:', queryParams);
+
+    const result = await client.query(query, queryParams);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Event not found or access denied' });
+    }
+
+    const event = result.rows[0];
+
+    // Generate presigned URLs
+    let coverImageUrl = '/default-profile-picture.jpg';
+    let proofOfPaymentUrl = null;
+
+    if (event.coverimage) {
+      const coverKey = event.coverimage.split('/').slice(3).join('/');
+      if (coverKey) {
+        try {
+          coverImageUrl = await generatePresignedUrl(coverKey);
+        } catch (e) {
+          console.warn('Failed to generate signed URL for cover image:', e);
+        }
+      }
+    }
+
+    if (event.payment_proof_key) {
+      const proofKey = event.payment_proof_key.split('/').slice(3).join('/');
+      if (proofKey) {
+        try {
+          proofOfPaymentUrl = await generatePresignedUrl(proofKey);
+        } catch (e) {
+          console.warn('Failed to generate signed URL for proof of payment:', e);
+        }
+      }
+    }
+
+    // Parse tabs and packages
+    event.tabs = event.tabs ? event.tabs.map(tab => {
+      try {
+        return JSON.parse(tab);
+      } catch (e) {
+        console.warn(`Failed to parse tab: ${tab}`, e);
+        return {};
+      }
+    }) : [];
+    event.packages = event.packages ? event.packages.map(pkg => {
+      try {
+        return JSON.parse(pkg);
+      } catch (e) {
+        console.warn(`Failed to parse package: ${pkg}`, e);
+        return {};
+      }
+    }) : [];
+
+    // Format sponsor data
+    event.sponsor = {
+      name: `${event.organizer_first_name || ''} ${event.organizer_last_name || ''}`.trim(),
+      phone: event.organizer_phone || 'N/A',
+      email: event.organizer_email || 'N/A',
+      amount: event.payment_type === 'Sponsor' && event.paid_amount ? `R ${parseFloat(event.paid_amount).toFixed(2)}` : ''
+    };
+
+    res.json({
+      ...event,
+      coverimage: coverImageUrl,
+      payment_proof_url: proofOfPaymentUrl
+    });
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    res.status(500).json({
+      message: 'Failed to fetch event',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Admin routes
+// Get all events for admin (all users' events)
+app.get("/api/admin/events", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { role } = req.user;
+
+    // Check if user is admin
+    if (role !== "Admin") {
+      return res.status(403).json({
+        error: "Access denied. Admin privileges required.",
+      });
+    }
+
+    const query = `
+      SELECT 
+        e.event_id as id,
+        e.name as event_name,
+        e.description,
+        e.terms_and_conditions,
+        e.location,
+        e.startdate as date,
+        e.enddate as end_date,
+        e.time,
+        e.endtime as end_time,
+        e.duration,
+        e.deadlinetime as registration_deadline_time,
+        e.deadlinedate as registration_deadline_date,
+        e.type as event_type,
+        e.capacity,
+        e.attendees,
+        e.contactnum,
+        e.email,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.status,
+        e.admin_comment,
+        e.user_id,
+        p.amount as paid_amount,
+        p.payment_type,
+        p.proof_of_payment as payment_proof_key,
+        up.firstname as organizer_first_name,
+        up.surname as organizer_last_name,
+        up.cellnumber as organizer_phone,
+        up.email as organizer_email
+      FROM events e
+      LEFT JOIN payments p ON e.event_id = p.event_id
+      LEFT JOIN user_profiles up ON e.user_id = up.user_id
+      ORDER BY e.startdate DESC, e.time DESC
+    `;
+
+    console.log("Admin fetching all events");
+    const result = await client.query(query);
+
+    const eventsWithUrls = await Promise.all(
+      result.rows.map(async (event) => {
+        let coverImageUrl = "/default-profile-picture.jpg";
+        let proofOfPaymentUrl = null;
+
+        if (event.coverimage) {
+          const coverKey = event.coverimage.split("/").slice(3).join("/");
+          try {
+            coverImageUrl = await generatePresignedUrl(coverKey);
+          } catch (e) {
+            console.warn("Failed to generate signed URL for cover image:", e);
+          }
+        }
+
+        if (event.payment_proof_key) {
+          const proofKey = event.payment_proof_key.split("/").slice(3).join("/");
+          try {
+            proofOfPaymentUrl = await generatePresignedUrl(proofKey);
+          } catch (e) {
+            console.warn("Failed to generate signed URL for proof of payment:", e);
+          }
+        }
+
+        const parsedTabs = event.tabs
+          ? event.tabs.map((tab) => {
+              try {
+                return JSON.parse(tab);
+              } catch (e) {
+                console.warn(`Failed to parse tab: ${tab}`, e);
+                return {};
+              }
+            })
+          : [];
+
+        const parsedPackages = event.packages
+          ? event.packages.map((pkg) => {
+              try {
+                return JSON.parse(pkg);
+              } catch (e) {
+                console.warn(`Failed to parse package: ${pkg}`, e);
+                return {};
+              }
+            })
+          : [];
+
+        return {
+          id: event.id,
+          event_name: event.event_name,
+          description: event.description,
+          terms_and_conditions: event.terms_and_conditions,
+          location: event.location,
+          date: event.date,
+          end_date: event.end_date,
+          time: event.time,
+          end_time: event.end_time,
+          duration: event.duration,
+          registration_deadline_time: event.registration_deadline_time,
+          registration_deadline_date: event.registration_deadline_date,
+          event_type: event.event_type,
+          capacity: event.capacity,
+          attendees: event.attendees,
+          contactnum: event.contactnum,
+          email: event.email,
+          status: event.status,
+          admin_comment: event.admin_comment,
+          user_id: event.user_id,
+          paid_amount: event.paid_amount,
+          payment_type: event.payment_type,
+          payment_proof_key: event.payment_proof_key,
+          coverimage: coverImageUrl,
+          file_url: coverImageUrl, // used on frontend
+          payment_proof_url: proofOfPaymentUrl,
+          tabs: parsedTabs,
+          packages: parsedPackages,
+          organizer: {
+            name: `${event.organizer_first_name || ""} ${event.organizer_last_name || ""}`.trim(),
+            phone: event.organizer_phone || "N/A",
+            email: event.organizer_email || "N/A",
+          },
+        };
+      })
+    );
+
+    console.log("Admin events fetched:", eventsWithUrls.length, "events");
+    res.json(eventsWithUrls);
+  } catch (error) {
+    console.error("Error fetching admin events:", error);
+    res.status(500).json({
+      error: "Failed to fetch events",
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+
+
+// Get specific event by ID for admin (can access any event)
+app.get("/api/admin/events/:eventId", authenticateToken, async (req, res) => {
+  const client = await pool.connect()
+
+  try {
+    const { eventId } = req.params
+    const { role } = req.user
+
+    // Check if user is admin
+    if (role !== "Admin") {
+      return res.status(403).json({
+        error: "Access denied. Admin privileges required.",
+      })
+    }
+
+    const query = `
+      SELECT 
+        e.event_id as id,
+        e.name,
+        e.description,
+        e.location,
+        e.startdate as start_date,
+        e.enddate as end_date,
+        e.time as start_time,
+        e.endtime as end_time,
+        e.duration,
+        e.deadlinetime as registration_deadline_time,
+        e.deadlinedate as registration_deadline_date,
+        e.type as event_type,
+        e.capacity,
+        e.attendees,
+        e.contactnum,
+        e.email,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.terms_and_conditions,
+        e.status,
+        e.admin_comment,
+        e.user_id,
+        p.payment_id,
+        p.amount as paid_amount,
+        p.payment_type,
+        p.proof_of_payment as payment_proof_key,
+        up.firstname as organizer_first_name,
+        up.surname as organizer_last_name,
+        up.cellnumber as organizer_phone,
+        up.email as organizer_email
+      FROM events e
+      LEFT JOIN payments p ON e.event_id = p.event_id
+      LEFT JOIN user_profiles up ON e.user_id = up.user_id
+      WHERE e.event_id = $1
+    `
+
+    console.log("Admin fetching event by ID:", eventId)
+    console.log("Query:", query)
+
+    const result = await client.query(query, [eventId])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Event not found" })
+    }
+
+    const event = result.rows[0]
+
+    // Generate presigned URLs
+    let coverImageUrl = "/default-profile-picture.jpg"
+    let proofOfPaymentUrl = null
+
+    if (event.coverimage) {
+      const coverKey = event.coverimage.split("/").slice(3).join("/")
+      if (coverKey) {
+        try {
+          coverImageUrl = await generatePresignedUrl(coverKey)
+        } catch (e) {
+          console.warn("Failed to generate signed URL for cover image:", e)
+        }
+      }
+    }
+
+    if (event.payment_proof_key) {
+      const proofKey = event.payment_proof_key.split("/").slice(3).join("/")
+      if (proofKey) {
+        try {
+          proofOfPaymentUrl = await generatePresignedUrl(proofKey)
+        } catch (e) {
+          console.warn("Failed to generate signed URL for proof of payment:", e)
+        }
+      }
+    }
+
+    // Parse tabs and packages
+    event.tabs = event.tabs
+      ? event.tabs.map((tab) => {
+          try {
+            return JSON.parse(tab)
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e)
+            return {}
+          }
+        })
+      : []
+
+    event.packages = event.packages
+      ? event.packages.map((pkg) => {
+          try {
+            return JSON.parse(pkg)
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e)
+            return {}
+          }
+        })
+      : []
+
+    // Format organizer data
+    event.organizer = {
+      name: `${event.organizer_first_name || ""} ${event.organizer_last_name || ""}`.trim(),
+      phone: event.organizer_phone || "N/A",
+      email: event.organizer_email || "N/A",
+      amount:
+        event.payment_type === "Sponsor" && event.paid_amount
+          ? `R ${Number.parseFloat(event.paid_amount).toFixed(2)}`
+          : "",
+    }
+
+    res.json({
+      ...event,
+      coverimage: coverImageUrl,
+      payment_proof_url: proofOfPaymentUrl,
+    })
+  } catch (error) {
+    console.error("Error fetching admin event:", error)
+    res.status(500).json({
+      message: "Failed to fetch event",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    })
+  } finally {
+    client.release()
+  }
+})
+
+// Delete an event
+app.delete('/api/events/:eventId', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const { userId, role } = req.user;
+
+    // Check if the user is the organizer or an admin
+    const eventCheck = await client.query(
+      'SELECT event_id FROM events WHERE event_id = $1 AND (user_id = $2 OR $3 = true)',
+      [eventId, userId, role === 'Admin']
+    );
+
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found or access denied' });
+    }
+
+    await client.query('BEGIN');
+
+    // Delete related records
+    await client.query('DELETE FROM payments WHERE event_id = $1', [eventId]);
+
+    // Delete the event
+    const result = await client.query('DELETE FROM events WHERE event_id = $1 RETURNING *', [eventId]);
+
+    if (result.rows.length === 0) {
+      throw new Error('Event not found after verification');
+    }
+
+    await client.query('COMMIT');
+
+    res.json({ message: 'Event deleted successfully', event: result.rows[0] });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting event:', error);
+    res.status(500).json({
+      error: 'Failed to delete event',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Faculty & Department lookup endpoints
+app.get('/api/faculties', async (req, res) => {
+  try {
+    const facultiesResult = await pool.query(
+      'SELECT faculty_id AS value, faculty_name AS label FROM faculties ORDER BY faculty_name'
+    );
+    res.json(facultiesResult.rows);
+  } catch (error) {
+    console.error('Error fetching faculties:', error);
+    res.status(500).json({
+      message: 'Failed to fetch faculties',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+app.get('/api/departments', async (req, res) => {
+  try {
+    const { facultyId } = req.query;
+    let query;
+    let queryParams = [];
+
+    if (facultyId) {
+      query = `
+        SELECT 
+          d.department_id AS value, 
+          d.department_name AS label,
+          f.faculty_name
+        FROM departments d
+        JOIN faculties f ON d.faculty_id = f.faculty_id
+        WHERE d.faculty_id = $1
+        ORDER BY d.department_name`;
+      queryParams = [facultyId];
+    } else {
+      query = `
+        SELECT 
+          d.department_id AS value, 
+          d.department_name AS label,
+          f.faculty_name
+        FROM departments d
+        JOIN faculties f ON d.faculty_id = f.faculty_id
+        ORDER BY f.faculty_name, d.department_name`;
+    }
+
+    const departmentsResult = await pool.query(query, queryParams);
+    res.json(departmentsResult.rows);
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    res.status(500).json({
+      message: 'Failed to fetch departments',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});

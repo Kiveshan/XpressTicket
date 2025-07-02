@@ -1,0 +1,138 @@
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 100%;
+  }
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #20c997;
+    margin-top: 5px;
+  }
+  .dashboard-logo {
+    height: 120px;
+    margin-bottom: -20px;
+    margin-top: -30px;
+  }
+  .profile-section {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .profile-icon {
+    margin-left: 5px;
+  }
+  
+  /* .back-button-container {
+    margin: 20px 0;
+  }
+   */
+  
+  
+  /* .dashboard-main {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .event-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    justify-content: center;
+    margin-top: -60px;
+  }
+  .event-card {
+
+    background-color: #d7e9e6;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px #17c4a3;
+  text-align: center;
+  max-width: 380px;
+  width: 900px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+    cursor: pointer;
+  }
+  .event-card:hover {
+    transform: scale(1.05);
+  }
+  
+  .event-image {
+   width: 100%; ;
+  height: 150px; /* Adjust height as needed 
+  object-fit: cover;
+  border-radius: 5px;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 15px;
+  }
+  
+  .event-details h3 {
+    margin: 15px 0 5px;
+align-items: center;
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  .event-details p {
+    margin: 5px 0;
+    font-size: 14px;
+    margin-top: 60px;
+    margin-left: -120px;
+    font-weight: bold;
+  } */
+  .dashboard-main {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    
+  }
+    /* logOut */
+    .backbutton22{
+      display: flex;
+      background-color: #dc2a2a;
+      color: #ffffff;
+      justify-content: flex-start;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      position: relative;
+    /* margin-top: -20px; */
+    margin-left: 1060px;
+    }
+    .backbutton22:hover {
+      background-color: #7d0b0b;
+    }
+    
+    .back-button-container3{
+      display: flex;
+  
+      justify-content: flex-start;
+      padding: 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      position: relative;
+      margin-top: -95px;
+    }
+    /* --------- */
+   .backbutton3{
+    background-color: #20c997;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 25px;
+margin-top: -30px;
+width: 100px;
+   }

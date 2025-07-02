@@ -1,0 +1,153 @@
+* {
+  box-sizing: border-box;
+  margin: 1px;
+  margin-top: 0px;
+  padding: 0;
+}
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin-top: -10px;
+  margin: 6px ;
+}
+ /* -------Nav----- */
+ .dashboard-header2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid #20c997;
+  margin-top: -10px;
+}
+.dashboard-logo {
+  height: 120px;
+  margin-bottom: -20px;
+  margin-top: -30px;
+}
+.profile-section {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.profile-icon {
+  margin-left: 5px;
+}
+
+ .back-button1 {
+  background-color: #17c4a3;
+  color: white;
+  padding: 10px ;
+  width: 80px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 5px;
+  margin-top: -20px;
+  margin-left: 30px;
+}
+.back-button1-hover {
+  background-color: #14917a;
+} 
+/* -------- */
+.container{
+margin-top: 15px;
+align-items: center;
+}
+.tabs button {
+  margin-right: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border: none;
+  color: #000000;
+  background: #61e0c0;
+  border-radius: 5px;
+  margin-top: -20px;
+}
+.explore-button {
+  background: #61e0c0;
+  color: #000000;
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+}
+.conference-info h3{
+  display: flex;
+  align-items: center;
+  text-align: justify;
+  margin-top: -130px;
+  margin-left: 260px;
+}
+.conference-info .ictas-logo {
+  margin-left: 90px;
+  width: 150px;
+  height: auto;
+  margin-top: -20px;
+
+}
+h4{
+  margin-left: 20px;
+}
+  .ictas-logo {     
+    width: 80px;
+    height: 80px;
+  }
+ 
+    .event-details h4{
+      display: flex;
+       align-items: center;
+       margin-top: 30px;
+      margin-left: 200px;
+      gap: 15px;
+      font-weight: bold;
+    }
+
+    .event-description{
+      display: flex;
+      align-items: center;
+      margin-top: 30px;
+    }
+
+    .tabs button {
+      margin-right: 10px;
+      margin-top: 80PX;
+      display: inline-block;
+      padding: 8px 12px;
+      cursor: pointer;
+      border: none;
+      margin-top: 40px;
+    }
+    .description-p{
+      text-align: justify;
+      width: 60%;
+    
+          }
+
+          .btn.extra {
+            display: flex;
+            gap: 10px; /* Adds space between buttons */
+            align-items: center;
+            margin-top: -65px;
+            margin-left: 45%;
+            cursor: pointer;
+          }
+          
+          .btn.extra button {
+            background-color: #17c4a3; /* Blue color */
+            color: rgb(0, 0, 0);
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            align-items: center;
+            
+
+          }
+          
+          .btn.extra button:hover {
+            background-color: #06c4a1; /* Darker blue on hover */
+          }

@@ -1,0 +1,230 @@
+/* ICTASAlt.css */
+
+.dashboard-logo {
+  height: 120px;
+  margin-bottom: -20px;
+  margin-top: -10px;
+}
+.dashboard-container3 {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin-top: 5px;
+}
+.dashboard-header3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid #20c997;
+  margin-top: -15px;
+}
+  .conference-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem 0;
+    background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
+    border-radius: 1rem;
+    color: white;
+  }
+  
+  .conference-theme {
+    font-size: 1.25rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+  }
+  .conference-info{
+    margin-top: 10px;
+  }
+  .conference-title {
+    font-size: 2rem;
+    margin: 0;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  
+  .annual-tag {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 400;
+    margin-bottom: 0.5rem;
+  }
+  
+  .event-details {
+    margin: 2rem 0;
+    margin-top: -10px;
+    margin-left: 60px;
+  }
+  
+  .detail-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .detail-label {
+    font-size: 0.875rem;
+    color: #718096;
+    margin-bottom: 0.25rem;
+  }
+  
+  .detail-value {
+    font-weight: 500;
+    color: #1a202c;
+  }
+  
+  .pricing-section {
+    margin-top: 110px;
+  }
+  
+  .pricing-title {
+    text-align: center;
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    color: #2d3748;
+  }
+  
+  .package-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 0px;
+    margin-top: -6px;
+margin-left: 70px;
+  }
+  
+  .package-card {
+    background: white;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    width: 350px;
+  }
+  
+  .package-card:hover {
+    transform: translateY(-4px);
+  }
+  
+  .package-content {
+    padding: 2rem;
+    flex-grow: 1;
+  }
+  
+  .package-name {
+    font-size: 1.25rem;
+    margin: 0 0 1rem;
+    color: #1e293b;
+  }
+  
+  .price-container {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .currency {
+    font-size: 1.2rem;
+    color: #17c4a3;
+  }
+  
+  .package-price {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  
+  .package-features {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+    margin-top: -35px;
+    text-align: center;
+  }
+  
+  .package-features li {
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .package-features li::before {
+    content: '✓';
+    color: #17c4a3;
+    font-weight: bold;
+  }
+  
+  .cta-button {
+    background: #17c4a3;
+    color: white;
+    border: none;
+    padding: 1rem;
+    width: 100%;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s ease;
+    margin-top: -25px;
+  }
+  
+  .cta-button:hover {
+    background: #045344;
+  }
+  
+  .arrow-icon {
+    font-size: 1.2rem;
+    transition: transform 0.2s ease;
+  }
+  
+  .cta-button:hover .arrow-icon {
+    transform: translateX(3px);
+  }
+  
+  @media (max-width: 768px) {
+    .conference-title {
+      font-size: 1.5rem;
+    }
+    
+    .detail-card {
+      grid-template-columns: 1fr;
+    }
+    
+    .package-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+     .back-button5 {
+   background-color: #17c4a3;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 5px;
+  margin-bottom: 30px;
+  margin-top: -30px;
+margin-left: 30px;
+ 
+  }
+  .back-button5:hover{
+    background-color: #09c3a1;
+  }

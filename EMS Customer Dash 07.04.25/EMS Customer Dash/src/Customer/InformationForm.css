@@ -1,0 +1,146 @@
+.form-container {
+    font-family: 'Arial', sans-serif;
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 20px;
+    margin-top: -25px;
+  }
+  
+  .back-header {
+    font-size: 1.5rem;
+    color: #2c3e50;
+    cursor: pointer;
+    display: inline-block;
+    margin-left: 00px;
+   
+  }
+  
+  .back-header:hover {
+    text-decoration: underline;
+  }
+  
+  .form-section {
+    margin-bottom: 1rem;
+  }
+  
+  h2 {
+    color: #34495e;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+  
+  .input-group {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .inputselect {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.8rem;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  select {
+    background-color: white;
+  }
+  
+  .submit-container {
+    text-align: center;
+    margin-top: 2rem;
+  }
+  
+  .submit-btn {
+    background-color: #3498db;
+    color: white;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+  }
+  
+  .submit-btn:hover {
+    background-color: #2980b9;
+  }
+  
+  @media (max-width: 768px) {
+    .input-group {
+      flex-direction: column;
+    }
+  
+    input, select {
+      width: 100%;
+      min-width: auto;
+    }
+  }
+
+  .disabled-button {
+    background-color: #ca5856;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .disabled-button:hover {
+    background-color: #a11b1b; /* No hover effect for disabled button */
+  }
+
+  /* Container for the events table */
+.events-table-container {
+  margin-top: 40px;
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Section heading */
+.events-table-container h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Events table */
+.events-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Table header */
+.events-table thead {
+  background-color: #007bff;
+  color: white;
+}
+
+.events-table th,
+.events-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+/* Hover effect on rows */
+.events-table tbody tr:hover {
+  background-color: #f8f9fa;
+  transition: background-color 0.3s;
+}
+
+/* Optional: status styling */
+.events-table td:last-child {
+  font-weight: 500;
+  color: #28a745; /* Example color for 'Active' */
+}

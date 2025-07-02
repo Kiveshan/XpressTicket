@@ -1,0 +1,64 @@
+.tickets-event-list-container {
+    font-family: Arial, sans-serif;
+  padding: -0px 2px;
+  background-color: #f9f9f9;
+  min-height: 100vh;
+  margin-top: -20px;
+}
+
+.tickets-event-list-title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.tickets-event-list-table {
+    width: 70%;
+    border-collapse: collapse;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-left: 212px;
+}
+
+
+.tickets-event-list-table td {
+    padding:6px 8px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+.tickets-event-list-table th {
+    background-color: #20c997;
+    color: rgb(0, 0, 0);
+    font-weight: bold;
+    padding: 9px 8px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+.tickets-event-list-table tr:hover {
+  background-color: #dbeee9;
+}
+
+.bell-icon {
+  margin-right: 5px;
+  color: #ff9800;
+  font-size: 18px;
+}
+
+.view-button {
+  padding: 8px 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.view-button:hover {
+  background-color: #218838;
+}

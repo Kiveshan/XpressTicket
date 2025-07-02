@@ -1,0 +1,232 @@
+/* EventTicketPackage.css */
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .ictas-container1 {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    margin-top: 20px;
+    
+  }
+  
+  /* -------Nav----- */
+  .dashboard-header4 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #20c997;
+    margin-top: -5px;
+  }
+  .dashboard-logo {
+    height: 120px;
+    margin-bottom: -20px;
+    margin-top: -30px;
+  }
+  .profile-section {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .profile-icon {
+    margin-left: 5px;
+  }
+  
+  
+   .back-button4 {
+    background-color: #17c4a3;
+    color: white;
+    width: 80px;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 5px;
+    margin-top: -10px;
+    margin-left: 30px;
+  }
+  .back-button4-hover {
+    background-color: #06c4a1;
+  } 
+  /* -------- */
+  
+  .event-details1 {
+    text-align: center;
+    margin-bottom: 20px;
+    margin-top: -26px;
+  }
+  
+  .conference-info1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+  
+  }
+  
+  
+  .ictas-logo {
+    height: 100px;
+    width: 100px;
+  }
+  
+  .row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .row input, .row select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 98%;
+  }
+  
+  .quantity1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 48%;
+  }
+  
+  .quantity1 button {
+    background: #0073e6;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .footer1 {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    align-items: center;
+  
+  }
+  
+  
+  
+  
+  .btn2 {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 45%;
+  }
+  
+  .btn3 {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 20px;
+  }
+  
+  
+  
+  .package-btn {
+    background: #0073e6;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
+  }
+  .addpeople1{
+    align-items: center;
+    border-radius: 5px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 50px;
+    padding-top: 10px;
+    padding-bottom: 20px;
+    width: 90%;
+    margin-left: 80px;
+    display: block;
+  }
+  .eventdestription {
+    align-items: center;
+    border-radius: 5px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 50px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    width: 90%;
+    margin-left: 80px;
+    text-align: justify;
+  }
+  .eventdestription p{
+    align-items: center;
+    
+    text-align: justify;
+  }
+  .eventprice{
+    margin-top: 40px;
+  }
+  
+  .packageprice{
+  font-weight: bold;
+  font-size: larger;
+  margin-bottom: 3px;
+  }
+  
+  
+  .date-input-container {
+    position: relative;
+    display: inline-block;
+    width: 2100px;
+
+  }
+  
+  .date-display-input {
+    width: 130%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .date-picker-popup {
+    position: absolute;
+    top: 100%;
+    left:-30px;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    margin-top: 5px;
+    
+  }
+  
+  .done-button {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 5px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .done-button:hover {
+    background: #0056b3;
+  }

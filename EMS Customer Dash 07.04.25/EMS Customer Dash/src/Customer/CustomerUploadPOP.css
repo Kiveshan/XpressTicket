@@ -1,0 +1,177 @@
+/* .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: Arial, sans-serif;
+  color: #333;
+} */
+
+/* header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.logo {
+  width: 130px;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile img {
+  width: 24px;
+  height: 24px;
+} */
+
+/* hr {
+  margin-bottom: 1rem;
+}
+
+.back-button {
+  background-color: #00c29e;
+  color: white;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  margin-bottom: 24px;
+  cursor: pointer;
+}
+
+.conference-info {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.conference-info img {
+  width: 260px;
+  margin-bottom: 10px;
+} */
+
+h2 {
+  font-size: 18px;
+  font-weight: 600;
+
+}
+
+.upload{
+  margin-top: 127px;
+  margin-left: 60px;
+}
+h3 {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 4px;
+ 
+} 
+
+
+
+
+/* Title */
+.upload {
+  color: #0f766e; /* Tailwind's teal-700 */
+}
+
+/* Table container */
+.table-container {
+  background-color: #f3f4f6; /* Tailwind's gray-100 */
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-left: 6%;
+}
+
+/* Table */
+.table {
+  width: 1300px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem; /* Tailwind's text-sm */
+  font-family: Arial, sans-serif;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Table Head */
+.table thead tr {
+  background-color: #ccfbf1; /* Tailwind's teal-100 */
+  font-weight: 600;
+}
+
+/* Table Cells */
+
+.table td {
+  padding: 0.5rem;
+  /* border: 1px solid #d1d5db; */
+}
+.table th{
+  background-color: #20c997; /* Tailwind's teal-500 */
+  color: rgb(0, 0, 0);
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 0.5rem 0.5rem;
+  border: 1px solid #d1d5db;
+}
+/* File Upload Cell */
+.upload-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Upload Icon */
+.upload-icon {
+  width: 1.25rem; /* Tailwind's w-5 */
+  cursor: pointer;
+}
+
+/* Submit Button */
+.submit-btn {
+  background-color: #14b8a6; /* Tailwind's teal-500 */
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.375rem;
+  display: block;
+  margin: 1.5rem auto 0;
+  text-align: center;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.submit-btn:hover {
+  background-color: #0d9488; /* Tailwind's teal-600 */
+}
+
+
+
+
+/* TicketsList css */
+.viewticket {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0073e6;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+
+/* Table container */
+.table-container5 {
+  background-color: #f3f4f6; /* Tailwind's gray-100 */
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-left: 6%;
+  margin-top: 100px;
+  
+}
