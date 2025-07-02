@@ -1624,6 +1624,8 @@ app.get('/api/departments', async (req, res) => {
   }
 });
 
+console.log("Hello")
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
