@@ -30,7 +30,7 @@ const AdminViewEventRequest = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/admin/event/${eventid}`, {
+      const response = await fetch(`http://localhost:5000/api/admin/events/${eventid}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -51,6 +51,15 @@ const AdminViewEventRequest = () => {
       console.log('Event data from API:', data);
       setEvent({
         ...data,
+        event_name: data.event_name || data.name || 'Untitled Event',
+        file_url: (() => {
+          let img = data.file_url || data.coverimage;
+          if (!img) return '/default-profile-picture.jpg';
+          if (!/^https?:\/\//.test(img) && !img.startsWith('data:')) {
+            img = `http://localhost:5000/${img.replace(/^\/+/, '')}`;
+          }
+          return img;
+        })(),
         client_type: data.client_type || [],
         tabs: data.tab_num > 0 ? [{ name: data.tab_name, content: data.tab_content }] : [],
         packages: data.package_num > 0 ? [{

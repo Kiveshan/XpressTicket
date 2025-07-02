@@ -49,8 +49,8 @@ const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'ems2.0',
-  password: '123456',
-  port: 5433,
+  password: '1234567890',
+  port: 5432,
 });
 
 // Test database connection
@@ -1621,6 +1621,233 @@ app.get('/api/departments', async (req, res) => {
       message: 'Failed to fetch departments',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+// Admin endpoint to get proof of payment for an event
+app.get('/api/admin/event/:eventId/proof-of-payment', authenticateToken, authenticateAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const result = await client.query(
+      'SELECT proof_of_payment FROM payments WHERE event_id = $1',
+      [eventId]
+    );
+    
+    if (result.rows.length === 0 || !result.rows[0].proof_of_payment) {
+      return res.status(404).json({ error: 'Proof of payment not found' });
+    }
+    
+    res.status(200).json({ url: result.rows[0].proof_of_payment });
+  } catch (err) {
+    console.error('Error fetching proof of payment:', err);
+    res.status(500).json({ error: 'Failed to fetch proof of payment', details: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Admin endpoint to update event status
+app.put('/api/admin/event/:eventId/status', authenticateToken, authenticateAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const { status, comment } = req.body;
+    
+    if (!eventId) {
+      return res.status(400).json({ error: 'Event ID is required' });
+    }
+    
+    if (!status || !['Approved', 'Rejected', 'Request Edit', 'pending'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required (Approved, Rejected, Request Edit, or pending)' });
+    }
+    
+    await client.query('BEGIN');
+    
+    // Update the event status in the database
+    const updateResult = await client.query(
+      'UPDATE events SET status = $1, admin_comment = $2 WHERE event_id = $3 RETURNING *',
+      [status, comment || null, eventId]
+    );
+    
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    await client.query('COMMIT');
+    
+    res.status(200).json({
+      message: `Event status updated to ${status}`,
+      event: updateResult.rows[0]
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error updating event status:', err);
+    res.status(500).json({ error: 'Failed to update event status', details: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Get users who have events
+app.get('/api/users-with-events', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const query = `
+      SELECT 
+        up.user_id, 
+        up.firstname, 
+        up.surname, 
+        up.email, 
+        e.name as event_name, 
+        e.startdate 
+      FROM 
+        user_profiles up 
+      INNER JOIN 
+        events e ON up.user_id = e.user_id
+    `;
+    const result = await client.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching users with events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// Get all customers
+app.get('/api/customers', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const query = `
+      SELECT 
+        up.user_id, 
+        up.firstname, 
+        up.surname, 
+        up.email, 
+        up.phone_number,
+        up.created_at
+      FROM 
+        user_profiles up 
+      WHERE 
+        up.role = 'customer'
+      ORDER BY 
+        up.created_at DESC
+    `;
+    const result = await client.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// Get all payments
+app.get('/api/payments', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const query = `
+      SELECT 
+        p.payment_id, 
+        p.event_id, 
+        p.amount, 
+        p.payment_date,
+        p.payment_status,
+        e.name as event_name,
+        up.firstname,
+        up.surname,
+        up.email
+      FROM 
+        payments p
+      INNER JOIN
+        events e ON p.event_id = e.event_id
+      INNER JOIN
+        user_profiles up ON e.user_id = up.user_id
+      ORDER BY 
+        p.payment_date DESC
+    `;
+    const result = await client.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// Get user profile by ID
+app.get('/api/user-profile/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const client = await pool.connect();
+  try {
+    const query = `
+      SELECT 
+        up.*, 
+        f.faculty_name, 
+        d.department_name 
+      FROM 
+        user_profiles up 
+      LEFT JOIN 
+        faculties f ON up.faculty_id = f.faculty_id 
+      LEFT JOIN 
+        departments d ON up.department_id = d.department_id 
+      WHERE 
+        up.user_id = $1
+    `;
+    const result = await client.query(query, [userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// Get events by user ID
+app.get('/api/user-events/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const client = await pool.connect();
+  try {
+    const query = `
+      SELECT * FROM events WHERE user_id = $1
+    `;
+    const result = await client.query(query, [userId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// Get payment by event ID
+app.get('/api/event-payment/:eventId', async (req, res) => {
+  const { eventId } = req.params;
+  const client = await pool.connect();
+  try {
+    const query = `
+      SELECT * FROM payments WHERE event_id = $1
+    `;
+    const result = await client.query(query, [eventId]);
+    if (result.rows.length === 0) {
+      return res.json({ amount: null });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching event payment:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 });
 

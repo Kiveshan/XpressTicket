@@ -1,56 +1,103 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../Customer/InformationForm.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios'; // Make sure axios is installed with npm install axios
 
 const ViewingOrganiser = () => {
   const nav = useNavigate();
-
-  // Initialize formData with default values
-  const [formData] = useState({
-    name: 'John Doe',
-    title: 'Mr',
-    dropdown: 'Mr',
-    email: 'johndoe@example.com',
-    cellNumber: '123-456-7890',
-    institutionLocation: 'New York University',
-    faculty: 'Engineering',
-    department: 'Computer Science',
-    ieeeNumber: '123456789',
-    organVAT: '987654321'
+  const location = useLocation();
+  const userId = location.state?.userId;
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    title: '',
+    dropdown: '',
+    email: '',
+    cellNumber: '',
+    institutionLocation: '',
+    faculty: '',
+    department: '',
+    ieeeNumber: '',
+    organVAT: ''
   });
+  
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sample data for events hosted by the organiser
-  const events = [
-    {
-      id: 1,
-      eventName: 'Tech Summit 2023',
-      date: '2023-05-15',
-      amount: 'R50,000',
-      createdAt: '2023-04-01',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      eventName: 'Music Festival',
-      date: '2023-06-20',
-      amount: 'R30,000',
-      createdAt: '2023-05-10',
-      status: 'Inactive'
-    },
-    {
-      id: 3,
-      eventName: 'Art Expo',
-      date: '2023-07-10',
-      amount: 'R20,000',
-      createdAt: '2023-06-01',
-      status: 'Active'
+  useEffect(() => {
+    // Define the API base URL
+    const API_BASE_URL = 'http://localhost:5000'; // Server is running on port 5000
+    
+    const fetchUserData = async () => {
+      try {
+        // Fetch user profile data
+        const userResponse = await axios.get(`${API_BASE_URL}/api/user-profile/${userId}`);
+        const userData = userResponse.data;
+        
+        setFormData({
+          name: `${userData.firstname} ${userData.surname}`,
+          title: userData.title || '',
+          dropdown: userData.title || '',
+          email: userData.email,
+          cellNumber: userData.cellnumber,
+          institutionLocation: userData.institution,
+          faculty: userData.faculty_name,
+          department: userData.department_name,
+          ieeeNumber: userData.ieee_no,
+          organVAT: userData.vat_no
+        });
+        
+        // Fetch events hosted by this user
+        const eventsResponse = await axios.get(`${API_BASE_URL}/api/user-events/${userId}`);
+        const eventsData = eventsResponse.data;
+        
+        // For each event, get the payment amount
+        const eventsWithPayments = await Promise.all(eventsData.map(async (event) => {
+          try {
+            const paymentResponse = await axios.get(`${API_BASE_URL}/api/event-payment/${event.event_id}`);
+            const paymentData = paymentResponse.data;
+            return {
+              id: event.event_id,
+              eventName: event.name,
+              date: event.startdate,
+              amount: paymentData.amount ? `R${paymentData.amount}` : 'N/A',
+              status: event.status
+            };
+          } catch (error) {
+            console.error(`Error fetching payment for event ${event.event_id}:`, error);
+            return {
+              id: event.event_id,
+              eventName: event.name,
+              date: event.startdate,
+              amount: 'N/A',
+              status: event.status
+            };
+          }
+        }));
+        
+        setEvents(eventsWithPayments);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setLoading(false);
+      }
+    };
+    
+    if (userId) {
+      fetchUserData();
+    } else {
+      nav('/users');
     }
-  ];
+  }, [userId, nav]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <>
-     <br />
-                <div className="back-button-container1">
+      <br />
+      <div className="back-button-container1">
         <button className="backbutton20" onClick={() => nav("/users")}>
           Back
         </button>
@@ -170,7 +217,6 @@ const ViewingOrganiser = () => {
               <th>Event Name</th>
               <th>Date</th>
               <th>Amount</th>
-              <th>Created At</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -180,7 +226,6 @@ const ViewingOrganiser = () => {
                 <td>{event.eventName}</td>
                 <td>{event.date}</td>
                 <td>{event.amount}</td>
-                <td>{event.createdAt}</td>
                 <td>{event.status}</td>
               </tr>
             ))}
