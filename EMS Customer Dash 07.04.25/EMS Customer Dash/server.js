@@ -49,9 +49,10 @@ const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'ems2.0',
-  password: '1234567890',
-  port: 5432,
-});
+  password: '123456',
+  port: 5433,
+})
+
 
 // Test database connection
 pool.connect((err, client, release) => {
@@ -264,7 +265,7 @@ const upload = multer({
       cb(new Error('Invalid file type. Only JPEG, PNG, and PDF are allowed.'));
     }
   }
-}); 
+});
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
@@ -272,13 +273,17 @@ const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
+    console.log('No token provided in request');
     return res.status(401).json({ error: 'No token provided' });
   }
 
+  console.log('Verifying token:', token.substring(0, 10) + '...');
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
+      console.error('Token verification failed:', err.message);
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
+    console.log('Token verified, user:', user);
     req.user = user;
     next();
   });
@@ -506,7 +511,7 @@ async function generatePresignedUrl(key) {
 
 
 
-
+// create event 
 app.post('/api/events', authenticateToken, upload.fields([
   { name: 'cover_image', maxCount: 1 },
   { name: 'proof_of_payment', maxCount: 1 },
@@ -1006,30 +1011,28 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
 
 
 //Get all the events for the logged in user 
-app.get('/api/admin/events', authenticateToken, async (req, res) => {
+// Get all events for the logged-in user
+// Get all events (user/admin)
+app.get('/api/events', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
-    const { role } = req.user;
+    const { userId, role } = req.user;
 
-    if (role !== 'Admin') {
-      return res.status(403).json({ error: 'Access denied. Admins only.' });
-    }
-
-    const query = `
+    let query = `
       SELECT 
-        e.event_id AS id,
-        e.name AS event_name,
+        e.event_id as id,
+        e.name,
         e.description,
         e.terms_and_conditions,
         e.location,
-        e.startdate AS start_date,
-        e.enddate AS end_date,
-        e.time AS start_time,
-        e.endtime AS end_time,
+        e.startdate as start_date,
+        e.enddate as end_date,
+        e.time as start_time,
+        e.endtime as end_time,
         e.duration,
-        e.deadlinetime AS registration_deadline_time,
-        e.deadlinedate AS registration_deadline_date,
-        e.type AS event_type,
+        e.deadlinetime as registration_deadline_time,
+        e.deadlinedate as registration_deadline_date,
+        e.type as event_type,
         e.capacity,
         e.attendees,
         e.contactnum,
@@ -1038,69 +1041,91 @@ app.get('/api/admin/events', authenticateToken, async (req, res) => {
         e.tabs,
         e.packages,
         e.status,
-        e.admin_comment,
-        up.firstname AS organizer_first_name,
-        up.surname AS organizer_last_name,
-        up.email AS organizer_email,
-        up.cellnumber AS organizer_phone
+        p.amount as paid_amount,
+        p.payment_type,
+        p.proof_of_payment as payment_proof_key
       FROM events e
-      LEFT JOIN user_profiles up ON e.user_id = up.user_id
-      ORDER BY e.startdate DESC, e.time DESC
+      LEFT JOIN payments p ON e.event_id = p.event_id
     `;
 
-    const result = await client.query(query);
+    let queryParams = [];
 
-    const events = await Promise.all(result.rows.map(async (event) => {
+    if (role !== 'Admin') {
+      query += ` WHERE e.user_id = $1`;
+      queryParams.push(userId);
+    }
+
+    query += ` ORDER BY e.startdate DESC, e.time DESC`;
+
+    console.log('Fetching events for userId:', userId, 'role:', role);
+    console.log('Query:', query);
+    console.log('Params:', queryParams);
+
+    const result = await client.query(query, queryParams);
+
+    const eventsWithPresignedUrls = await Promise.all(result.rows.map(async (event) => {
       let coverImageUrl = '/default-profile-picture.jpg';
+      let proofOfPaymentUrl = null;
 
       if (event.coverimage) {
         const coverKey = event.coverimage.split('/').slice(3).join('/');
         try {
           coverImageUrl = await generatePresignedUrl(coverKey);
         } catch (e) {
-          console.warn(`Failed to sign cover image for event ${event.id}`, e);
+          console.warn('Failed to generate signed URL for cover image:', e);
         }
       }
 
-      // Parse tabs and packages
-      const parsedTabs = event.tabs?.map(tab => {
+      if (event.payment_proof_key) {
+        const proofKey = event.payment_proof_key.split('/').slice(3).join('/');
+        try {
+          proofOfPaymentUrl = await generatePresignedUrl(proofKey);
+        } catch (e) {
+          console.warn('Failed to generate signed URL for proof of payment:', e);
+        }
+      }
+
+      const parsedTabs = event.tabs ? event.tabs.map(tab => {
         try {
           return JSON.parse(tab);
-        } catch {
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e);
           return {};
         }
-      }) || [];
+      }) : [];
 
-      const parsedPackages = event.packages?.map(pkg => {
+      const parsedPackages = event.packages ? event.packages.map(pkg => {
         try {
           return JSON.parse(pkg);
-        } catch {
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e);
           return {};
         }
-      }) || [];
+      }) : [];
 
       return {
         ...event,
         coverimage: coverImageUrl,
+        payment_proof_url: proofOfPaymentUrl,
         tabs: parsedTabs,
-        packages: parsedPackages,
-        organizer: {
-          name: `${event.organizer_first_name || ''} ${event.organizer_last_name || ''}`.trim(),
-          email: event.organizer_email || 'N/A',
-          phone: event.organizer_phone || 'N/A',
-        }
+        packages: parsedPackages
       };
     }));
 
-    res.json(events);
-  } catch (err) {
-    console.error('Admin event fetch failed:', err);
-    res.status(500).json({ error: 'Failed to fetch events for admin.' });
+    console.log('Events fetched:', eventsWithPresignedUrls);
+    res.json(eventsWithPresignedUrls);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({
+      error: 'Failed to fetch events',
+      details: error.message
+    });
   } finally {
     client.release();
   }
 });
-// Get event by ID
+
+// Get single event by ID
 app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -1163,7 +1188,6 @@ app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
 
     const event = result.rows[0];
 
-    // Generate presigned URLs
     let coverImageUrl = '/default-profile-picture.jpg';
     let proofOfPaymentUrl = null;
 
@@ -1189,7 +1213,6 @@ app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
       }
     }
 
-    // Parse tabs and packages
     event.tabs = event.tabs ? event.tabs.map(tab => {
       try {
         return JSON.parse(tab);
@@ -1198,6 +1221,7 @@ app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
         return {};
       }
     }) : [];
+
     event.packages = event.packages ? event.packages.map(pkg => {
       try {
         return JSON.parse(pkg);
@@ -1207,7 +1231,6 @@ app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
       }
     }) : [];
 
-    // Format sponsor data
     event.sponsor = {
       name: `${event.organizer_first_name || ''} ${event.organizer_last_name || ''}`.trim(),
       phone: event.organizer_phone || 'N/A',
@@ -1230,6 +1253,11 @@ app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
     client.release();
   }
 });
+
+
+
+
+
 
 // Admin routes
 // Get all events for admin (all users' events)
@@ -1312,24 +1340,24 @@ app.get("/api/admin/events", authenticateToken, async (req, res) => {
 
         const parsedTabs = event.tabs
           ? event.tabs.map((tab) => {
-              try {
-                return JSON.parse(tab);
-              } catch (e) {
-                console.warn(`Failed to parse tab: ${tab}`, e);
-                return {};
-              }
-            })
+            try {
+              return JSON.parse(tab);
+            } catch (e) {
+              console.warn(`Failed to parse tab: ${tab}`, e);
+              return {};
+            }
+          })
           : [];
 
         const parsedPackages = event.packages
           ? event.packages.map((pkg) => {
-              try {
-                return JSON.parse(pkg);
-              } catch (e) {
-                console.warn(`Failed to parse package: ${pkg}`, e);
-                return {};
-              }
-            })
+            try {
+              return JSON.parse(pkg);
+            } catch (e) {
+              console.warn(`Failed to parse package: ${pkg}`, e);
+              return {};
+            }
+          })
           : [];
 
         return {
@@ -1478,24 +1506,24 @@ app.get("/api/admin/events/:eventId", authenticateToken, async (req, res) => {
     // Parse tabs and packages
     event.tabs = event.tabs
       ? event.tabs.map((tab) => {
-          try {
-            return JSON.parse(tab)
-          } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e)
-            return {}
-          }
-        })
+        try {
+          return JSON.parse(tab)
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e)
+          return {}
+        }
+      })
       : []
 
     event.packages = event.packages
       ? event.packages.map((pkg) => {
-          try {
-            return JSON.parse(pkg)
-          } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e)
-            return {}
-          }
-        })
+        try {
+          return JSON.parse(pkg)
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e)
+          return {}
+        }
+      })
       : []
 
     // Format organizer data
@@ -1633,11 +1661,11 @@ app.get('/api/admin/event/:eventId/proof-of-payment', authenticateToken, authent
       'SELECT proof_of_payment FROM payments WHERE event_id = $1',
       [eventId]
     );
-    
+
     if (result.rows.length === 0 || !result.rows[0].proof_of_payment) {
       return res.status(404).json({ error: 'Proof of payment not found' });
     }
-    
+
     res.status(200).json({ url: result.rows[0].proof_of_payment });
   } catch (err) {
     console.error('Error fetching proof of payment:', err);
@@ -1653,30 +1681,30 @@ app.put('/api/admin/event/:eventId/status', authenticateToken, authenticateAdmin
   try {
     const { eventId } = req.params;
     const { status, comment } = req.body;
-    
+
     if (!eventId) {
       return res.status(400).json({ error: 'Event ID is required' });
     }
-    
+
     if (!status || !['Approved', 'Rejected', 'Request Edit', 'pending'].includes(status)) {
       return res.status(400).json({ error: 'Valid status is required (Approved, Rejected, Request Edit, or pending)' });
     }
-    
+
     await client.query('BEGIN');
-    
+
     // Update the event status in the database
     const updateResult = await client.query(
       'UPDATE events SET status = $1, admin_comment = $2 WHERE event_id = $3 RETURNING *',
       [status, comment || null, eventId]
     );
-    
+
     if (updateResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Event not found' });
     }
-    
+
     await client.query('COMMIT');
-    
+
     res.status(200).json({
       message: `Event status updated to ${status}`,
       event: updateResult.rows[0]
