@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import './Form.css';
 
 function Form() {
@@ -8,32 +8,15 @@ function Form() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const nav = useNavigate();
-  const location = useLocation();
-
-  // Email validation regex: Ensures format like username@domain.com
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  // Check for registration success state
-  useEffect(() => {
-    if (location.state?.registrationSuccess) {
-      setSuccessMessage("Registration successful! Please log in.");
-      setIsLogin(true); // Ensure login form is shown
-    }
-  }, [location.state]);
 
   const handleToggle = () => {
     setIsLogin(!isLogin);
     setErrorMessage("");
-    setSuccessMessage("");
     setUsername("");
     setPassword("");
     setConfirmPassword("");
   };
-
-  // Validate email format
-  const isValidEmail = (email) => emailRegex.test(email.toLowerCase());
 
   // Handle user/admin login
   const handleLogin = async (e) => {
@@ -44,21 +27,15 @@ function Form() {
       return;
     }
 
-    if (!isValidEmail(username)) {
-      setErrorMessage("Please enter a valid email address (e.g., example@domain.com).");
-      return;
-    }
-
-    const loginData = { email: username.toLowerCase(), password };
+    const loginData = { email: username, password };
 
     try {
-      // Hardcoded admin credentials
+      // Check if admin credentials
       const ADMIN_EMAIL = 'admin@eventxpress.com';
       const ADMIN_PASSWORD = 'admin123';
 
-      // Determine the login endpoint based on credentials
       let url = 'http://localhost:5000/api/login';
-      if (username.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      if (username === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
         url = 'http://localhost:5000/api/admin/login';
       }
 
@@ -74,12 +51,15 @@ function Form() {
 
       if (response.ok) {
         // Store user and token in sessionStorage
-        sessionStorage.setItem('token', data.token);
-        sessionStorage.setItem('user', JSON.stringify(data.user));
         sessionStorage.setItem('userId', data.user.id);
-
-        // Redirect based on user role
-        if (data.user.role === 'Admin' || data.user.isAdmin) {
+        sessionStorage.setItem('user', JSON.stringify(data.user));
+        sessionStorage.setItem('token', data.token);
+        
+        // Check user role and redirect accordingly
+        if (data.user.role === 'Admin') {
+          nav('/admin-dash');
+        } else if (data.user.isAdmin) {
+          // Keep backward compatibility with the existing isAdmin check
           nav('/admin-dash');
         } else {
           nav('/mainmenu');
@@ -98,32 +78,24 @@ function Form() {
     e.preventDefault();
 
     if (!username || !password || password !== confirmPassword) {
-      setErrorMessage("Please fill in all fields and ensure passwords match.");
       return;
     }
 
-    if (!isValidEmail(username)) {
-      setErrorMessage("Please enter a valid email address (e.g., example@domain.com).");
-      return;
-    }
-
-    // Store registration data in lowercase
-    sessionStorage.setItem("reg_email", username.toLowerCase());
+    // Store registration data (for next step in flow)
+    sessionStorage.setItem("reg_email", username);
     sessionStorage.setItem("reg_password", password);
     nav('/information-form');
   };
 
-  // Disable register button if fields are invalid
-  const isRegisterButtonDisabled = !username || !password || password !== confirmPassword || !isValidEmail(username);
+  const isRegisterButtonDisabled = !username || !password || password !== confirmPassword;
 
   return (
     <div className="auth-container">
-      <div className="left-sided">
+      <div className="left-side">
         <div className="form-card">
           {isLogin ? (
             <>
               <h1 className="form-title">Login</h1>
-              {successMessage && <p className="success-message">{successMessage}</p>}
               <form className="form" onSubmit={handleLogin}>
                 <div className="form-group">
                   <label>Email</label>
@@ -131,7 +103,7 @@ function Form() {
                     type="email"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="example.email@domain.com"
+                    placeholder="example.email@gmail.com"
                   />
                 </div>
                 <div className="form-group">
@@ -147,7 +119,7 @@ function Form() {
                 <button type="submit" className="submit-button">Log In</button>
               </form>
               <p className="toggle-text">
-                Click <span onClick={handleToggle} className="toggle-link">Register</span> if you don't have an account.
+                Click <span onClick={handleToggle} className="toggle-link">Register</span> if you do have Account.
               </p>
             </>
           ) : (
@@ -160,7 +132,7 @@ function Form() {
                     type="email"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="example.email@domain.com"
+                    placeholder="example.email@gmail.com"
                   />
                 </div>
                 <div className="form-group">

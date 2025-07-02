@@ -1,27 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './SystemUsers.css'; // <-- External CSS
+import axios from 'axios';
+import './SystemUsers.css';
 
 const SystemUsers = () => {
   const nav = useNavigate();
-  const [activeTable, setActiveTable] = useState('Payment');
+  const [activeTable, setActiveTable] = useState('Organiser');
+  const [organisers, setOrganisers] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const organisers = [
-    { id: 1, name: 'Alice Johnson', email: 'alice@example.com', event: 'Tech Summit', createdAt: '2023-03-01' },
-    { id: 2, name: 'Bob Williams', email: 'bob@example.com', event: 'Music Festival', createdAt: '2023-04-01' },
-  ];
+  useEffect(() => {
+    // Define the API base URL
+    const API_BASE_URL = 'http://localhost:5000'; // Server is running on port 5000
+    
+    // Fetch organizers with events
+    const fetchOrganisers = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/users-with-events`);
+        // Ensure response.data is an array
+        if (Array.isArray(response.data)) {
+          setOrganisers(response.data);
+        } else {
+          console.error('API response is not an array:', response.data);
+          setOrganisers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching organisers:', error);
+        setOrganisers([]);
+      }
+    };
 
-  const customers = [
-    { id: 1, name: 'Charlie Brown', email: 'charlie@example.com', event: 'Art Expo', createdAt: '2023-05-01' },
-    { id: 2, name: 'Diana Prince', email: 'diana@example.com', event: 'Food Fair', createdAt: '2023-06-01' },
-  ];
+    // Fetch customers
+    const fetchCustomers = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/customers`);
+        // Ensure response.data is an array
+        if (Array.isArray(response.data)) {
+          setCustomers(response.data);
+        } else {
+          console.error('API response is not an array:', response.data);
+          setCustomers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        setCustomers([]);
+      }
+    };
 
-  const payments = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', event: 'ICTAS International Conference', amount: 'R50 000', createdAt: '2023-01-01' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', event: 'Pool Party', amount: 'R20 000', createdAt: '2023-02-01' },
-  ];
+    // Fetch payments
+    const fetchPayments = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/payments`);
+        // Ensure response.data is an array
+        if (Array.isArray(response.data)) {
+          setPayments(response.data);
+        } else {
+          console.error('API response is not an array:', response.data);
+          setPayments([]);
+        }
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+        setPayments([]);
+      }
+    };
+
+    fetchOrganisers();
+    fetchCustomers();
+    fetchPayments();
+    setLoading(false);
+  }, []);
 
   const renderTable = () => {
+    if (loading) {
+      return <div>Loading...</div>;
+    }
+
     if (activeTable === 'Organiser') {
       return (
         <table className="package-table">
@@ -30,22 +85,22 @@ const SystemUsers = () => {
               <th>Organiser Name</th>
               <th>Email</th>
               <th>Event</th>
-              <th>Created At</th>
+              <th>DATE OF EVENT</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {organisers.map((organiser) => (
-              <tr key={organiser.id}>
-                <td>{organiser.name}</td>
+            {Array.isArray(organisers) && organisers.length > 0 ? organisers.map((organiser) => (
+              <tr key={organiser.user_id}>
+                <td>{`${organiser.firstname} ${organiser.surname}`}</td>
                 <td>{organiser.email}</td>
-                <td>{organiser.event}</td>
-                <td>{organiser.createdAt}</td>
+                <td>{organiser.event_name}</td>
+                <td>{organiser.startdate}</td>
                 <td>
-                  <button onClick={() => nav('/viewingorganiser')}>View</button>
+                  <button onClick={() => nav('/viewingorganiser', { state: { userId: organiser.user_id } })}>View</button>
                 </td>
               </tr>
-            ))}
+            )) : <tr><td colSpan="5">No organizers found</td></tr>}
           </tbody>
         </table>
       );
@@ -61,16 +116,16 @@ const SystemUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {customers.map((customer) => (
-              <tr key={customer.id}>
-                <td>{customer.name}</td>
+            {Array.isArray(customers) && customers.length > 0 ? customers.map((customer) => (
+              <tr key={customer.user_id}>
+                <td>{`${customer.firstname} ${customer.surname}`}</td>
                 <td>{customer.email}</td>
-                <td>{customer.createdAt}</td>
+                <td>{customer.created_at}</td>
                 <td>
                   <button onClick={() => nav('/viewingcustomer')}>View</button>
                 </td>
               </tr>
-            ))}
+            )) : <tr><td colSpan="4">No customers found</td></tr>}
           </tbody>
         </table>
       );
@@ -88,18 +143,18 @@ const SystemUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {payments.map((payment) => (
-              <tr key={payment.id}>
-                <td>{payment.name}</td>
+            {Array.isArray(payments) && payments.length > 0 ? payments.map((payment) => (
+              <tr key={payment.payment_id}>
+                <td>{`${payment.firstname} ${payment.surname}`}</td>
                 <td>{payment.email}</td>
-                <td>{payment.event}</td>
+                <td>{payment.event_name}</td>
                 <td>{payment.amount}</td>
-                <td>{payment.createdAt}</td>
+                <td>{payment.payment_date}</td>
                 <td>
                   <button onClick={() => alert(`Viewing details for ${payment.name}`)}>View</button>
                 </td>
               </tr>
-            ))}
+            )) : <tr><td colSpan="6">No payments found</td></tr>}
           </tbody>
         </table>
       );
