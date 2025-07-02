@@ -53,7 +53,7 @@ const SystemUsers = () => {
     // Fetch payments
     const fetchPayments = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/payments`);
+        const response = await axios.get(`${API_BASE_URL}/api/payments-with-user-names`);
         // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setPayments(response.data);
@@ -135,11 +135,8 @@ const SystemUsers = () => {
         <table className="package-table">
           <thead>
             <tr>
-              <th>Purchaser Name</th>
-              <th>Email</th>
-              <th>Event</th>
+              <th>Full Name</th>
               <th>Amount</th>
-              <th>Created At</th>
               <th>Proof of Payment</th>
             </tr>
           </thead>
@@ -147,15 +144,12 @@ const SystemUsers = () => {
             {Array.isArray(payments) && payments.length > 0 ? payments.map((payment, index) => (
               <tr key={`payment-${payment.payment_id}-${index}`}>
                 <td>{`${payment.firstname} ${payment.surname}`}</td>
-                <td>{payment.email}</td>
-                <td>{payment.event_name}</td>
                 <td>{payment.amount}</td>
-                <td>{payment.payment_date}</td>
                 <td>
-                  <button onClick={() => alert(`Viewing details for ${payment.firstname} ${payment.surname}`)}>View</button>
+                  <button onClick={() => alert(`Viewing proof of payment for ${payment.firstname} ${payment.surname}`)}>View</button>
                 </td>
               </tr>
-            )) : <tr key="no-payments"><td colSpan="6">No payments found</td></tr>}
+            )) : <tr key="no-payments"><td colSpan="3">No payments found</td></tr>}
           </tbody>
         </table>
       );

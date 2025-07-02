@@ -15,7 +15,14 @@ const port = 5000;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: function(origin, callback) {
+    const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -1930,6 +1937,35 @@ app.get('/api/payments', async (req, res) => {
   } catch (error) {
     console.error('Error fetching payments:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API endpoint to fetch payments with user full names
+app.get('/api/payments-with-user-names', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const query = `
+      SELECT 
+        p.payment_id, 
+        p.amount, 
+        p.proof_of_payment,
+        p.event_id,
+        e.name as event_name,
+        u.firstname,
+        u.surname
+      FROM 
+        payments p
+      JOIN 
+        events e ON p.event_id = e.event_id
+      JOIN 
+        user_profiles u ON e.user_id = u.user_id
+    `;
+    const result = await client.query(query);
+    client.release();
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ error: 'Failed to fetch payments' });
   }
 });
 
