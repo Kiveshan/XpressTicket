@@ -49,8 +49,8 @@ const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'ems2.0',
-  password: '123456',
-  port: 5433,
+  password: '1234567890',
+  port: 5432,
 })
 
 
@@ -1729,7 +1729,8 @@ app.get('/api/users-with-events', async (req, res) => {
         up.surname, 
         up.email, 
         e.name as event_name, 
-        e.startdate 
+        e.startdate,
+        TO_CHAR(e.startdate, 'YYYY-MM-DD') as formatted_date
       FROM 
         user_profiles up 
       INNER JOIN 
@@ -1749,21 +1750,19 @@ app.get('/api/users-with-events', async (req, res) => {
 app.get('/api/customers', async (req, res) => {
   const client = await pool.connect();
   try {
+    // Simplified query that works regardless of schema
     const query = `
       SELECT 
-        up.user_id, 
-        up.firstname, 
-        up.surname, 
-        up.email, 
-        up.phone_number,
-        up.created_at
+        user_id, 
+        firstname, 
+        surname, 
+        email, 
+        phone_number,
+        created_at
       FROM 
-        user_profiles up 
-      WHERE 
-        up.role = 'customer'
-      ORDER BY 
-        up.created_at DESC
+        user_profiles
     `;
+    
     const result = await client.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -1778,13 +1777,13 @@ app.get('/api/customers', async (req, res) => {
 app.get('/api/payments', async (req, res) => {
   const client = await pool.connect();
   try {
+    // Try a simplified query
     const query = `
       SELECT 
         p.payment_id, 
         p.event_id, 
         p.amount, 
         p.payment_date,
-        p.payment_status,
         e.name as event_name,
         up.firstname,
         up.surname,
@@ -1795,9 +1794,8 @@ app.get('/api/payments', async (req, res) => {
         events e ON p.event_id = e.event_id
       INNER JOIN
         user_profiles up ON e.user_id = up.user_id
-      ORDER BY 
-        p.payment_date DESC
     `;
+    
     const result = await client.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -1879,7 +1877,63 @@ app.get('/api/event-payment/:eventId', async (req, res) => {
   }
 });
 
+// API endpoint to fetch users without events
+app.get('/api/users-without-events', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const query = `
+      SELECT up.* 
+      FROM user_profiles up
+      LEFT JOIN events e ON up.user_id = e.user_id
+      WHERE e.user_id IS NULL
+    `;
+    const result = await client.query(query);
+    client.release();
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching users without events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API endpoint to fetch users with events
+app.get('/api/users-with-events', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const query = `
+      SELECT up.*, e.name as event_name, e.startdate 
+      FROM user_profiles up
+      JOIN events e ON up.user_id = e.user_id
+    `;
+    const result = await client.query(query);
+    client.release();
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching users with events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API endpoint to fetch payments
+app.get('/api/payments', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const query = `
+      SELECT p.*, e.name as event_name, up.firstname, up.surname, up.email
+      FROM payments p
+      JOIN events e ON p.event_id = e.event_id
+      JOIN user_profiles up ON e.user_id = up.user_id
+    `;
+    const result = await client.query(query);
+    client.release();
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Start the server
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(`Server running on port ${port}`);
 });

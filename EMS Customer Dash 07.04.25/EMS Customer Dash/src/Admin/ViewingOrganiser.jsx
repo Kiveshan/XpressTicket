@@ -60,6 +60,7 @@ const ViewingOrganiser = () => {
               id: event.event_id,
               eventName: event.name,
               date: event.startdate,
+              formattedDate: new Date(event.startdate).toLocaleDateString(),
               amount: paymentData.amount ? `R${paymentData.amount}` : 'N/A',
               status: event.status
             };
@@ -69,6 +70,7 @@ const ViewingOrganiser = () => {
               id: event.event_id,
               eventName: event.name,
               date: event.startdate,
+              formattedDate: new Date(event.startdate).toLocaleDateString(),
               amount: 'N/A',
               status: event.status
             };
@@ -224,7 +226,7 @@ const ViewingOrganiser = () => {
             {events.map((event) => (
               <tr key={event.id}>
                 <td>{event.eventName}</td>
-                <td>{event.date}</td>
+                <td>{event.formattedDate || new Date(event.date).toLocaleDateString()}</td>
                 <td>{event.amount}</td>
                 <td>{event.status}</td>
               </tr>
