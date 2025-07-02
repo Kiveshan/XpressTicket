@@ -6,6 +6,7 @@ import './SystemUsers.css';
 const SystemUsers = () => {
   const nav = useNavigate();
   const [activeTable, setActiveTable] = useState('Organiser');
+  const [generalUsers, setGeneralUsers] = useState([]);
   const [organisers, setOrganisers] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -32,20 +33,20 @@ const SystemUsers = () => {
       }
     };
 
-    // Fetch customers
-    const fetchCustomers = async () => {
+    // Fetch general users (users without events)
+    const fetchGeneralUsers = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/customers`);
+        const response = await axios.get(`${API_BASE_URL}/api/users-without-events`);
         // Ensure response.data is an array
         if (Array.isArray(response.data)) {
-          setCustomers(response.data);
+          setGeneralUsers(response.data);
         } else {
           console.error('API response is not an array:', response.data);
-          setCustomers([]);
+          setGeneralUsers([]);
         }
       } catch (error) {
-        console.error('Error fetching customers:', error);
-        setCustomers([]);
+        console.error('Error fetching general users:', error);
+        setGeneralUsers([]);
       }
     };
 
@@ -67,7 +68,7 @@ const SystemUsers = () => {
     };
 
     fetchOrganisers();
-    fetchCustomers();
+    fetchGeneralUsers();
     fetchPayments();
     setLoading(false);
   }, []);
@@ -90,42 +91,42 @@ const SystemUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {Array.isArray(organisers) && organisers.length > 0 ? organisers.map((organiser) => (
-              <tr key={organiser.user_id}>
+            {Array.isArray(organisers) && organisers.length > 0 ? organisers.map((organiser, index) => (
+              <tr key={`organiser-${organiser.user_id}-${index}`}>
                 <td>{`${organiser.firstname} ${organiser.surname}`}</td>
                 <td>{organiser.email}</td>
                 <td>{organiser.event_name}</td>
-                <td>{organiser.startdate}</td>
+                <td>{organiser.formatted_date || new Date(organiser.startdate).toLocaleDateString()}</td>
                 <td>
                   <button onClick={() => nav('/viewingorganiser', { state: { userId: organiser.user_id } })}>View</button>
                 </td>
               </tr>
-            )) : <tr><td colSpan="5">No organizers found</td></tr>}
+            )) : <tr key="no-organisers"><td colSpan="5">No organizers found</td></tr>}
           </tbody>
         </table>
       );
-    } else if (activeTable === 'Customer') {
+    } else if (activeTable === 'General Users') {
       return (
         <table className="package-table">
           <thead>
             <tr>
               <th>Customer Name</th>
               <th>Email</th>
-              <th>Created At</th>
+              <th>Role</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {Array.isArray(customers) && customers.length > 0 ? customers.map((customer) => (
-              <tr key={customer.user_id}>
-                <td>{`${customer.firstname} ${customer.surname}`}</td>
-                <td>{customer.email}</td>
-                <td>{customer.created_at}</td>
+            {Array.isArray(generalUsers) && generalUsers.length > 0 ? generalUsers.map((user, index) => (
+              <tr key={`user-${user.user_id}-${index}`}>
+                <td>{`${user.firstname} ${user.surname}`}</td>
+                <td>{user.email}</td>
+                <td>{user.role}</td>
                 <td>
-                  <button onClick={() => nav('/viewingcustomer')}>View</button>
+                  <button onClick={() => nav('/viewingcustomer', { state: { userId: user.user_id } })}>View</button>
                 </td>
               </tr>
-            )) : <tr><td colSpan="4">No customers found</td></tr>}
+            )) : <tr key="no-users"><td colSpan="4">No general users found</td></tr>}
           </tbody>
         </table>
       );
@@ -143,18 +144,18 @@ const SystemUsers = () => {
             </tr>
           </thead>
           <tbody>
-            {Array.isArray(payments) && payments.length > 0 ? payments.map((payment) => (
-              <tr key={payment.payment_id}>
+            {Array.isArray(payments) && payments.length > 0 ? payments.map((payment, index) => (
+              <tr key={`payment-${payment.payment_id}-${index}`}>
                 <td>{`${payment.firstname} ${payment.surname}`}</td>
                 <td>{payment.email}</td>
                 <td>{payment.event_name}</td>
                 <td>{payment.amount}</td>
                 <td>{payment.payment_date}</td>
                 <td>
-                  <button onClick={() => alert(`Viewing details for ${payment.name}`)}>View</button>
+                  <button onClick={() => alert(`Viewing details for ${payment.firstname} ${payment.surname}`)}>View</button>
                 </td>
               </tr>
-            )) : <tr><td colSpan="6">No payments found</td></tr>}
+            )) : <tr key="no-payments"><td colSpan="6">No payments found</td></tr>}
           </tbody>
         </table>
       );
@@ -184,10 +185,10 @@ const SystemUsers = () => {
           Organiser
         </button>
         <button
-          className={`customer-button tab-button ${activeTable === 'Customer' ? 'active' : ''}`}
-          onClick={() => setActiveTable('Customer')}
+          className={`customer-button tab-button ${activeTable === 'General Users' ? 'active' : ''}`}
+          onClick={() => setActiveTable('General Users')}
         >
-          Customer
+          General Users
         </button>
         <button
           className={`payment-button tab-button ${activeTable === 'Payment' ? 'active' : ''}`}
