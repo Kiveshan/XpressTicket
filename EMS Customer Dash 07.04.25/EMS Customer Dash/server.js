@@ -1934,6 +1934,142 @@ app.get('/api/payments', async (req, res) => {
 });
 
 //payments org start
+app.get('/api/organiser/events', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { userId } = req.user;
+    const query = `
+      SELECT 
+        e.event_id,
+        e.name AS event_name,
+        COALESCE(COUNT(tp.purchase_id), 0) AS request_count
+      FROM events e
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.request_status = 'pending'
+      WHERE e.user_id = $1
+      GROUP BY e.event_id, e.name
+      ORDER BY e.event_id DESC
+    `;
+    const result = await client.query(query, [userId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({
+      error: 'Failed to fetch events',
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Get ticket purchase requests for a specific event
+app.get('/api/organiser/events/:eventId/ticket-requests', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const { userId } = req.user;
+
+    const query = `
+      SELECT 
+        tp.purchase_id,
+        tp.event_id,
+        tp.user_id,
+        tp.number_of_tickets,
+        tp.package,
+        tp.amount,
+        tp.proof_of_payment,
+        tp.request_status,
+        tp.delegate_details,
+        e.name as event_name,
+        up.firstname,
+        up.surname,
+        up.email
+      FROM ticket_purchases tp
+      JOIN events e ON tp.event_id = e.event_id
+      JOIN user_profiles up ON tp.user_id = up.user_id
+      WHERE e.event_id = $1 AND e.user_id = $2 AND tp.request_status = 'pending'
+      ORDER BY tp.purchase_id DESC
+    `;
+    const result = await client.query(query, [eventId, userId]);
+
+    const requestsWithUrls = await Promise.all(result.rows.map(async (request) => {
+      let proofOfPaymentUrl = null;
+      if (request.proof_of_payment) {
+        const proofKey = request.proof_of_payment.startsWith('http')
+          ? request.proof_of_payment.split('/').slice(3).join('/')
+          : request.proof_of_payment;
+        try {
+          proofOfPaymentUrl = await generatePresignedUrl(proofKey);
+        } catch (e) {
+          console.warn(`Failed to generate signed URL for proof of payment: ${proofKey}`, e);
+        }
+      }
+
+      return {
+        ...request,
+        proof_of_payment_url: proofOfPaymentUrl,
+        purchaser_name: `${request.firstname} ${request.surname}`.trim(),
+      };
+    }));
+
+    console.log('Fetched ticket requests for event:', eventId, 'Count:', requestsWithUrls.length);
+    res.json(requestsWithUrls);
+  } catch (error) {
+    console.error('Error fetching ticket requests:', error);
+    res.status(500).json({
+      error: 'Failed to fetch ticket requests',
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Update ticket purchase request status
+app.put('/api/organiser/ticket-requests/:purchaseId/status', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { purchaseId } = req.params;
+    const { userId } = req.user;
+    const { request_status } = req.body;
+
+    if (!request_status || !['Approved', 'Rejected', 'pending'].includes(request_status)) {
+      return res.status(400).json({ error: 'Valid request status is required (Approved, Rejected, or pending)' });
+    }
+
+    await client.query('BEGIN');
+
+    const query = `
+      UPDATE ticket_purchases
+      SET request_status = $1
+      FROM events e
+      WHERE ticket_purchases.purchase_id = $2 AND e.event_id = ticket_purchases.event_id AND e.user_id = $3
+      RETURNING ticket_purchases.*
+    `;
+    const result = await client.query(query, [request_status, purchaseId, userId]);
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Ticket purchase not found or access denied' });
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      message: `Ticket request status updated to ${request_status}`,
+      purchase: result.rows[0],
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating ticket request status:', error);
+    res.status(500).json({
+      error: 'Failed to update ticket request status',
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // Get all ticket purchases for organiser's events
 app.get('/api/organiser/ticket-purchases', authenticateToken, async (req, res) => {
   const client = await pool.connect();
@@ -1958,7 +2094,7 @@ app.get('/api/organiser/ticket-purchases', authenticateToken, async (req, res) =
       FROM ticket_purchases tp
       JOIN events e ON tp.event_id = e.event_id
       JOIN user_profiles up ON tp.user_id = up.user_id
-      WHERE e.user_id = $1
+      WHERE e.user_id = $1 AND tp.request_status = 'Approved'
       ORDER BY tp.purchase_id DESC
     `;
     const result = await client.query(query, [userId]);

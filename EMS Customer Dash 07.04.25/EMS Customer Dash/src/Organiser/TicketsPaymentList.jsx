@@ -21,7 +21,7 @@ const TicketPaymentList = () => {
         }
         const response = await fetch('http://localhost:5000/api/organiser/ticket-purchases', {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
         if (!response.ok) {
@@ -43,66 +43,66 @@ const TicketPaymentList = () => {
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="ticket-payment-list">
-      <div className="container">
-        <header className="dashboard-header1">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="dashboard-logo1"
-          />
-          <div className="profile-section">
-            Profile <span className="profile-icon">👤</span>
-          </div>
-        </header>
-
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => nav('/organiser-dash')}>
-            Back
+    <div className="container">
+      <header className="dashboard-header1">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="dashboard-logo1"
+        />
+        <div className="profile-section">
+          <button className="backbutton22" onClick={() => nav('/')}>
+            LogOut
           </button>
         </div>
-        <h2 className="section-title">Ticket Payments</h2>
-        <div className="table-container12">
-          <table>
-            <thead>
+      </header>
+
+      <div className="back-button-container1">
+        <button className="backbutton20" onClick={() => nav('/organiser-dash')}>
+          Back
+        </button>
+      </div>
+      <h2 className="section-title">Ticket Payments</h2>
+      <div className="table-container12">
+        <table>
+          <thead>
+            <tr>
+              <th>Purchaser Name</th>
+              <th>Number of Tickets</th>
+              <th>Event</th>
+              <th>Package</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {purchases.length === 0 ? (
               <tr>
-                <th>Purchaser Name</th>
-                <th>Number of Tickets</th>
-                <th>Event</th>
-                <th>Package</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Proof of Payment</th>
+                <td colSpan="7">No approved ticket purchases found</td>
               </tr>
-            </thead>
-            <tbody>
-              {purchases.length === 0 ? (
-                <tr>
-                  <td colSpan="7">No ticket purchases found</td>
+            ) : (
+              purchases.map((item) => (
+                <tr key={item.purchase_id}>
+                  <td>{item.purchaser_name}</td>
+                  <td>{item.number_of_tickets}</td>
+                  <td>{item.event_name}</td>
+                  <td>{item.package}</td>
+                  <td>R {Number(item.amount).toFixed(2)}</td>
+                  <td>{item.status}</td>
+                  <td>
+                    <button
+                      className="view-more"
+                      onClick={() => nav(`/ticketspayment/${item.purchase_id}`)}
+                    >
+                      View More
+                    </button>
+                  </td>
                 </tr>
-              ) : (
-                purchases.map((item) => (
-                  <tr key={item.purchase_id}>
-                    <td>{item.purchaser_name}</td>
-                    <td>{item.number_of_tickets}</td>
-                    <td>{item.event_name}</td>
-                    <td>{item.package}</td>
-                    <td>R {Number(item.amount).toFixed(2)}</td>
-                    <td>{item.status}</td>
-                    <td>
-                      <button
-                        className="view-more"
-                        onClick={() => nav(`/ticketspayment/${item.purchase_id}`)}
-                      >
-                        View More
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

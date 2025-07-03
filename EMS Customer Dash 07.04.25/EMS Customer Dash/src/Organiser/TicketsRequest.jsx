@@ -1,98 +1,156 @@
-import React from "react";
-import "./TicketsRequest.css";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import './TicketsRequest.css';
 
 function TicketsRequest() {
-  // Sample data for ticket requests
-  const ticketRequests = [
-    {
-      id: 1,
-      customerName: "John Doe",
+  const nav = useNavigate();
+  const { eventId } = useParams();
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-      tickets: 2,
-      proofOfPayment: "/proofs/john_doe_payment.pdf",
-    },
-    {
-      id: 2,
-      customerName: "Jane Smith",
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+          setError('No authentication token found. Please log in.');
+          setLoading(false);
+          nav('/');
+          return;
+        }
+        const response = await fetch(`http://localhost:5000/api/organiser/events/${eventId}/ticket-requests`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setRequests(data);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+    fetchRequests();
+  }, [eventId, nav]);
 
-      tickets: 4,
-      proofOfPayment: "/proofs/jane_smith_payment.pdf",
-    },
-    {
-      id: 3,
-      customerName: "Alice Johnson",
-     
-      tickets: 1,
-      proofOfPayment: "/proofs/alice_johnson_payment.pdf",
-    },
-    {
-      id: 4,
-      customerName: "Bob Williams",
-   
-      tickets: 3,
-      proofOfPayment: "/proofs/bob_williams_payment.pdf",
-    },
-  ];
-
-  // Function to handle viewing proof of payment
-  const handleViewProof = (proofUrl) => {
-    window.open(proofUrl, "_blank");
+  const handleStatusUpdate = async (purchaseId, request_status) => {
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found. Please log in.');
+        setLoading(false);
+        nav('/');
+        return;
+      }
+      const response = await fetch(`http://localhost:5000/api/organiser/ticket-requests/${purchaseId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ request_status }),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        alert(`Ticket request ${request_status} successfully`);
+        setRequests(requests.filter((req) => req.purchase_id !== purchaseId)); // Remove from local state
+        nav('/tickets-event-list'); // Navigate back to event list
+      } else {
+        alert(result.error);
+      }
+    } catch (error) {
+      console.error('Error updating request status:', error);
+      alert('Failed to update request status');
+    }
   };
 
-const nav = useNavigate(); // Initialize useNavigate for navigation
+  const handleViewProof = (proofUrl) => {
+    if (proofUrl) {
+      window.open(proofUrl, '_blank');
+    } else {
+      alert('No proof of payment available');
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="tickets-request-container">
-        <header className="dashboard-header1">
+      <header className="dashboard-header1">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
           className="dashboard-logo1"
         />
-         <div className="profile-section">
-              <button className="backbutton22" onClick={()=> nav('/')}>LogOut </button>
-          </div>
+        <div className="profile-section">
+          <button className="backbutton22" onClick={() => nav('/')}>
+            LogOut
+          </button>
+        </div>
       </header>
 
       <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/tickets-event-list")}>
+        <button className="backbutton20" onClick={() => nav('/tickets-event-list')}>
           Back
         </button>
       </div>
 
-      <h2 className="tickets-request-title">Tickets Request</h2>
-      <table className="tickets-request-table">
-        <thead>
-          <tr>
-            <th>Customer Name</th>
-            <th>Number of Tickets</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ticketRequests.map((request) => (
-            <tr key={request.id}>
-              <td>{request.customerName}</td>
-              <td>{request.tickets}</td>
-              <td>
-                <button
-                  className="view-proof-button"
-                  onClick={() => handleViewProof(request.proofOfPayment)}
-                >
-                  View Proof
-                </button>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                <button
-                  className="view-proof-button"
-                >
-                  Approve
-                </button>
-              </td>
+      <h2 className="tickets-request-title">Ticket Requests</h2>
+      <div className="tickets-request-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Purchaser Name</th>
+              <th>Number of Tickets</th>
+              <th>Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {requests.length === 0 ? (
+              <tr>
+                <td colSpan="3">No ticket requests found</td>
+              </tr>
+            ) : (
+              requests.map((request) => (
+                <tr key={request.purchase_id}>
+                  <td>{request.purchaser_name}</td>
+                  <td>{request.number_of_tickets}</td>
+                  <td>
+                    <button
+                      className="view-proof-button"
+                      onClick={() => handleViewProof(request.proof_of_payment_url)}
+                    >
+                      View Proof
+                    </button>
+                    {request.request_status === 'pending' && (
+                      <>
+                        <button
+                          className="view-proof-button"
+                          onClick={() => handleStatusUpdate(request.purchase_id, 'Approved')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="view-proof-button"
+                          onClick={() => handleStatusUpdate(request.purchase_id, 'Rejected')}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

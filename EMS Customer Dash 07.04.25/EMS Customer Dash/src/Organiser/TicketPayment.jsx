@@ -66,7 +66,7 @@ const TicketPayment = () => {
       if (response.ok) {
         alert(`Payment ${status} successfully`);
         setPayment({ ...payment, status });
-        nav('/ticketspaymentlist'); // Navigate back to list view
+        nav('/ticketspaymentlist');
       } else {
         alert(result.error);
       }
@@ -80,7 +80,6 @@ const TicketPayment = () => {
   if (error) return <div>Error: {error}</div>;
   if (!payment) return <div>No payment data found</div>;
 
-  // Ensure delegate_details is an array
   const delegateDetails = Array.isArray(payment.delegate_details) ? payment.delegate_details : [];
 
   return (
@@ -92,7 +91,9 @@ const TicketPayment = () => {
           className="dashboard-logo1"
         />
         <div className="profile-section">
-          Profile <span className="profile-icon">👤</span>
+          <button className="backbutton22" onClick={() => nav('/')}>
+            LogOut
+          </button>
         </div>
       </header>
 
