@@ -14,87 +14,74 @@ const AdminViewEventRequest = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-  if (!eventid) {
-    setError('No event ID provided');
-    setLoading(false);
-    return;
-  }
+    if (!eventid) {
+      setError('No event ID provided');
+      setLoading(false);
+      return;
+    }
 
-  const fetchEvent = async () => {
-    try {
-      setLoading(true);
-      const token = sessionStorage.getItem('token');
-      if (!token) {
-        console.error('No token found in sessionStorage');
-        nav('/login');
-        return;
-      }
-
-      const response = await fetch(`http://localhost:5000/api/admin/events/${eventid}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        if (response.status === 401 || response.status === 403) {
-          sessionStorage.removeItem('token');
-          sessionStorage.removeItem('user');
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+          console.error('No token found in sessionStorage');
           nav('/login');
           return;
         }
-        throw new Error(`Failed to fetch event: ${errorData.error || response.statusText}`);
-      }
 
-      const data = await response.json();
-      console.log('Event data from API:', data);
-      setEvent({
-        ...data,
-        event_name: data.event_name || data.name || 'Untitled Event',
-        file_url: (() => {
-          let img = data.file_url || data.coverimage;
-          if (!img) return '/default-profile-picture.jpg';
-          if (!/^https?:\/\//.test(img) && !img.startsWith('data:')) {
-            img = `http://localhost:5000/${img.replace(/^\/+/, '')}`;
+        const response = await fetch(`http://localhost:5000/api/admin/events/${eventid}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            nav('/login');
+            return;
           }
-          return img;
-        })(),
-        client_type: data.client_type || [],
-        tabs: data.tab_num > 0 ? [{ name: data.tab_name, content: data.tab_content }] : [],
-        packages: data.package_num > 0 ? [{
-          selectType: data.select_type,
-          packageType: data.package_type,
-          location: data.loc_ation,
-          duration: data.duration,
-          dateChoices: data.date_choices,
-          pricing: data.pricing ? `R${Number.parseFloat(data.pricing).toFixed(2)}` : 'N/A',
-          details: data.package_details,
-          typeOptions: [data.select_type, 'Day'].filter(Boolean),
-        }] : [],
-        sponsor: {
-          name: data.sponser_name || '',
-          phone: data.cell_num || '',
-          email: data.email || '',
-          amount: data.amount && data.payment_type === 'Sponsor' ? data.amount : '', // Use pre-formatted amount
-        },
-        payment_type: data.payment_type || '',
-        amount: data.amount || 'N/A', // Use pre-formatted amount directly
-        start_date: data.start_date ? new Date(data.start_date).toISOString().split('T')[0] : '',
-        end_date: data.end_date ? new Date(data.end_date).toISOString().split('T')[0] : '',
-        deadline: data.deadline ? new Date(data.deadline).toISOString().split('T')[0] : '',
-      });
-      setComment(data.admin_comment || '');
-    } catch (err) {
-      console.error('Error fetching event:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+          throw new Error(`Failed to fetch event: ${errorData.error || response.statusText}`);
+        }
 
-  fetchEvent();
-}, [eventid, nav]);
+        const data = await response.json();
+        console.log('Event data from API:', data);
+
+        setEvent({
+          ...data,
+          event_name: data.event_name || 'Untitled Event',
+          event_details: data.event_details || data.description || '',
+          file_url: data.coverimage || data.file_url || '/default-profile-picture.jpg',
+          client_type: data.client_type || [],
+          time: data.time || '',
+          tabs: data.tabs || [],
+          packages: data.packages || [],
+          sponsor: {
+            name: data.sponser_name || data.organizer?.name || '',
+            phone: data.cell_num || data.organizer?.phone || '',
+            email: data.email || data.organizer?.email || '',
+            amount: data.payment_type === 'Sponsor' && data.amount ? data.amount : '',
+          },
+          payment_type: data.payment_type || '',
+          amount: data.amount || 'N/A',
+          start_date: data.start_date ? new Date(data.start_date).toISOString().split('T')[0] : '',
+          end_date: data.end_date ? new Date(data.end_date).toISOString().split('T')[0] : '',
+          deadline: data.registration_deadline_date ? new Date(data.registration_deadline_date).toISOString().split('T')[0] : '',
+        });
+        setComment(data.admin_comment || '');
+      } catch (err) {
+        console.error('Error fetching event:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
+  }, [eventid, nav]);
 
   const handleStatusUpdate = async (status) => {
     if (!eventid) {
@@ -189,7 +176,8 @@ const AdminViewEventRequest = () => {
     return <p>No event data available</p>;
   }
 
-  console.log('Event state after set:', event);
+  console.log('Processed event state:', event);
+
   return (
     <div className="event-form">
       <button className="back-button" onClick={() => nav('/event-approval')}>Back</button>
@@ -248,66 +236,70 @@ const AdminViewEventRequest = () => {
 
           <div className="client-types">
             <label>Client Types Available</label>
-            {event.client_type.map((type, index) => (
-              <div key={index} className="client-type-item">
-                <label>{type}</label>
-              </div>
-            ))}
+            {event.client_type.length > 0 ? (
+              event.client_type.map((type, index) => (
+                <div key={index} className="client-type-item">
+                  <label>{type}</label>
+                </div>
+              ))
+            ) : (
+              <p>No client types available</p>
+            )}
           </div>
         </div>
       </div>
 
       <h4>Packages</h4>
-      {event.packages.map((pkg, idx) => (
-        <div key={idx} className="form-item">
-          <div className="form-grid">
-            <div>
-              <label>Select</label>
-              <select value={pkg.selectType} disabled>
-                {pkg.typeOptions.map((opt, i) => (
-                  <option key={i}>{opt}</option>
-                ))}
-              </select>
+      {event.packages.length > 0 ? (
+        event.packages.map((pkg, idx) => (
+          <div key={idx} className="form-item">
+            <div className="form-grid">
+              <div>
+                <label>Package Type</label>
+                <input type="text" value={pkg.package_type || ''} readOnly />
+              </div>
+              <div>
+                <label>Location</label>
+                <input type="text" value={pkg.location || ''} readOnly />
+              </div>
+              <div>
+                <label>Duration</label>
+                <input type="text" value={pkg.duration || ''} readOnly />
+              </div>
+              <div>
+                <label>Date Choices</label>
+                <input type="text" value={pkg.date_choices || ''} readOnly />
+              </div>
+              <div>
+                <label>Pricing</label>
+                <input type="text" value={pkg.pricing ? `R${Number.parseFloat(pkg.pricing).toFixed(2)}` : 'N/A'} readOnly />
+              </div>
             </div>
-            <div>
-              <label>Package Type</label>
-              <input type="text" value={pkg.packageType || ''} readOnly />
-            </div>
-            <div>
-              <label>Location</label>
-              <input type="text" value={pkg.location || ''} readOnly />
-            </div>
-            <div>
-              <label>Duration</label>
-              <input type="text" value={pkg.duration || ''} readOnly />
-            </div>
-            <div>
-              <label>Date Choices</label>
-              <input type="text" value={pkg.dateChoices || ''} readOnly />
-            </div>
-            <div>
-              <label>Pricing</label>
-              <input type="text" value={pkg.pricing || ''} readOnly />
-            </div>
+            <label>Package Details</label>
+            <textarea value={pkg.details || ''} readOnly></textarea>
           </div>
-          <label>Package Details</label>
-          <textarea value={pkg.details || ''} readOnly></textarea>
-        </div>
-      ))}
+        ))
+      ) : (
+        <p>No packages available</p>
+      )}
 
       <h4>Tabs</h4>
-      {event.tabs.map((tab, idx) => (
-        <div key={idx} className="form-item">
-          <div className="form-grid">
-            <div>
-              <label>Name of Tab</label>
-              <input type="text" value={tab.name || ''} readOnly />
+      {event.tabs.length > 0 ? (
+        event.tabs.map((tab, idx) => (
+          <div key={idx} className="form-item">
+            <div className="form-grid">
+              <div>
+                <label>Name of Tab</label>
+                <input type="text" value={tab.name || ''} readOnly />
+              </div>
             </div>
+            <label>Tab Content</label>
+            <textarea value={tab.content || ''} readOnly></textarea>
           </div>
-          <label>Tab Content</label>
-          <textarea value={tab.content || ''} readOnly></textarea>
-        </div>
-      ))}
+        ))
+      ) : (
+        <p>No tabs available</p>
+      )}
 
       <div className="form-row">
         <label>Insert Terms and Conditions Here</label>

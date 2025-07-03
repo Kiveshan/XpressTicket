@@ -7,8 +7,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
 } from "recharts";
 import "../Organiser/Analytics.css";
 import { useNavigate } from "react-router-dom";
@@ -20,50 +18,59 @@ export default function Analytics() {
   const [selectedYear, setSelectedYear] = useState("All");
   const navigate = useNavigate();
 
-  // Sample data for events
-  const eventAnalyticsData = {
-    profitVsTickets: [
-      { event: "Tech Conference", profit: 50000, ticketsSold: 200, month: "June", year: "2023" },
-      { event: "Music Festival", profit: 75000, ticketsSold: 300, month: "July", year: "2023" },
-      { event: "Art Expo", profit: 30000, ticketsSold: 150, month: "June", year: "2022" },
-      { event: "Food Carnival", profit: 60000, ticketsSold: 250, month: "August", year: "2023" },
-    ],
-    attendance: [
-      { event: "Tech Conference", attendance: 180, capacity: 200, month: "June", year: "2023" },
-      { event: "Music Festival", attendance: 290, capacity: 300, month: "July", year: "2023" },
-      { event: "Art Expo", attendance: 140, capacity: 150, month: "June", year: "2022" },
-      { event: "Food Carnival", attendance: 230, capacity: 250, month: "August", year: "2023" },
-    ],
-    revenueVsExpenses: [
-      { event: "Tech Conference", revenue: 100000, expenses: 50000, month: "June", year: "2023" },
-      { event: "Music Festival", revenue: 150000, expenses: 75000, month: "July", year: "2023" },
-      { event: "Art Expo", revenue: 60000, expenses: 30000, month: "June", year: "2022" },
-      { event: "Food Carnival", revenue: 120000, expenses: 60000, month: "August", year: "2023" },
-    ],
-    ratings: [
-      { event: "Tech Conference", rating: 4.5, month: "June", year: "2023" },
-      { event: "Music Festival", rating: 4.8, month: "July", year: "2023" },
-      { event: "Art Expo", rating: 4.2, month: "June", year: "2022" },
-      { event: "Food Carnival", rating: 4.6, month: "August", year: "2023" },
-    ],
+  const fetchAnalyticsData = async () => {
+    try {
+      const token = sessionStorage.getItem("token");
+      console.log('Token:', token);
+      if (!token) {
+        console.error("No token found in sessionStorage");
+        navigate("/");
+        return;
+      }
+
+      const queryParams = new URLSearchParams();
+      if (selectedMonth !== "All") {
+        queryParams.append("month", selectedMonth);
+      }
+      if (selectedYear !== "All") {
+        queryParams.append("year", selectedYear);
+      }
+
+      const endpoint = activeFilter === "profitVsTickets" ? "/api/analytics/profit-vs-tickets" : "/api/analytics/attendance";
+      const url = `http://localhost:5000${endpoint}?${queryParams.toString()}`;
+      console.log('Fetching from:', url);
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log('Response status:', response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        if (response.status === 401) {
+          console.error("Unauthorized: Invalid or expired token");
+          navigate("/");
+          return;
+        }
+        throw new Error(`Failed to fetch analytics data: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Fetched data:', data);
+      setChartData(data);
+    } catch (error) {
+      console.error("Error fetching analytics data:", error);
+      setChartData([]);
+    }
   };
 
-  // Update chart data when the filter changes
   useEffect(() => {
-    let filteredData = eventAnalyticsData[activeFilter];
+    fetchAnalyticsData();
+  }, [activeFilter, selectedMonth, selectedYear, navigate]);
 
-    // Apply month and year filters
-    if (selectedMonth !== "All") {
-      filteredData = filteredData.filter((item) => item.month === selectedMonth);
-    }
-    if (selectedYear !== "All") {
-      filteredData = filteredData.filter((item) => item.year === selectedYear);
-    }
-
-    setChartData(filteredData);
-  }, [activeFilter, selectedMonth, selectedYear]);
-
-  // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -80,7 +87,6 @@ export default function Analytics() {
     return null;
   };
 
-  // Render different charts based on the active filter
   const renderChart = () => {
     switch (activeFilter) {
       case "profitVsTickets":
@@ -92,7 +98,7 @@ export default function Analytics() {
               <Tooltip content={<CustomTooltip />} />
               <Legend />
               <Bar dataKey="profit" name="Profit (R)" fill="#4CAF50" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="ticketsSold" name="Tickets Sold" fill="#FFC107" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="ticketsSold" name="Tickets Sold (R)" fill="#FFC107" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         );
@@ -107,31 +113,6 @@ export default function Analytics() {
               <Bar dataKey="attendance" name="Attendance" fill="#2196F3" radius={[4, 4, 0, 0]} />
               <Bar dataKey="capacity" name="Capacity" fill="#9C27B0" radius={[4, 4, 0, 0]} />
             </BarChart>
-          </ResponsiveContainer>
-        );
-      case "revenueVsExpenses":
-        return (
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
-              <XAxis dataKey="event" />
-              <YAxis />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="revenue" name="Revenue (R)" fill="#4CAF50" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expenses" name="Expenses (R)" fill="#F44336" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      case "ratings":
-        return (
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
-              <XAxis dataKey="event" />
-              <YAxis />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line type="monotone" dataKey="rating" name="Event Rating" stroke="#FFC107" />
-            </LineChart>
           </ResponsiveContainer>
         );
       default:
@@ -165,7 +146,6 @@ export default function Analytics() {
       </div>
 
       <div className="analytics-content">
-        {/* Sidebar filters */}
         <div className="sidebar-filters">
           <button
             className={`filter-button ${activeFilter === "profitVsTickets" ? "active" : ""}`}
@@ -179,49 +159,44 @@ export default function Analytics() {
           >
             Attendance
           </button>
-          <button
-            className={`filter-button ${activeFilter === "revenueVsExpenses" ? "active" : ""}`}
-            onClick={() => setActiveFilter("revenueVsExpenses")}
-          >
-            Revenue vs Expenses
-          </button>
-          <button
-            className={`filter-button ${activeFilter === "ratings" ? "active" : ""}`}
-            onClick={() => setActiveFilter("ratings")}
-          >
-            Event Ratings
-          </button>
         </div>
 
-               {/* Chart area */}
         <div className="chart-area">
-            {/* Month and Year Filters */}
-        <div className="filter-controls">
-          <select
-            className="filter-dropdown"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-          >
-            <option value="All">All Months</option>
-            <option value="June">June</option>
-            <option value="July">July</option>
-            <option value="August">August</option>
-          </select>
-          <select
-            className="filter-dropdown"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-          >
-            <option value="All">All Years</option>
-            <option value="2022">2022</option>
-            <option value="2023">2023</option>
-          </select>
-        </div>
+          <div className="filter-controls">
+            <select
+              className="filter-dropdown"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              <option value="All">All Months</option>
+              <option value="January">January</option>
+              <option value="February">February</option>
+              <option value="March">March</option>
+              <option value="April">April</option>
+              <option value="May">May</option>
+              <option value="June">June</option>
+              <option value="July">July</option>
+              <option value="August">August</option>
+              <option value="September">September</option>
+              <option value="October">October</option>
+              <option value="November">November</option>
+              <option value="December">December</option>
+            </select>
+            <select
+              className="filter-dropdown"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
+              <option value="All">All Years</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+            </select>
+          </div>
           <h2 className="chart-title">
             {activeFilter === "profitVsTickets" && "Profit vs Tickets Sold"}
             {activeFilter === "attendance" && "Attendance Analysis"}
-            {activeFilter === "revenueVsExpenses" && "Revenue vs Expenses"}
-            {activeFilter === "ratings" && "Event Ratings"}
           </h2>
           {renderChart()}
         </div>
