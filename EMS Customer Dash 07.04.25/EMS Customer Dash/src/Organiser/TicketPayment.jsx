@@ -1,104 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import './TicketsRequest.css';
+import React from 'react';
+import '../Organiser/TicketsRequest.css';
+import { useNavigate } from 'react-router-dom';
 
-const TicketPayment = () => {
+const TickectPayment = () => {
   const nav = useNavigate();
-  const { purchaseId } = useParams();
-  const [payment, setPayment] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchPaymentDetails = async () => {
-      try {
-        const token = sessionStorage.getItem('token');
-        console.log('Token:', token);
-        if (!token) {
-          setError('No authentication token found. Please log in.');
-          setLoading(false);
-          nav('/');
-          return;
-        }
-
-        const response = await fetch(`http://localhost:5000/api/organiser/ticket-purchases/${purchaseId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('Payment data:', data);
-        setPayment(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching payment details:', error);
-        setError(error.message);
-        setLoading(false);
-      }
-    };
-    fetchPaymentDetails();
-  }, [purchaseId, nav]);
-
-  const handleStatusUpdate = async (status) => {
-    try {
-      const token = sessionStorage.getItem('token');
-      console.log('Token:', token);
-      if (!token) {
-        setError('No authentication token found. Please log in.');
-        setLoading(false);
-        nav('/');
-        return;
-      }
-      const response = await fetch(`http://localhost:5000/api/organiser/ticket-purchases/${purchaseId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
-      const result = await response.json();
-      if (response.ok) {
-        alert(`Payment ${status} successfully`);
-        setPayment({ ...payment, status });
-        nav('/ticketspaymentlist');
-      } else {
-        alert(result.error);
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Failed to update payment status');
-    }
-  };
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!payment) return <div>No payment data found</div>;
-
-  const delegateDetails = Array.isArray(payment.delegate_details) ? payment.delegate_details : [];
-
   return (
     <div className="container">
-      <header className="dashboard-header1">
+       <header className="dashboard-header1">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
           className="dashboard-logo1"
         />
         <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>
-            LogOut
-          </button>
+          Profile <span className="profile-icon">👤</span>
         </div>
       </header>
 
       <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/ticketspaymentlist')}>
+        <button className="backbutton20" onClick={()=> nav('/ticketspaymentlist')}>
           Back
         </button>
       </div>
@@ -109,44 +29,43 @@ const TicketPayment = () => {
         <div className="form-grid">
           <div>
             <label>Title</label>
-            <select value={payment.title || 'Professor'} disabled>
-              <option>Professor</option>
-              <option>Dr</option>
-              <option>Mr</option>
-              <option>Ms</option>
-            </select>
+            <select><option>Professor</option></select>
           </div>
           <div>
             <label>Full name</label>
-            <input type="text" value={payment.purchaser_name} disabled />
+            <input type="text" value="Rorrik Shaun" disabled />
           </div>
           <div>
             <label>Email</label>
-            <input type="email" value={payment.email} disabled />
+            <input type="email" value="rorrik@gmail.com" />
           </div>
           <div>
             <label>Cell Number</label>
-            <input type="text" value={payment.cellnumber || ''} disabled />
+            <input type="text" placeholder="Number here" />
           </div>
           <div>
             <label>Institution Name</label>
-            <input type="text" value={payment.institution || ''} disabled />
+            <input type="text" value="UKZN" />
+          </div>
+          <div>
+            <label>Institution Location</label>
+            <input type="text" value="11 Magical Lane, Durban, KZN" />
           </div>
           <div>
             <label>Faculty</label>
-            <input type="text" value={payment.faculty_name || ''} disabled />
+            <input type="text" value="Faculty of Accounting and Informatics" />
           </div>
           <div>
             <label>Department</label>
-            <input type="text" value={payment.department_name || ''} disabled />
+            <input type="text" value="Information Systems" />
           </div>
           <div>
             <label>IEEE Number</label>
-            <input type="text" value={payment.ieee_no || ''} disabled />
+            <input type="text" value="0123" />
           </div>
           <div>
             <label>Organ VAT</label>
-            <input type="text" value={payment.vat_no || ''} disabled />
+            <input type="text" value="0123" />
           </div>
         </div>
       </div>
@@ -157,73 +76,49 @@ const TicketPayment = () => {
         <table>
           <thead>
             <tr>
-              <th>Package Details</th>
-              <th>Title</th>
-              <th>Name</th>
-              <th>Gender</th>
-              <th>Email</th>
-              <th>Phone Number</th>
-              <th>No. of Tickets</th>
-              <th>IEEE Number</th>
-              <th>Day Pass Duration</th>
-              <th>Amount</th>
+              {["Package Details", "Title", "Name", "Gender", "Text", "Phone Number", "No. of Tickets", "IEEE Number", "Day Pass Duration", "Amount"].map((heading) => (
+                <th key={heading}>{heading}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {delegateDetails.length === 0 ? (
-              <tr>
-                <td colSpan="10">No delegate details available</td>
-              </tr>
-            ) : (
-              delegateDetails.map((delegate, index) => (
-                <tr key={index}>
-                  <td>{delegate.package || payment.package}</td>
-                  <td>{delegate.title || ''}</td>
-                  <td>{delegate.name || ''}</td>
-                  <td>{delegate.gender || ''}</td>
-                  <td>{delegate.email || ''}</td>
-                  <td>{delegate.phone || ''}</td>
-                  <td>{delegate.number_of_tickets || ''}</td>
-                  <td>{delegate.ieee_number || ''}</td>
-                  <td>{delegate.day_pass_duration || ''}</td>
-                  <td>{delegate.amount ? `R ${delegate.amount.toFixed(2)}` : ''}</td>
-                </tr>
-              ))
-            )}
+            <tr>
+              <td>Conference Delegate</td>
+              <td>Prof</td>
+              <td>Rorrik Shaun</td>
+              <td>Male</td>
+              <td>rorrikshaun@gmail.com</td>
+              <td>0828529658</td>
+              <td>1</td>
+              <td>02541</td>
+              <td></td>
+              <td>R 7 000,00</td>
+            </tr>
+            <tr>
+              <td>Day Pass</td>
+              <td>Dr</td>
+              <td>New Person</td>
+              <td>Female</td>
+              <td>newguy@gmail.com</td>
+              <td>0316536451</td>
+              <td>1</td>
+              <td>56352</td>
+              <td>27/08/2025 - 29/08/2025</td>
+              <td>Content</td>
+            </tr>
           </tbody>
         </table>
       </div>
 
       <div className="buttons">
-        {payment.proof_of_payment_url && (
-          <a
-            href={payment.proof_of_payment_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="view-btn"
-          >
-            View Proof of Payment
-          </a>
-        )}
-        {payment.status === 'pending' && (
-          <div className="actions">
-            <button
-              className="approve"
-              onClick={() => handleStatusUpdate('Approved')}
-            >
-              Approve
-            </button>
-            <button
-              className="reject"
-              onClick={() => handleStatusUpdate('Rejected')}
-            >
-              Reject
-            </button>
-          </div>
-        )}
+        <button className="view-btn">View Proof of Payment</button>
+        <div className="actions">
+          <button className="approve">Approve</button>
+          <button className="reject">Reject</button>
+        </div>
       </div>
     </div>
   );
 };
 
-export default TicketPayment;
+export default TickectPayment;

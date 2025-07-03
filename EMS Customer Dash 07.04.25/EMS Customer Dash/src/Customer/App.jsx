@@ -83,7 +83,7 @@ function App() {
           {/* Organiser */}
           <Route path="/organiser-dash" element={<OrganiserDash />} />
           <Route path="/requestcard" element={<RequestCard/>}/>
-          <Route path="/ticketsrequest/:eventId" element={<TicketsRequest />} />
+          <Route path="/ticketsrequest" element={<TicketsRequest />} />
           <Route path="/tickets-event-list" element={<TicketsEventList />} />
           <Route path="/event-form" element={<EventForm />} />
           <Route path="/event-request" element={<EventRequest />} />
@@ -92,7 +92,7 @@ function App() {
           <Route path="/event-guest/:eventId" element={<EventGuestList />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/ticketspaymentlist" element={<TicketPaymentList />} />
-          <Route path="/ticketspayment/:purchaseId" element={<TicketPayment />} />
+          <Route path="/ticketspayment" element={<TicketPayment />} />
           
 
 
