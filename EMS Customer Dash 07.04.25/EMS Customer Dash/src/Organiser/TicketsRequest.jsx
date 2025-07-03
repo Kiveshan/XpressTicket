@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import './TicketsRequest.css';
 
 function TicketsRequest() {
   const nav = useNavigate();
   const { eventId } = useParams();
   const [requests, setRequests] = useState([]);
+  const [eventName, setEventName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -28,9 +30,12 @@ function TicketsRequest() {
           throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         }
         const data = await response.json();
+        console.log('Fetched requests:', data);
         setRequests(data);
+        setEventName(data.length > 0 ? data[0].event_name : 'Event');
         setLoading(false);
       } catch (err) {
+        console.error('Error fetching requests:', err);
         setError(err.message);
         setLoading(false);
       }
@@ -58,8 +63,8 @@ function TicketsRequest() {
       const result = await response.json();
       if (response.ok) {
         alert(`Ticket request ${request_status} successfully`);
-        setRequests(requests.filter((req) => req.purchase_id !== purchaseId)); // Remove from local state
-        nav('/tickets-event-list'); // Navigate back to event list
+        setRequests(requests.filter((req) => req.purchase_id !== purchaseId));
+        nav('/tickets-event-list');
       } else {
         alert(result.error);
       }
@@ -74,6 +79,74 @@ function TicketsRequest() {
       window.open(proofUrl, '_blank');
     } else {
       alert('No proof of payment available');
+    }
+  };
+
+  const handleDownloadCustomers = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found. Please log in.');
+        nav('/');
+        return;
+      }
+      const response = await fetch(`http://localhost:5000/api/organiser/events/${eventId}/ticket-requests?all=true`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+
+      if (data.length === 0) {
+        alert('No customer data available for download.');
+        return;
+      }
+
+      // Prepare data for Excel
+      const excelData = data.map((request) => ({
+        'Purchaser Name': request.purchaser_name,
+        'Package': request.package,
+        'Number of Tickets': request.number_of_tickets,
+        'Amount': `R ${Number(request.amount).toFixed(2)}`,
+      }));
+
+      // Calculate totals
+      const totalTickets = data.reduce((sum, request) => sum + request.number_of_tickets, 0);
+      const totalAmount = data.reduce((sum, request) => sum + Number(request.amount), 0);
+
+      // Add totals row
+      excelData.push({
+        'Purchaser Name': 'Total',
+        'Package': '',
+        'Number of Tickets': totalTickets,
+        'Amount': `R ${totalAmount.toFixed(2)}`,
+      });
+
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(excelData, {
+        header: ['Purchaser Name', 'Package', 'Number of Tickets', 'Amount'],
+      });
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 20 }, // Purchaser Name
+        { wch: 20 }, // Package
+        { wch: 15 }, // Number of Tickets
+        { wch: 15 }, // Amount
+      ];
+
+      // Create workbook and add the worksheet
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, data[0]?.event_name || 'Customers');
+
+      // Generate and download the Excel file
+      XLSX.writeFile(wb, `${data[0]?.event_name || 'event'}_customers.xlsx`);
+    } catch (error) {
+      console.error('Error downloading customers:', error);
+      alert('Failed to download customer list: ' + error.message);
     }
   };
 
@@ -101,7 +174,14 @@ function TicketsRequest() {
         </button>
       </div>
 
-      <h2 className="tickets-request-title">Ticket Requests</h2>
+      <h2 className="tickets-request-title">Ticket Requests for {eventName}</h2>
+
+      <div className="button-container">
+        <button className="download-button" onClick={handleDownloadCustomers}>
+          Download all customers
+        </button>
+      </div>
+
       <div className="tickets-request-table">
         <table>
           <thead>

@@ -1933,7 +1933,8 @@ app.get('/api/payments', async (req, res) => {
   }
 });
 
-//payments org start
+//----------------payments org start
+// Get all events with pending ticket request counts
 app.get('/api/organiser/events', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -1968,6 +1969,7 @@ app.get('/api/organiser/events/:eventId/ticket-requests', authenticateToken, asy
   try {
     const { eventId } = req.params;
     const { userId } = req.user;
+    const { all } = req.query; // Optional query param to fetch all statuses
 
     const query = `
       SELECT 
@@ -1987,7 +1989,7 @@ app.get('/api/organiser/events/:eventId/ticket-requests', authenticateToken, asy
       FROM ticket_purchases tp
       JOIN events e ON tp.event_id = e.event_id
       JOIN user_profiles up ON tp.user_id = up.user_id
-      WHERE e.event_id = $1 AND e.user_id = $2 AND tp.request_status = 'pending'
+      WHERE e.event_id = $1 AND e.user_id = $2 ${all ? '' : "AND tp.request_status = 'pending'"}
       ORDER BY tp.purchase_id DESC
     `;
     const result = await client.query(query, [eventId, userId]);
@@ -2218,7 +2220,7 @@ app.put('/api/organiser/ticket-purchases/:purchaseId/status', authenticateToken,
       UPDATE ticket_purchases
       SET status = $1
       FROM events e
-      WHERE ticket_purchases.purchase_id = $2 AND e.event_id = ticket_purchases.event_id AND e.user_id = $3
+      WHERE ticket_purchases.purchase_id = $2 AND e.event_id = ticket_purchases.event_id AND e.user_id = $3 AND tp.request_status = 'Approved'
       RETURNING ticket_purchases.*
     `;
     const result = await client.query(query, [status, purchaseId, userId]);
@@ -2244,7 +2246,7 @@ app.put('/api/organiser/ticket-purchases/:purchaseId/status', authenticateToken,
     client.release();
   }
 });
-//payments org end
+//----------------payments org end
 
 // Start the server
 app.listen(port, () => {
