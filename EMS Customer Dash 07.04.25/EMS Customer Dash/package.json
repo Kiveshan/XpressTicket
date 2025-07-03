@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "backend": "nodemon server.js",
+    "backend": "node server.js",
     "start": "concurrently \"npm run dev\" \"npm run backend\""
   },
   "keywords": [],

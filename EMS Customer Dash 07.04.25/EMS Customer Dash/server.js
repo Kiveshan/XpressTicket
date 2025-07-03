@@ -48,8 +48,8 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'xpress-03-07-2025',
-  password: '123456',
+  database: 'ems2.0',
+  password: '1234567890',
   port: 5432,
 })
 
@@ -1762,7 +1762,7 @@ app.get('/api/customers', async (req, res) => {
       FROM 
         user_profiles
     `;
-
+    
     const result = await client.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -1795,7 +1795,7 @@ app.get('/api/payments', async (req, res) => {
       INNER JOIN
         user_profiles up ON e.user_id = up.user_id
     `;
-
+    
     const result = await client.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -1932,144 +1932,6 @@ app.get('/api/payments', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-
-
-//-----------------------------Organiser Payments Start---------------------------//
-// Get all ticket purchases for organizer's events
-// Get all ticket purchases for organizer's events
-app.get('/api/organizer/ticket-payments', authenticateToken, async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(
-      `
-      SELECT 
-        tp.purchase_id,
-        up.firstname || ' ' || up.surname AS purchaser_name,
-        tp.number_of_tickets,
-        e.name AS event_name,
-        tp.package,
-        tp.amount,
-        tp.proof_of_payment
-      FROM ticket_purchases tp
-      JOIN events e ON tp.event_id = e.event_id
-      JOIN user_profiles up ON tp.user_id = up.user_id
-      WHERE e.user_id = $1
-      `,
-      [req.user.userId]
-    );
-
-    // Generate presigned URLs for proof of payment
-    const payments = await Promise.all(
-      result.rows.map(async (row) => ({
-        ...row,
-        proof_of_payment: row.proof_of_payment ? await generatePresignedUrl(row.proof_of_payment) : null,
-      }))
-    );
-
-    res.json(payments);
-  } catch (error) {
-    console.error('Error fetching ticket payments:', error);
-    res.status(500).json({ error: 'Failed to fetch ticket payments', details: error.message });
-  } finally {
-    client.release();
-  }
-});
-
-// Get details for a specific ticket purchase
-app.get('/api/organizer/ticket-payments/:purchaseId', authenticateToken, async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { purchaseId } = req.params;
-
-    // Fetch purchase details
-    const purchaseResult = await client.query(
-      `
-      SELECT 
-        tp.purchase_id,
-        up.firstname || ' ' || up.surname AS purchaser_name,
-        up.email,
-        up.cellnumber,
-        up.institution,
-        up.faculty_id,
-        up.department_id,
-        up.ieee_no,
-        up.vat_no,
-        e.name AS event_name,
-        tp.number_of_tickets,
-        tp.package,
-        tp.amount,
-        tp.proof_of_payment,
-        tp.delegate_details,
-        tp.status
-      FROM ticket_purchases tp
-      JOIN events e ON tp.event_id = e.event_id
-      JOIN user_profiles up ON tp.user_id = up.user_id
-      WHERE tp.purchase_id = $1 AND e.user_id = $2
-      `,
-      [purchaseId, req.user.userId]
-    );
-
-    if (purchaseResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Payment not found or not authorized' });
-    }
-
-    const purchase = purchaseResult.rows[0];
-
-    // Generate presigned URL for proof of payment
-    const proofOfPaymentUrl = purchase.proof_of_payment
-      ? await generatePresignedUrl(purchase.proof_of_payment)
-      : null;
-
-    res.json({
-      ...purchase,
-      proof_of_payment: proofOfPaymentUrl,
-    });
-  } catch (error) {
-    console.error('Error fetching payment details:', error);
-    res.status(500).json({ error: 'Failed to fetch payment details', details: error.message });
-  } finally {
-    client.release();
-  }
-});
-
-// Update ticket purchase status
-app.put('/api/organizer/ticket-payments/:purchaseId/status', authenticateToken, async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { purchaseId } = req.params;
-    const { status } = req.body;
-
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status. Must be "approved" or "rejected"' });
-    }
-
-    const result = await client.query(
-      `
-      UPDATE ticket_purchases
-      SET status = $1
-      FROM events e
-      WHERE ticket_purchases.purchase_id = $2
-      AND ticket_purchases.event_id = e.event_id
-      AND e.user_id = $3
-      RETURNING ticket_purchases.purchase_id, ticket_purchases.status
-      `,
-      [status, purchaseId, req.user.userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Payment not found or not authorized' });
-    }
-
-    res.json({ message: `Payment ${status} successfully`, purchase: result.rows[0] });
-  } catch (error) {
-    console.error('Error updating payment status:', error);
-    res.status(500).json({ error: 'Failed to update payment status', details: error.message });
-  } finally {
-    client.release();
-  }
-});
-//-----------------------------Organiser Payments End-----------------------------//
 
 // Start the server
 app.listen(port, () => {

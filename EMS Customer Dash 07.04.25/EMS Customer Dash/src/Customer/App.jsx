@@ -91,7 +91,7 @@ function App() {
           <Route path="/event-list" element={<EventList />} />
           <Route path="/event-guest/:eventId" element={<EventGuestList />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/ticketpaymentlist" element={<TicketPaymentList />} />
+          <Route path="/ticketspaymentlist" element={<TicketPaymentList />} />
           <Route path="/ticketspayment" element={<TicketPayment />} />
           
 
