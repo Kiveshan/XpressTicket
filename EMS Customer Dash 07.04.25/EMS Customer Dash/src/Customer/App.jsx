@@ -92,7 +92,7 @@ function App() {
           <Route path="/event-guest/:eventId" element={<EventGuestList />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/ticketspaymentlist" element={<TicketPaymentList />} />
-          <Route path="/ticketspayment" element={<TicketPayment />} />
+          <Route path="/ticketspayment/:purchaseId" element={<TicketPayment />} />
           
 
 

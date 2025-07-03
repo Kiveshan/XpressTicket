@@ -1,12 +1,88 @@
-import React from 'react';
-import '../Organiser/TicketsRequest.css';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import './TicketsRequest.css';
+import { useNavigate, useParams } from 'react-router-dom';
 
-const TickectPayment = () => {
+const TicketPayment = () => {
   const nav = useNavigate();
+  const { purchaseId } = useParams();
+  const [purchase, setPurchase] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchPurchase = async () => {
+      try {
+        const token = sessionStorage.getItem('token'); // Changed to sessionStorage
+        console.log('Token:', token); // Debug token
+        if (!token) {
+          setError('No authentication token found. Please log in.');
+          setLoading(false);
+          nav('/'); // Redirect to login page
+          return;
+        }
+        const response = await fetch(`http://localhost:5000/api/organiser/ticket-purchases/${purchaseId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setPurchase(data);
+        setLoading(false);
+      } catch (err) {
+        setPN / AError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchPurchase();
+  }, [purchaseId, nav]);
+
+  const handleStatusUpdate = async (status) => {
+    try {
+      const token = sessionStorage.getItem('token'); // Changed to sessionStorage
+      console.log('Updating status with token:', token); // Debug token
+      if (!token) {
+        alert('No authentication token found. Please log in.');
+        nav('/');
+        return;
+      }
+      const response = await fetch(`http://localhost:5000/api/organiser/ticket-purchases/${purchaseId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+      }
+      const result = await response.json();
+      setPurchase({ ...purchase, status: result.purchase.status });
+      alert(`Ticket purchase ${status.toLowerCase()} successfully`);
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const handleViewProofOfPayment = () => {
+    if (purchase?.proof_of_payment_url) {
+      window.open(purchase.proof_of_payment_url, '_blank');
+    } else {
+      alert('No proof of payment available');
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!purchase) return <div>No purchase data</div>;
+
   return (
     <div className="container">
-       <header className="dashboard-header1">
+      <header className="dashboard-header1">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
@@ -18,7 +94,7 @@ const TickectPayment = () => {
       </header>
 
       <div className="back-button-container1">
-        <button className="backbutton20" onClick={()=> nav('/ticketspaymentlist')}>
+        <button className="backbutton20" onClick={() => nav('/ticketspaymentlist')}>
           Back
         </button>
       </div>
@@ -29,43 +105,48 @@ const TickectPayment = () => {
         <div className="form-grid">
           <div>
             <label>Title</label>
-            <select><option>Professor</option></select>
+            <select disabled value={purchase.delegate_details?.title || 'Professor'}>
+              <option>Professor</option>
+              <option>Dr</option>
+              <option>Mr</option>
+              <option>Ms</option>
+            </select>
           </div>
           <div>
-            <label>Full name</label>
-            <input type="text" value="Rorrik Shaun" disabled />
+            <label>Full Name</label>
+            <input type="text" value={purchase.purchaser_name} disabled />
           </div>
           <div>
             <label>Email</label>
-            <input type="email" value="rorrik@gmail.com" />
+            <input type="email" value={purchase.email} disabled />
           </div>
           <div>
             <label>Cell Number</label>
-            <input type="text" placeholder="Number here" />
+            <input type="text" value={purchase.cellnumber || 'N/A'} disabled />
           </div>
           <div>
             <label>Institution Name</label>
-            <input type="text" value="UKZN" />
-          </div>
-          <div>
-            <label>Institution Location</label>
-            <input type="text" value="11 Magical Lane, Durban, KZN" />
+            <input type="text" value={purchase.institution || 'N/A'} disabled />
           </div>
           <div>
             <label>Faculty</label>
-            <input type="text" value="Faculty of Accounting and Informatics" />
+            <input type="text" value={purchase.faculty_name || 'N/A'} disabled />
           </div>
           <div>
             <label>Department</label>
-            <input type="text" value="Information Systems" />
+            <input type="text" value={purchase.department_name || 'N/A'} disabled />
           </div>
           <div>
             <label>IEEE Number</label>
-            <input type="text" value="0123" />
+            <input type="text" value={purchase.ieee_no || 'N/A'} disabled />
           </div>
           <div>
             <label>Organ VAT</label>
-            <input type="text" value="0123" />
+            <input type="text" value={purchase.vat_no || 'N/A'} disabled />
+          </div>
+          <div>
+            <label>Status</label>
+            <input type="text" value={purchase.status} disabled />
           </div>
         </div>
       </div>
@@ -76,49 +157,56 @@ const TickectPayment = () => {
         <table>
           <thead>
             <tr>
-              {["Package Details", "Title", "Name", "Gender", "Text", "Phone Number", "No. of Tickets", "IEEE Number", "Day Pass Duration", "Amount"].map((heading) => (
+              {[
+                'Package Details',
+                'Title',
+                'Name',
+                'Gender',
+                'Email',
+                'Phone Number',
+                'No. of Tickets',
+                'IEEE Number',
+                'Day Pass Duration',
+                'Amount',
+              ].map((heading) => (
                 <th key={heading}>{heading}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Conference Delegate</td>
-              <td>Prof</td>
-              <td>Rorrik Shaun</td>
-              <td>Male</td>
-              <td>rorrikshaun@gmail.com</td>
-              <td>0828529658</td>
-              <td>1</td>
-              <td>02541</td>
-              <td></td>
-              <td>R 7 000,00</td>
-            </tr>
-            <tr>
-              <td>Day Pass</td>
-              <td>Dr</td>
-              <td>New Person</td>
-              <td>Female</td>
-              <td>newguy@gmail.com</td>
-              <td>0316536451</td>
-              <td>1</td>
-              <td>56352</td>
-              <td>27/08/2025 - 29/08/2025</td>
-              <td>Content</td>
-            </tr>
+            {(purchase.delegate_details?.delegates || []).map((delegate, index) => (
+              <tr key={index}>
+                <td>{delegate.package || purchase.package}</td>
+                <td>{delegate.title || 'N/A'}</td>
+                <td>{delegate.name || 'N/A'}</td>
+                <td>{delegate.gender || 'N/A'}</td>
+                <td>{delegate.email || 'N/A'}</td>
+                <td>{delegate.phone || 'N/A'}</td>
+                <td>{delegate.number_of_tickets || purchase.number_of_tickets}</td>
+                <td>{delegate.ieee_number || 'N/A'}</td>
+                <td>{delegate.day_pass_duration || 'N/A'}</td>
+                <td>R {Number(delegate.amount || purchase.amount).toFixed(2)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
       <div className="buttons">
-        <button className="view-btn">View Proof of Payment</button>
+        <button className="view-btn" onClick={handleViewProofOfPayment}>
+          View Proof of Payment
+        </button>
         <div className="actions">
-          <button className="approve">Approve</button>
-          <button className="reject">Reject</button>
+          <button className="approve" onClick={() => handleStatusUpdate('Approved')}>
+            Approve
+          </button>
+          <button className="reject" onClick={() => handleStatusUpdate('Rejected')}>
+            Reject
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default TickectPayment;
+export default TicketPayment;

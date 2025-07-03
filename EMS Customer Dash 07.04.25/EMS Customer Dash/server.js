@@ -48,8 +48,8 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'ems2.0',
-  password: '1234567890',
+  database: 'xpress-03-07-2025',
+  password: '123456',
   port: 5432,
 })
 
@@ -1762,7 +1762,7 @@ app.get('/api/customers', async (req, res) => {
       FROM 
         user_profiles
     `;
-    
+
     const result = await client.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -1795,7 +1795,7 @@ app.get('/api/payments', async (req, res) => {
       INNER JOIN
         user_profiles up ON e.user_id = up.user_id
     `;
-    
+
     const result = await client.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -1932,6 +1932,183 @@ app.get('/api/payments', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+//payments org start
+// Get all ticket purchases for organiser's events
+app.get('/api/organiser/ticket-purchases', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { userId } = req.user;
+
+    const query = `
+      SELECT 
+        tp.purchase_id,
+        tp.event_id,
+        tp.user_id,
+        tp.number_of_tickets,
+        tp.package,
+        tp.amount,
+        tp.proof_of_payment,
+        tp.status,
+        tp.delegate_details,
+        e.name as event_name,
+        up.firstname,
+        up.surname,
+        up.email
+      FROM ticket_purchases tp
+      JOIN events e ON tp.event_id = e.event_id
+      JOIN user_profiles up ON tp.user_id = up.user_id
+      WHERE e.user_id = $1
+      ORDER BY tp.purchase_id DESC
+    `;
+    const result = await client.query(query, [userId]);
+
+    const purchasesWithUrls = await Promise.all(result.rows.map(async (purchase) => {
+      let proofOfPaymentUrl = null;
+      if (purchase.proof_of_payment) {
+        const proofKey = purchase.proof_of_payment.split('/').slice(3).join('/');
+        try {
+          proofOfPaymentUrl = await generatePresignedUrl(proofKey);
+        } catch (e) {
+          console.warn(`Failed to generate signed URL for proof of payment: ${proofKey}`, e);
+        }
+      }
+
+      return {
+        ...purchase,
+        proof_of_payment_url: proofOfPaymentUrl,
+        purchaser_name: `${purchase.firstname} ${purchase.surname}`.trim(),
+      };
+    }));
+
+    console.log('Fetched ticket purchases for organiser:', userId, 'Count:', purchasesWithUrls.length);
+    res.json(purchasesWithUrls);
+  } catch (error) {
+    console.error('Error fetching ticket purchases:', error);
+    res.status(500).json({
+      error: 'Failed to fetch ticket purchases',
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Get single ticket purchase by ID
+app.get('/api/organiser/ticket-purchases/:purchaseId', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { purchaseId } = req.params;
+    const { userId } = req.user;
+
+    const query = `
+      SELECT 
+        tp.purchase_id,
+        tp.event_id,
+        tp.user_id,
+        tp.number_of_tickets,
+        tp.package,
+        tp.amount,
+        tp.proof_of_payment,
+        tp.status,
+        tp.delegate_details,
+        e.name as event_name,
+        up.firstname,
+        up.surname,
+        up.email,
+        up.cellnumber,
+        up.institution,
+        up.faculty_id,
+        up.department_id,
+        up.ieee_no,
+        up.vat_no,
+        f.faculty_name,
+        d.department_name
+      FROM ticket_purchases tp
+      JOIN events e ON tp.event_id = e.event_id
+      JOIN user_profiles up ON tp.user_id = up.user_id
+      LEFT JOIN faculties f ON up.faculty_id = f.faculty_id
+      LEFT JOIN departments d ON up.department_id = d.department_id
+      WHERE tp.purchase_id = $1 AND e.user_id = $2
+    `;
+    const result = await client.query(query, [purchaseId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Ticket purchase not found or access denied' });
+    }
+
+    const purchase = result.rows[0];
+    let proofOfPaymentUrl = null;
+    if (purchase.proof_of_payment) {
+      const proofKey = purchase.proof_of_payment.split('/').slice(3).join('/');
+      try {
+        proofOfPaymentUrl = await generatePresignedUrl(proofKey);
+      } catch (e) {
+        console.warn(`Failed to generate signed URL for proof of payment: ${proofKey}`, e);
+      }
+    }
+
+    res.json({
+      ...purchase,
+      proof_of_payment_url: proofOfPaymentUrl,
+      purchaser_name: `${purchase.firstname} ${purchase.surname}`.trim(),
+    });
+  } catch (error) {
+    console.error('Error fetching ticket purchase:', error);
+    res.status(500).json({
+      error: 'Failed to fetch ticket purchase',
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Update ticket purchase status
+app.put('/api/organiser/ticket-purchases/:purchaseId/status', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { purchaseId } = req.params;
+    const { userId } = req.user;
+    const { status } = req.body;
+
+    if (!status || !['Approved', 'Rejected', 'pending'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required (Approved, Rejected, or pending)' });
+    }
+
+    await client.query('BEGIN');
+
+    const query = `
+      UPDATE ticket_purchases
+      SET status = $1
+      FROM events e
+      WHERE ticket_purchases.purchase_id = $2 AND e.event_id = ticket_purchases.event_id AND e.user_id = $3
+      RETURNING ticket_purchases.*
+    `;
+    const result = await client.query(query, [status, purchaseId, userId]);
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Ticket purchase not found or access denied' });
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      message: `Ticket purchase status updated to ${status}`,
+      purchase: result.rows[0],
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating ticket purchase status:', error);
+    res.status(500).json({
+      error: 'Failed to update ticket purchase status',
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+//payments org end
 
 // Start the server
 app.listen(port, () => {
