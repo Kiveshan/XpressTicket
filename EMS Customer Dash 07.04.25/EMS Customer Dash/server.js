@@ -1820,6 +1820,7 @@ app.get('/api/customers', async (req, res) => {
       ORDER BY 
         up.created_at DESC
     `;
+    
     const result = await client.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -1854,6 +1855,7 @@ app.get('/api/payments', async (req, res) => {
       ORDER BY 
         p.payment_date DESC
     `;
+    
     const result = await client.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -1932,6 +1934,62 @@ app.get('/api/event-payment/:eventId', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   } finally {
     client.release();
+  }
+});
+
+// API endpoint to fetch users without events
+app.get('/api/users-without-events', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const query = `
+      SELECT up.* 
+      FROM user_profiles up
+      LEFT JOIN events e ON up.user_id = e.user_id
+      WHERE e.user_id IS NULL
+    `;
+    const result = await client.query(query);
+    client.release();
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching users without events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API endpoint to fetch users with events
+app.get('/api/users-with-events', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const query = `
+      SELECT up.*, e.name as event_name, e.startdate 
+      FROM user_profiles up
+      JOIN events e ON up.user_id = e.user_id
+    `;
+    const result = await client.query(query);
+    client.release();
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching users with events:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API endpoint to fetch payments
+app.get('/api/payments', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const query = `
+      SELECT p.*, e.name as event_name, up.firstname, up.surname, up.email
+      FROM payments p
+      JOIN events e ON p.event_id = e.event_id
+      JOIN user_profiles up ON e.user_id = up.user_id
+    `;
+    const result = await client.query(query);
+    client.release();
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
