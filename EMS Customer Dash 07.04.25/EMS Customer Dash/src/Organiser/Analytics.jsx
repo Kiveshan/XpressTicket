@@ -16,61 +16,55 @@ export default function Analytics() {
   const [chartData, setChartData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  const fetchAnalyticsData = async () => {
-    try {
-      const token = sessionStorage.getItem("token");
-      console.log('Token:', token);
-      if (!token) {
-        console.error("No token found in sessionStorage");
-        navigate("/");
-        return;
-      }
-
-      const queryParams = new URLSearchParams();
-      if (selectedMonth !== "All") {
-        queryParams.append("month", selectedMonth);
-      }
-      if (selectedYear !== "All") {
-        queryParams.append("year", selectedYear);
-      }
-
-      const endpoint = activeFilter === "profitVsTickets" ? "/api/analytics/profit-vs-tickets" : "/api/analytics/attendance";
-      const url = `http://localhost:5000${endpoint}?${queryParams.toString()}`;
-      console.log('Fetching from:', url);
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log('Response status:', response.status);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Response error:', errorText);
-        if (response.status === 401) {
-          console.error("Unauthorized: Invalid or expired token");
-          navigate("/");
+  useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      try {
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+          setError('No authentication token found. Please log in.');
+          navigate('/');
           return;
         }
-        throw new Error(`Failed to fetch analytics data: ${errorText}`);
+
+        setLoading(true);
+        const response = await fetch('http://localhost:5000/api/organiser/analytics', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        // Filter data by month and year
+        let filteredData = data[activeFilter];
+
+        if (selectedMonth !== "All") {
+          filteredData = filteredData.filter((item) => item.month === selectedMonth);
+        }
+        if (selectedYear !== "All") {
+          filteredData = filteredData.filter((item) => item.year === selectedYear);
+        }
+
+        setChartData(filteredData);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching analytics data:', err);
+        setError(err.message);
+        setLoading(false);
       }
+    };
 
-      const data = await response.json();
-      console.log('Fetched data:', data);
-      setChartData(data);
-    } catch (error) {
-      console.error("Error fetching analytics data:", error);
-      setChartData([]);
-    }
-  };
-
-  useEffect(() => {
     fetchAnalyticsData();
   }, [activeFilter, selectedMonth, selectedYear, navigate]);
 
+  // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -121,8 +115,11 @@ export default function Analytics() {
   };
 
   const handleBack = () => {
-    navigate("/event-list");
+    navigate("/organiser-dash");
   };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="analytics-container">
@@ -161,7 +158,9 @@ export default function Analytics() {
           </button>
         </div>
 
+        {/* Chart area */}
         <div className="chart-area">
+          {/* Month and Year Filters */}
           <div className="filter-controls">
             <select
               className="filter-dropdown"
