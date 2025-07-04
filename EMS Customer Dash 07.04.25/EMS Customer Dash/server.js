@@ -2246,6 +2246,80 @@ app.put('/api/organiser/ticket-purchases/:purchaseId/status', authenticateToken,
     client.release();
   }
 });
+
+//Analytics
+app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { userId } = req.user;
+
+    // Query for Profit vs Tickets Sold
+    const profitVsTicketsQuery = `
+      SELECT 
+        e.event_id,
+        e.name AS event,
+        COALESCE(SUM(tp.amount), 0) AS tickets_sold,
+        COALESCE(SUM(tp.amount), 0) - COALESCE(p.amount, 0) AS profit,
+        TO_CHAR(e.startdate, 'Month') AS month,
+        TO_CHAR(e.startdate, 'YYYY') AS year
+      FROM events e
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.status = 'Approved'
+      LEFT JOIN payments p ON e.event_id = p.event_id
+      WHERE e.user_id = $1
+      GROUP BY e.event_id, e.name, p.amount, e.startdate
+      ORDER BY e.startdate DESC;
+    `;
+
+    // Query for Attendance
+    const attendanceQuery = `
+      SELECT 
+        e.event_id,
+        e.name AS event,
+        COALESCE(SUM(tp.number_of_tickets), 0) AS attendance,
+        e.capacity,
+        TO_CHAR(e.startdate, 'Month') AS month,
+        TO_CHAR(e.startdate, 'YYYY') AS year
+      FROM events e
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.status = 'Approved'
+      WHERE e.user_id = $1
+      GROUP BY e.event_id, e.name, e.capacity, e.startdate
+      ORDER BY e.startdate DESC;
+    `;
+
+    const [profitVsTicketsResult, attendanceResult] = await Promise.all([
+      client.query(profitVsTicketsQuery, [userId]),
+      client.query(attendanceQuery, [userId]),
+    ]);
+
+    // Format data for frontend
+    const analyticsData = {
+      profitVsTickets: profitVsTicketsResult.rows.map(row => ({
+        event: row.event,
+        profit: parseFloat(row.profit) || 0,
+        ticketsSold: parseFloat(row.tickets_sold) || 0,
+        month: row.month.trim(),
+        year: row.year,
+      })),
+      attendance: attendanceResult.rows.map(row => ({
+        event: row.event,
+        attendance: parseInt(row.attendance, 10) || 0,
+        capacity: parseInt(row.capacity, 10) || 0,
+        month: row.month.trim(),
+        year: row.year,
+      })),
+    };
+
+    res.json(analyticsData);
+  } catch (error) {
+    console.error('Error fetching analytics data:', error);
+    res.status(500).json({
+      error: 'Failed to fetch analytics data',
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
 //----------------payments org end
 
 // Start the server
