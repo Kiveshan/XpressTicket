@@ -7,6 +7,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import "../Organiser/Analytics.css";
 import { useNavigate } from "react-router-dom";
@@ -69,9 +72,9 @@ export default function Analytics() {
     if (active && payload && payload.length) {
       return (
         <div className="custom-tooltip">
-          <p className="tooltip-label">{label}</p>
+          <p className="tooltip-label">{label || payload[0].name}</p>
           {payload.map((entry, index) => (
-            <p key={index} className="tooltip-value" style={{ color: entry.color }}>
+            <p key={index} className="tooltip-value" style={{ color: entry.color || entry.payload.fill }}>
               {entry.name}: {entry.value}
             </p>
           ))}
@@ -80,6 +83,9 @@ export default function Analytics() {
     }
     return null;
   };
+
+  // Colors for pie chart
+  const COLORS = ['#FF9800', '#2196F3', '#4CAF50', '#F44336', '#9C27B0', '#FFC107'];
 
   const renderChart = () => {
     switch (activeFilter) {
@@ -113,13 +119,24 @@ export default function Analytics() {
       case "ticketsSold":
         return (
           <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
-              <XAxis dataKey="event" />
-              <YAxis />
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="ticketsSold"
+                nameKey="event"
+                cx="50%"
+                cy="50%"
+                outerRadius={120}
+                fill="#FF9800"
+                label
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Bar dataKey="ticketsSold" name="Tickets Sold" fill="#FF9800" radius={[4, 4, 0, 0]} />
-            </BarChart>
+            </PieChart>
           </ResponsiveContainer>
         );
       default:
@@ -202,7 +219,7 @@ export default function Analytics() {
             </select>
             <select
               className="filter-dropdown"
-              value={selectedYear}
+              value={selectedMonth}
               onChange={(e) => setSelectedYear(e.target.value)}
             >
               <option value="All">All Years</option>
@@ -220,6 +237,6 @@ export default function Analytics() {
           {renderChart()}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
