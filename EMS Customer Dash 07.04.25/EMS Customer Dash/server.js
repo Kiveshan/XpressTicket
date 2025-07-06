@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const multer = require('multer');
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 
 const app = express();
 const port = 5000;
@@ -265,6 +266,15 @@ const upload = multer({
       cb(new Error('Invalid file type. Only JPEG, PNG, and PDF are allowed.'));
     }
   }
+});
+
+// Initialize SES Client
+const sesClient = new SESClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID_SES,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY_SES,
+  },
 });
 
 // Authentication middleware
@@ -2203,43 +2213,93 @@ app.get('/api/organiser/ticket-purchases/:purchaseId', authenticateToken, async 
 });
 
 // Update ticket purchase status
-app.put('/api/organiser/ticket-purchases/:purchaseId/status', authenticateToken, async (req, res) => {
+app.put('/api/organiser/ticket-purchases/:purchase_id/status', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
-    const { purchaseId } = req.params;
-    const { userId } = req.user;
+    const { purchase_id } = req.params;
     const { status } = req.body;
+    const { userId } = req.user;
 
-    if (!status || !['Approved', 'Rejected', 'pending'].includes(status)) {
-      return res.status(400).json({ error: 'Valid status is required (Approved, Rejected, or pending)' });
+    // Validate status
+    if (!['Approved', 'Rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be Approved or Rejected.' });
     }
 
-    await client.query('BEGIN');
+    // Check if the ticket purchase exists and belongs to an event created by the organiser
+    const purchaseQuery = `
+      SELECT tp.purchase_id, tp.event_id, tp.user_id, tp.number_of_tickets, e.name, u.email
+      FROM ticket_purchases tp
+      JOIN events e ON tp.event_id = e.event_id
+      JOIN user_profiles u ON tp.user_id = u.user_id
+      WHERE tp.purchase_id = $1 AND e.user_id = $2;
+    `;
+    const purchaseResult = await client.query(purchaseQuery, [purchase_id, userId]);
 
-    const query = `
+    if (purchaseResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Ticket purchase not found or not authorized.' });
+    }
+
+    const purchase = purchaseResult.rows[0];
+
+    // Update ticket purchase status
+    const updateQuery = `
       UPDATE ticket_purchases
       SET status = $1
-      FROM events e
-      WHERE ticket_purchases.purchase_id = $2 AND e.event_id = ticket_purchases.event_id AND e.user_id = $3 AND tp.request_status = 'Approved'
-      RETURNING ticket_purchases.*
+      WHERE purchase_id = $2
+      RETURNING *;
     `;
-    const result = await client.query(query, [status, purchaseId, userId]);
+    const updateResult = await client.query(updateQuery, [status, purchase_id]);
 
-    if (result.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Ticket purchase not found or access denied' });
+    // Send email via SES
+    const toEmail = process.env.NODE_ENV === 'production' ? purchase.email : 'success@simulator.amazonses.com';
+    const subject = `Ticket Purchase ${status} for ${purchase.name}`;
+    const bodyText = `Dear Customer,\n\nYour ticket purchase for the event "${purchase.name}" has been ${status.toLowerCase()}.\n\nDetails:\n- Event: ${purchase.name}\n- Number of Tickets: ${purchase.number_of_tickets}\n\nThank you,\nEventXpress Team`;
+    const bodyHtml = `
+      <html>
+      <body>
+        <h2>Ticket Purchase ${status}</h2>
+        <p>Dear Customer,</p>
+        <p>Your ticket purchase for the event "<strong>${purchase.name}</strong>" has been <strong>${status.toLowerCase()}</strong>.</p>
+        <p><strong>Details:</strong></p>
+        <ul>
+          <li>Event: ${purchase.name}</li>
+          <li>Number of Tickets: ${purchase.number_of_tickets}</li>
+        </ul>
+        <p>Thank you,<br>EventXpress Team</p>
+      </body>
+      </html>
+    `;
+
+    const sendEmailCommand = new SendEmailCommand({
+      Source: process.env.AWS_SES_FROM_EMAIL,
+      Destination: {
+        ToAddresses: [toEmail],
+      },
+      Message: {
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: {
+          Text: { Data: bodyText, Charset: 'UTF-8' },
+          Html: { Data: bodyHtml, Charset: 'UTF-8' },
+        },
+      },
+    });
+
+    try {
+      await sesClient.send(sendEmailCommand);
+      console.log(`Email sent to ${toEmail} for purchase ${purchase_id}`);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      // Continue with response even if email fails to avoid blocking the status update
     }
 
-    await client.query('COMMIT');
     res.json({
-      message: `Ticket purchase status updated to ${status}`,
-      purchase: result.rows[0],
+      message: `Ticket purchase ${status.toLowerCase()} successfully`,
+      data: updateResult.rows[0],
     });
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error updating ticket purchase status:', error);
+    console.error('Error updating ticket purchase:', error);
     res.status(500).json({
-      error: 'Failed to update ticket purchase status',
+      error: 'Failed to update ticket purchase',
       details: error.message,
     });
   } finally {
