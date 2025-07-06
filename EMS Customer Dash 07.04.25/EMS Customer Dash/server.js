@@ -184,20 +184,7 @@ async function initializeLookupTables() {
 
 
 
-    // Create payments table after events
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS public.payments (
-        payment_id SERIAL NOT NULL,
-        event_id integer NOT NULL,
-        amount real NOT NULL,
-        payment_type character varying NOT NULL DEFAULT 'Unknown',
-        proof_of_payment character varying,
-        CONSTRAINT payments_pkey PRIMARY KEY (payment_id),
-        CONSTRAINT payments_event_id_fkey FOREIGN KEY (event_id)
-          REFERENCES public.events (event_id) ON DELETE CASCADE
-      );
-    `);
-
+   
     // Seed sample data if no faculties present
     const { rows } = await client.query('SELECT COUNT(*)::int AS count FROM faculties');
     if (rows[0].count === 0) {
@@ -670,10 +657,106 @@ app.get('/api/analytics/attendance', authenticateToken, async (req, res) => {
 
 
 
-// create event 
+
+app.get('/api/events', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { userId, role } = req.user;
+
+    let query = `
+      SELECT 
+        e.event_id as id,
+        e.name,
+        e.description,
+        e.terms_and_conditions,
+        e.location,
+        e.startdate as start_date,
+        e.enddate as end_date,
+        e.time as start_time,
+        e.endtime as end_time,
+        e.duration,
+        e.deadlinetime as registration_deadline_time,
+        e.deadlinedate as registration_deadline_date,
+        e.type as event_type,
+        e.capacity,
+        e.attendees,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.status
+      FROM events e
+    `;
+
+    let queryParams = [];
+
+    if (role !== 'Admin') {
+      query += ` WHERE e.user_id = $1`;
+      queryParams.push(userId);
+    }
+
+    query += ` ORDER BY e.startdate DESC, e.time DESC`;
+
+    console.log('Fetching events for userId:', userId, 'role:', role);
+    console.log('Query:', query);
+    console.log('Params:', queryParams);
+
+    const result = await client.query(query, queryParams);
+
+    const eventsWithPresignedUrls = await Promise.all(result.rows.map(async (event) => {
+      let coverImageUrl = '/default-profile-picture.jpg';
+
+      if (event.coverimage) {
+        const coverKey = event.coverimage.split('/').slice(3).join('/');
+        try {
+          coverImageUrl = await generatePresignedUrl(coverKey);
+        } catch (e) {
+          console.warn('Failed to generate signed URL for cover image:', e);
+        }
+      }
+
+      const parsedTabs = event.tabs ? event.tabs.map(tab => {
+        try {
+          return JSON.parse(tab);
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e);
+          return {};
+        }
+      }) : [];
+
+      const parsedPackages = event.packages ? event.packages.map(pkg => {
+        try {
+          return JSON.parse(pkg);
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e);
+          return {};
+        }
+      }) : [];
+
+      return {
+        ...event,
+        coverimage: coverImageUrl,
+        tabs: parsedTabs,
+        packages: parsedPackages
+      };
+    }));
+
+    console.log('Events fetched:', eventsWithPresignedUrls);
+    res.json(eventsWithPresignedUrls);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({
+      error: 'Failed to fetch events',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+
+
 app.post('/api/events', authenticateToken, upload.fields([
   { name: 'cover_image', maxCount: 1 },
-  { name: 'proof_of_payment', maxCount: 1 },
 ]), async (req, res) => {
   console.log('Received /api/events request');
   console.log('Files received:', req.files);
@@ -698,11 +781,6 @@ app.post('/api/events', authenticateToken, upload.fields([
       attendees,
       tabs,
       packages,
-      sponsorData,
-      payment_type,
-      amount,
-      contactnum,
-      email,
     } = req.body;
 
     // Validate required fields
@@ -744,40 +822,6 @@ app.post('/api/events', authenticateToken, upload.fields([
       return res.status(400).json({ error: 'Cover image must be JPEG or PNG' });
     }
 
-    // Validate proof of payment for non-Sponsor payment types
-    if (payment_type !== 'Sponsor') {
-      if (!req.files || !req.files['proof_of_payment'] || !req.files['proof_of_payment'][0]) {
-        console.error('No proof of payment file received for non-Sponsor payment');
-        return res.status(400).json({ error: 'Proof of payment is required for non-Sponsor payment types' });
-      }
-      const proofFile = req.files['proof_of_payment'][0];
-      console.log('Proof of payment file:', {
-        originalname: proofFile.originalname,
-        mimetype: proofFile.mimetype,
-        size: proofFile.size,
-      });
-      if (!['image/jpeg', 'image/png', 'application/pdf'].includes(proofFile.mimetype)) {
-        console.error('Invalid proof of payment type:', proofFile.mimetype);
-        return res.status(400).json({ error: 'Proof of payment must be JPEG, PNG, or PDF' });
-      }
-    }
-
-    // Validate sponsor fields when payment_type is Sponsor
-    if (payment_type === 'Sponsor') {
-      if (!contactnum || contactnum.trim() === '') missingFields.push('contactnum');
-      if (!email || email.trim() === '') missingFields.push('email');
-      if (missingFields.length > 0) {
-        console.log('Missing sponsor fields:', missingFields);
-        return res.status(400).json({
-          error: 'Missing required sponsor fields',
-          details: `The following fields are missing or empty for Sponsor payment: ${missingFields.join(', ')}`,
-        });
-      }
-    }
-
-    const finalContactnum = payment_type === 'Sponsor' ? contactnum || 'N/A' : 'N/A';
-    const finalEmail = payment_type === 'Sponsor' ? email || 'N/A' : 'N/A';
-
     let parsedAttendees = [];
     let parsedTabs = [];
     let parsedPackages = [];
@@ -790,23 +834,7 @@ app.post('/api/events', authenticateToken, upload.fields([
       return res.status(400).json({ error: 'Invalid JSON format for attendees, tabs, or packages', details: e.message });
     }
 
-    let parsedSponsor = {};
-    try {
-      parsedSponsor = JSON.parse(sponsorData || '{}');
-    } catch (e) {
-      console.error('Sponsor data parsing error:', e.message);
-      return res.status(400).json({ error: 'Invalid sponsorData format', details: e.message });
-    }
-
     await client.query('BEGIN');
-
-    // Verify S3 configuration
-    console.log('S3 configuration:', {
-      bucket: process.env.S3_BUCKET_NAME,
-      region: 'af-south-1',
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID ? 'Set' : 'Not set',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ? 'Set' : 'Not set',
-    });
 
     // Upload cover image to S3
     let coverImageUrl;
@@ -843,7 +871,7 @@ app.post('/api/events', authenticateToken, upload.fields([
       throw new Error(`Cover image upload failed: ${error.message}`);
     }
 
-    // Insert event with the uploaded cover image URL
+    // Insert event without payment-related fields
     const queryParams = [
       name,
       location,
@@ -856,8 +884,8 @@ app.post('/api/events', authenticateToken, upload.fields([
       type,
       parseInt(capacity, 10),
       `{${parsedAttendees.join(',')}}`,
-      finalContactnum,
-      finalEmail,
+      null, // contactnum
+      null, // email
       coverImageUrl,
       parsedTabs,
       parsedPackages,
@@ -888,55 +916,6 @@ app.post('/api/events', authenticateToken, upload.fields([
     const event_id = eventResult.rows[0].event_id;
     console.log('Event created with ID:', event_id);
 
-    // Insert payment
-    const paymentResult = await client.query(
-      `INSERT INTO payments (event_id, amount, payment_type, proof_of_payment)
-       VALUES ($1, $2, $3, $4)
-       RETURNING payment_id`,
-      [event_id, parseFloat(amount) || 0, payment_type || 'Unknown', null]
-    );
-
-    const payment_id = paymentResult.rows[0].payment_id;
-    console.log('Payment created with ID:', payment_id);
-
-    // Upload proof of payment to S3 for non-Sponsor payments
-    let proofOfPaymentUrl = null;
-    let proofOfPaymentKey = null;
-    if (payment_type !== 'Sponsor' && req.files && req.files['proof_of_payment']) {
-      try {
-        const file = req.files['proof_of_payment'][0];
-        const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        proofOfPaymentKey = `proof_of_payment/${event_id}/${Date.now()}_${sanitizedFileName}`;
-
-        console.log('Uploading proof of payment to S3:', {
-          bucket: process.env.S3_BUCKET_NAME,
-          key: proofOfPaymentKey,
-          contentType: file.mimetype,
-          bufferLength: file.buffer ? file.buffer.length : 'undefined',
-        });
-
-        const proofCommand = new PutObjectCommand({
-          Bucket: process.env.S3_BUCKET_NAME,
-          Key: proofOfPaymentKey,
-          Body: file.buffer,
-          ContentType: file.mimetype,
-        });
-
-        await s3Client.send(proofCommand);
-        proofOfPaymentUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${proofOfPaymentKey}`;
-        console.log('Proof of payment uploaded successfully:', proofOfPaymentUrl);
-
-        await client.query(
-          `UPDATE payments SET proof_of_payment = $1 WHERE payment_id = $2`,
-          [proofOfPaymentUrl, payment_id]
-        );
-        console.log('Updated payment with proof of payment URL:', proofOfPaymentUrl);
-      } catch (error) {
-        console.error('Failed to upload proof of payment to S3:', error);
-        // Proof of payment is nullable, so we can continue
-      }
-    }
-
     await client.query('COMMIT');
     console.log('Transaction committed');
 
@@ -945,15 +924,13 @@ app.post('/api/events', authenticateToken, upload.fields([
       [event_id]
     );
 
-    // Generate presigned URLs for response
+    // Generate presigned URL for response
     const finalCoverImageUrl = coverImageKey ? await generatePresignedUrl(coverImageKey) : coverImageUrl;
-    const finalProofOfPaymentUrl = proofOfPaymentKey ? await generatePresignedUrl(proofOfPaymentKey) : null;
 
     console.log('Event created:', finalEvent.rows[0]);
     res.status(200).json({
       message: 'Event created successfully',
       coverImageUrl: finalCoverImageUrl,
-      proofOfPaymentUrl: finalProofOfPaymentUrl,
       event: finalEvent.rows[0],
     });
   } catch (error) {
@@ -967,127 +944,16 @@ app.post('/api/events', authenticateToken, upload.fields([
 
 
 
-
-
 //Get all the events for the logged in user 
 // Get all events for the logged-in user
-// Get all events (user/admin)
-app.get('/api/events', authenticateToken, async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { userId, role } = req.user;
+// Get all
 
-    let query = `
-      SELECT 
-        e.event_id as id,
-        e.name,
-        e.description,
-        e.terms_and_conditions,
-        e.location,
-        e.startdate as start_date,
-        e.enddate as end_date,
-        e.time as start_time,
-        e.endtime as end_time,
-        e.duration,
-        e.deadlinetime as registration_deadline_time,
-        e.deadlinedate as registration_deadline_date,
-        e.type as event_type,
-        e.capacity,
-        e.attendees,
-        e.contactnum,
-        e.email,
-        e.coverimage,
-        e.tabs,
-        e.packages,
-        e.status,
-        p.amount as paid_amount,
-        p.payment_type,
-        p.proof_of_payment as payment_proof_key
-      FROM events e
-      LEFT JOIN payments p ON e.event_id = p.event_id
-    `;
 
-    let queryParams = [];
 
-    if (role !== 'Admin') {
-      query += ` WHERE e.user_id = $1`;
-      queryParams.push(userId);
-    }
-
-    query += ` ORDER BY e.startdate DESC, e.time DESC`;
-
-    console.log('Fetching events for userId:', userId, 'role:', role);
-    console.log('Query:', query);
-    console.log('Params:', queryParams);
-
-    const result = await client.query(query, queryParams);
-
-    const eventsWithPresignedUrls = await Promise.all(result.rows.map(async (event) => {
-      let coverImageUrl = '/default-profile-picture.jpg';
-      let proofOfPaymentUrl = null;
-
-      if (event.coverimage) {
-        const coverKey = event.coverimage.split('/').slice(3).join('/');
-        try {
-          coverImageUrl = await generatePresignedUrl(coverKey);
-        } catch (e) {
-          console.warn('Failed to generate signed URL for cover image:', e);
-        }
-      }
-
-      if (event.payment_proof_key) {
-        const proofKey = event.payment_proof_key.split('/').slice(3).join('/');
-        try {
-          proofOfPaymentUrl = await generatePresignedUrl(proofKey);
-        } catch (e) {
-          console.warn('Failed to generate signed URL for proof of payment:', e);
-        }
-      }
-
-      const parsedTabs = event.tabs ? event.tabs.map(tab => {
-        try {
-          return JSON.parse(tab);
-        } catch (e) {
-          console.warn(`Failed to parse tab: ${tab}`, e);
-          return {};
-        }
-      }) : [];
-
-      const parsedPackages = event.packages ? event.packages.map(pkg => {
-        try {
-          return JSON.parse(pkg);
-        } catch (e) {
-          console.warn(`Failed to parse package: ${pkg}`, e);
-          return {};
-        }
-      }) : [];
-
-      return {
-        ...event,
-        coverimage: coverImageUrl,
-        payment_proof_url: proofOfPaymentUrl,
-        tabs: parsedTabs,
-        packages: parsedPackages
-      };
-    }));
-
-    console.log('Events fetched:', eventsWithPresignedUrls);
-    res.json(eventsWithPresignedUrls);
-  } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({
-      error: 'Failed to fetch events',
-      details: error.message
-    });
-  } finally {
-    client.release();
-  }
-});
 
 // Get single event by ID
 app.put('/api/events/:eventId', authenticateToken, upload.fields([
   { name: 'cover_image', maxCount: 1 },
-  { name: 'proof_of_payment', maxCount: 1 },
 ]), async (req, res) => {
   const client = await pool.connect();
   try {
@@ -1112,8 +978,7 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
       tabs,
       packages,
       terms_and_conditions,
-      payment_amount,
-      payment_type
+      // Remove payment_amount and payment_type from destructuring
     } = req.body;
 
     // Verify the user owns the event and the event is in 'Request Edit' or 'pending' status
@@ -1214,79 +1079,30 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
       );
     }
 
-    // Handle payment if provided
-    let proofOfPaymentUrl = null;
-    let proofOfPaymentKey = null;
-    if (payment_amount && payment_type) {
-      if (payment_type !== 'Sponsor' && req.files && req.files['proof_of_payment']) {
-        const file = req.files['proof_of_payment'][0];
-        const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        proofOfPaymentKey = `proof_of_payment/${eventId}/${Date.now()}_${sanitizedFileName}`;
-
-        const proofCommand = new PutObjectCommand({
-          Bucket: process.env.S3_BUCKET_NAME,
-          Key: proofOfPaymentKey,
-          Body: file.buffer,
-          ContentType: file.mimetype
-        });
-
-        await s3Client.send(proofCommand);
-        proofOfPaymentUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${proofOfPaymentKey}`;
-        console.log('Proof of payment uploaded:', proofOfPaymentUrl);
-      }
-
-      const paymentQuery = `
-        INSERT INTO payments (
-          event_id, amount, payment_type, proof_of_payment
-        ) VALUES ($1, $2, $3, $4)
-        ON CONFLICT (event_id) DO UPDATE
-        SET amount = EXCLUDED.amount,
-            payment_type = EXCLUDED.payment_type,
-            proof_of_payment = COALESCE(EXCLUDED.proof_of_payment, payments.proof_of_payment)
-        RETURNING payment_id;
-      `;
-
-      const paymentValues = [
-        eventId,
-        parseFloat(payment_amount) || 0,
-        payment_type,
-        proofOfPaymentKey
-      ];
-
-      await client.query(paymentQuery, paymentValues);
-    }
-
     await client.query('COMMIT');
 
     // Fetch the updated event
     const { rows: [updatedEvent] } = await client.query(
       `SELECT e.*, 
-              p.amount as paid_amount, p.payment_type, p.proof_of_payment as payment_proof_key,
               up.firstname, up.surname, up.email, up.cellnumber
        FROM events e
-       LEFT JOIN payments p ON e.event_id = p.event_id
        LEFT JOIN user_profiles up ON e.user_id = up.user_id
        WHERE e.event_id = $1`,
       [eventId]
     );
 
-    // Generate presigned URLs for response
+    // Generate presigned URL for response
     const finalCoverImageUrl = updatedEvent.coverimage
       ? await generatePresignedUrl(updatedEvent.coverimage.split('/').slice(3).join('/'))
       : '/default-profile-picture.jpg';
-    const finalProofOfPaymentUrl = updatedEvent.payment_proof_key
-      ? await generatePresignedUrl(updatedEvent.payment_proof_key.split('/').slice(3).join('/'))
-      : null;
 
     res.json({
       message: 'Event updated successfully and set to pending',
       event: {
         ...updatedEvent,
         coverimage: finalCoverImageUrl,
-        payment_proof_url: finalProofOfPaymentUrl
       },
       coverImageUrl: finalCoverImageUrl,
-      proofOfPaymentUrl: finalProofOfPaymentUrl
     });
   } catch (error) {
     await client.query('ROLLBACK');

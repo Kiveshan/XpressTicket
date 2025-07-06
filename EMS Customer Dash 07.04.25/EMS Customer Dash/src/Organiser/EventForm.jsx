@@ -79,18 +79,8 @@ export default function EventForm() {
     },
   ]);
   const [tabs, setTabs] = useState([{ name: "", content: "" }]);
-  const [paymentType, setPaymentType] = useState("");
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [sponsor, setSponsor] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    amount: "",
-  });
   const [coverImageFile, setCoverImageFile] = useState(null);
-  const [proofOfPaymentFile, setProofOfPaymentFile] = useState(null);
   const [coverImageUrl, setCoverImageUrl] = useState("");
-  const [proofOfPaymentUrl, setProofOfPaymentUrl] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,11 +113,7 @@ export default function EventForm() {
     selectedClientTypes,
     tabs,
     packages,
-    paymentType,
-    paymentAmount,
-    sponsor,
     coverImageFile,
-    proofOfPaymentFile,
   ]);
 
   const validateForm = () => {
@@ -219,23 +205,8 @@ export default function EventForm() {
       });
     }
 
-    if (!paymentType) newErrors.payment_type = "Payment type is required";
-    if (!paymentAmount && paymentType !== "Sponsor") newErrors.payment_amount = "Payment amount is required";
-    if (paymentType === "Sponsor") {
-      if (!sponsor.name.trim()) newErrors.sponsor_name = "Sponsor name is required";
-      if (!sponsor.phone.trim()) newErrors.sponsor_phone = "Sponsor phone number is required";
-      if (!sponsor.email.trim()) newErrors.sponsor_email = "Sponsor email is required";
-      if (!sponsor.amount.trim()) newErrors.sponsor_amount = "Sponsor amount is required";
-    }
-
     if (!coverImageFile || !(coverImageFile instanceof File) || !["image/png", "image/jpeg"].includes(coverImageFile.type)) {
       newErrors.cover_image = "A valid PNG or JPEG cover image is required";
-    }
-    if (paymentType !== "Sponsor" && (!proofOfPaymentFile || !(proofOfPaymentFile instanceof File))) {
-      newErrors.proof_of_payment = "Proof of payment is required for non-Sponsor payment types";
-    }
-    if (paymentType !== "Sponsor" && proofOfPaymentFile && !["image/png", "image/jpeg", "application/pdf"].includes(proofOfPaymentFile.type)) {
-      newErrors.proof_of_payment = "Proof of payment must be PNG, JPEG, or PDF";
     }
 
     setErrors(newErrors);
@@ -353,35 +324,6 @@ export default function EventForm() {
     }
   };
 
-  const handleProofOfPaymentChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file instanceof File && ["image/png", "image/jpeg", "application/pdf"].includes(file.type) && file.size > 0) {
-      console.log("Proof of payment selected:", {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        lastModified: file.lastModified,
-      });
-      setProofOfPaymentFile(file);
-      alert(`Proof of payment selected: ${file.name}`);
-    } else {
-      console.error("Invalid proof of payment:", file ? { type: file.type, size: file.size } : "No file selected");
-      alert("Please select a valid PNG, JPEG, or PDF file for proof of payment.");
-      setProofOfPaymentFile(null); // Clear invalid file
-    }
-  };
-
-  const handleSponsorChange = (e) => {
-    const { name, value } = e.target;
-    if (name === "phone") {
-      if (value === "" || /^\d*$/.test(value)) {
-        setSponsor({ ...sponsor, [name]: value });
-      }
-    } else {
-      setSponsor({ ...sponsor, [name]: value });
-    }
-  };
-
   const handleSendRequest = async () => {
     setErrorMessage("");
     setShowSuccess(false);
@@ -429,43 +371,7 @@ export default function EventForm() {
     formDataToSend.append("attendees", JSON.stringify(selectedClientTypes));
     formDataToSend.append("tabs", JSON.stringify(tabs));
     formDataToSend.append("packages", JSON.stringify(packages));
-    formDataToSend.append("sponsorData", JSON.stringify(sponsor));
-    formDataToSend.append("payment_type", paymentType);
-    formDataToSend.append("amount", paymentType === "Sponsor" ? sponsor.amount : paymentAmount);
-
-    if (paymentType === "Sponsor") {
-      if (!sponsor.phone || !sponsor.email) {
-        console.error("Missing sponsor fields:", { phone: sponsor.phone, email: sponsor.email });
-        alert("Sponsor phone and email are required for Sponsor payment type.");
-        setIsSubmitting(false);
-        return;
-      }
-      formDataToSend.append("contactnum", sponsor.phone);
-      formDataToSend.append("email", sponsor.email);
-    }
-
     formDataToSend.append("cover_image", coverImageFile);
-    console.log("Appending cover_image:", {
-      name: coverImageFile.name,
-      type: coverImageFile.type,
-      size: coverImageFile.size,
-    });
-
-    if (paymentType !== "Sponsor") {
-      if (!proofOfPaymentFile || !(proofOfPaymentFile instanceof File)) {
-        console.error("No valid proof of payment file selected for non-Sponsor payment");
-        alert("Proof of payment is required for non-Sponsor payment types.");
-        setErrors((prev) => ({ ...prev, proof_of_payment: "Proof of payment is required for non-Sponsor payment types" }));
-        setIsSubmitting(false);
-        return;
-      }
-      formDataToSend.append("proof_of_payment", proofOfPaymentFile);
-      console.log("Appending proof_of_payment:", {
-        name: proofOfPaymentFile.name,
-        type: proofOfPaymentFile.type,
-        size: proofOfPaymentFile.size,
-      });
-    }
 
     console.log("FormData contents:");
     for (const pair of formDataToSend.entries()) {
@@ -500,7 +406,6 @@ export default function EventForm() {
 
       console.log("✅ Event created successfully:", responseData);
       setCoverImageUrl(responseData.coverImageUrl || "/default-profile-picture.jpg");
-      setProofOfPaymentUrl(responseData.proofOfPaymentUrl || "");
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
@@ -565,155 +470,153 @@ export default function EventForm() {
                   </div>
                 )}
               </div>
-              <div className="time-column">
-                <div className="time-group">
-                  <div className="form-group time-input">
-                    <label htmlFor="start_time" className="form-label">
-                      Start Time *
-                    </label>
-                    <input
-                      type="time"
-                      id="start_time"
-                      name="start_time"
-                      className={`form-input ${errors.start_time ? "error" : ""}`}
-                      value={formData.start_time}
-                      onChange={handleDateChange}
-                      required
-                    />
-                    {errors.start_time && (
-                      <div className="error-message">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {errors.start_time}
-                      </div>
-                    )}
-                  </div>
-                  <div className="form-group time-input">
-                    <label htmlFor="end_time" className="form-label">
-                      End Time *
-                    </label>
-                    <input
-                      type="time"
-                      id="end_time"
-                      name="end_time"
-                      className={`form-input ${errors.end_time ? "error" : ""}`}
-                      value={formData.end_time}
-                      onChange={handleDateChange}
-                      required
-                    />
-                    {errors.end_time && (
-                      <div className="error-message">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {errors.end_time}
-                      </div>
-                    )}
-                  </div>
-                  <div className="form-group time-input">
-                    <label htmlFor="deadlinedate" className="form-label">
-                      Registration Deadline Date *
-                    </label>
-                    <input
-                      type="date"
-                      id="deadlinedate"
-                      name="deadlinedate"
-                      className={`form-input ${errors.deadlinedate ? "error" : ""}`}
-                      value={formData.deadlinedate}
-                      onChange={handleDateChange}
-                      max={formData.startdate}
-                      required
-                    />
-                    {errors.deadlinedate && (
-                      <div className="error-message">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {errors.deadlinedate}
-                      </div>
-                    )}
-                  </div>
-                  <div className="form-group time-input">
-                    <label htmlFor="deadlinetime" className="form-label">
-                      Registration Deadline Time *
-                    </label>
-                    <input
-                      type="time"
-                      id="deadlinetime"
-                      name="deadlinetime"
-                      className={`form-input ${errors.deadlinetime ? "error" : ""}`}
-                      value={formData.deadlinetime}
-                      onChange={handleDateChange}
-                      required
-                    />
-                    {errors.deadlinetime && (
-                      <div className="error-message">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {errors.deadlinetime}
-                      </div>
-                    )}
-                  </div>
+              <div className="time-group">
+                <div className="form-group time-input">
+                  <label htmlFor="start_time" className="form-label">
+                    Start Time *
+                  </label>
+                  <input
+                    type="time"
+                    id="start_time"
+                    name="start_time"
+                    className={`form-input ${errors.start_time ? "error" : ""}`}
+                    value={formData.start_time}
+                    onChange={handleDateChange}
+                    required
+                  />
+                  {errors.start_time && (
+                    <div className="error-message">
+                      <i className="fas fa-exclamation-circle"></i>
+                      {errors.start_time}
+                    </div>
+                  )}
                 </div>
-                <div className="time-group">
-                  <div className="form-group time-input">
-                    <label htmlFor="type" className="form-label">
-                      Event Type *
-                    </label>
+                <div className="form-group time-input">
+                  <label htmlFor="end_time" className="form-label">
+                    End Time *
+                  </label>
+                  <input
+                    type="time"
+                    id="end_time"
+                    name="end_time"
+                    className={`form-input ${errors.end_time ? "error" : ""}`}
+                    value={formData.end_time}
+                    onChange={handleDateChange}
+                    required
+                  />
+                  {errors.end_time && (
+                    <div className="error-message">
+                      <i className="fas fa-exclamation-circle"></i>
+                      {errors.end_time}
+                    </div>
+                  )}
+                </div>
+                <div className="form-group time-input">
+                  <label htmlFor="deadlinedate" className="form-label">
+                    Registration Deadline Date *
+                  </label>
+                  <input
+                    type="date"
+                    id="deadlinedate"
+                    name="deadlinedate"
+                    className={`form-input ${errors.deadlinedate ? "error" : ""}`}
+                    value={formData.deadlinedate}
+                    onChange={handleDateChange}
+                    max={formData.startdate}
+                    required
+                  />
+                  {errors.deadlinedate && (
+                    <div className="error-message">
+                      <i className="fas fa-exclamation-circle"></i>
+                      {errors.deadlinedate}
+                    </div>
+                  )}
+                </div>
+                <div className="form-group time-input">
+                  <label htmlFor="deadlinetime" className="form-label">
+                    Registration Deadline Time *
+                  </label>
+                  <input
+                    type="time"
+                    id="deadlinetime"
+                    name="deadlinetime"
+                    className={`form-input ${errors.deadlinetime ? "error" : ""}`}
+                    value={formData.deadlinetime}
+                    onChange={handleDateChange}
+                    required
+                  />
+                  {errors.deadlinetime && (
+                    <div className="error-message">
+                      <i className="fas fa-exclamation-circle"></i>
+                      {errors.deadlinetime}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="time-group">
+                <div className="form-group time-input">
+                  <label htmlFor="type" className="form-label">
+                    Event Type *
+                  </label>
+                  <input
+                    type="text"
+                    id="type"
+                    name="type"
+                    className={`form-input ${errors.type ? "error" : ""}`}
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    placeholder="Conference"
+                    required
+                  />
+                  {errors.type && (
+                    <div className="error-message">
+                      <i className="fas fa-exclamation-circle"></i>
+                      {errors.type}
+                    </div>
+                  )}
+                </div>
+                <div className="form-group time-input">
+                  <label htmlFor="capacity" className="form-label">
+                    Max Capacity *
+                  </label>
+                  <div className="number-input">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: Math.max(1, prev.capacity - 1),
+                        }))
+                      }
+                      className="number-btn minus"
+                    >
+                      -
+                    </button>
                     <input
                       type="text"
-                      id="type"
-                      name="type"
-                      className={`form-input ${errors.type ? "error" : ""}`}
-                      value={formData.type}
-                      onChange={handleInputChange}
-                      placeholder="Conference"
+                      id="capacity"
+                      name="capacity"
+                      className={`form-input ${errors.capacity ? "error" : ""}`}
+                      value={formData.capacity}
+                      onChange={handleNumberInput}
                       required
                     />
-                    {errors.type && (
-                      <div className="error-message">
-                        <i className="fas fa-exclamation-circle"></i>
-                        {errors.type}
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: prev.capacity + 1,
+                        }))
+                      }
+                      className="number-btn plus"
+                    >
+                      +
+                    </button>
                   </div>
-                  <div className="form-group time-input">
-                    <label htmlFor="capacity" className="form-label">
-                      Max Capacity *
-                    </label>
-                    <div className="number-input">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            capacity: Math.max(1, prev.capacity - 1),
-                          }))
-                        }
-                        className="number-btn minus"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="text"
-                        id="capacity"
-                        name="capacity"
-                        className={`form-input ${errors.capacity ? "error" : ""}`}
-                        value={formData.capacity}
-                        onChange={handleNumberInput}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            capacity: prev.capacity + 1,
-                          }))
-                        }
-                        className="number-btn plus"
-                      >
-                        +
-                      </button>
-                    </div>
-                    {errors.capacity && (
-                      <div className="error-message">{errors.capacity}</div>
-                    )}
-                  </div>
+                  {errors.capacity && (
+                    <div className="error-message">{errors.capacity}</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1026,142 +929,6 @@ export default function EventForm() {
         </div>
       ))}
       {errors.packages && <div className="error-message">{errors.packages}</div>}
-      <div className="form-grid">
-        <div>
-          <label>Payment Type *</label>
-          <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} required>
-            <option value="">Select</option>
-            <option value="Direct">Direct</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Credit">Credit</option>
-            <option value="Sponsor">Sponsor</option>
-          </select>
-          {errors.payment_type && (
-            <div className="error-message">{errors.payment_type}</div>
-          )}
-        </div>
-        <table className="payment-table">
-          <thead>
-            <tr>
-              {paymentType === "Sponsor" ? (
-                <>
-                  <th>Sponsor Name *</th>
-                  <th>Cellphone Number *</th>
-                  <th>Email *</th>
-                  <th>Amount *</th>
-                </>
-              ) : (
-                <>
-                  <th>Amount *</th>
-                  <th>Proof of Payment *</th>
-                </>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              {paymentType === "Sponsor" ? (
-                <>
-                  <td>
-                    <input
-                      type="text"
-                      name="name"
-                      value={sponsor.name}
-                      onChange={handleSponsorChange}
-                      placeholder="Sponsor Name"
-                      required
-                    />
-                    {errors.sponsor_name && (
-                      <div className="error-message">{errors.sponsor_name}</div>
-                    )}
-                  </td>
-                  <td>
-                    <input
-                      className="cellno"
-                      type="text"
-                      name="phone"
-                      value={sponsor.phone}
-                      onChange={handleSponsorChange}
-                      placeholder="Cellphone Number"
-                      required
-                    />
-                    {errors.sponsor_phone && (
-                      <div className="error-message">{errors.sponsor_phone}</div>
-                    )}
-                  </td>
-                  <td>
-                    <input
-                      type="email"
-                      name="email"
-                      value={sponsor.email}
-                      onChange={handleSponsorChange}
-                      placeholder="Email"
-                      required
-                    />
-                    {errors.sponsor_email && (
-                      <div className="error-message">{errors.sponsor_email}</div>
-                    )}
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      name="amount"
-                      value={sponsor.amount}
-                      onChange={handleSponsorChange}
-                      placeholder="Amount"
-                      required
-                    />
-                    {errors.sponsor_amount && (
-                      <div className="error-message">{errors.sponsor_amount}</div>
-                    )}
-                  </td>
-                </>
-              ) : (
-                <>
-                  <td>
-                    <input
-                      type="text"
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                      placeholder="Enter amount (e.g., 7000000.00)"
-                      required
-                    />
-                    {errors.payment_amount && (
-                      <div className="error-message">{errors.payment_amount}</div>
-                    )}
-                  </td>
-                  <td className="upload-cell">
-                    <input
-                      type="file"
-                      id="proof_of_payment"
-                      name="proof_of_payment"
-                      onChange={handleProofOfPaymentChange}
-                      accept="image/png,image/jpeg,application/pdf"
-                      style={{ display: "none" }}
-                      required={paymentType !== "Sponsor"}
-                    />
-                    <label htmlFor="proof_of_payment" className="upload-button">
-                      Upload
-                    </label>
-                    {proofOfPaymentFile && <span className="file-name">{proofOfPaymentFile.name}</span>}
-                    {errors.proof_of_payment && (
-                      <div className="error-message">{errors.proof_of_payment}</div>
-                    )}
-                  </td>
-                </>
-              )}
-            </tr>
-          </tbody>
-        </table>
-        {proofOfPaymentUrl && (
-          <div className="uploaded-preview">
-            <p>Proof of Payment Uploaded:</p>
-            <a href={proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
-              View File
-            </a>
-          </div>
-        )}
-      </div>
       <div className="p-4">
         <button
           onClick={handleSendRequest}
