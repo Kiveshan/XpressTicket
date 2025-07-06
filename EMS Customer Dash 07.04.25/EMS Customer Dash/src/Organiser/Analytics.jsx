@@ -12,7 +12,6 @@ import "../Organiser/Analytics.css";
 import { useNavigate } from "react-router-dom";
 
 export default function Analytics() {
-  const [activeFilter, setActiveFilter] = useState("profitVsTickets");
   const [chartData, setChartData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState("All");
@@ -43,7 +42,7 @@ export default function Analytics() {
 
         const data = await response.json();
         // Filter data by month and year
-        let filteredData = data[activeFilter];
+        let filteredData = data.attendance;
 
         if (selectedMonth !== "All") {
           filteredData = filteredData.filter((item) => item.month === selectedMonth);
@@ -62,7 +61,7 @@ export default function Analytics() {
     };
 
     fetchAnalyticsData();
-  }, [activeFilter, selectedMonth, selectedYear, navigate]);
+  }, [selectedMonth, selectedYear, navigate]);
 
   // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
@@ -82,36 +81,18 @@ export default function Analytics() {
   };
 
   const renderChart = () => {
-    switch (activeFilter) {
-      case "profitVsTickets":
-        return (
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
-              <XAxis dataKey="event" />
-              <YAxis />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="profit" name="Profit (R)" fill="#4CAF50" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="ticketsSold" name="Tickets Sold (R)" fill="#FFC107" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      case "attendance":
-        return (
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
-              <XAxis dataKey="event" />
-              <YAxis />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="attendance" name="Attendance" fill="#2196F3" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="capacity" name="Capacity" fill="#9C27B0" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      default:
-        return null;
-    }
+    return (
+      <ResponsiveContainer width="100%" height={350}>
+        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+          <XAxis dataKey="event" />
+          <YAxis />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          <Bar dataKey="attendance" name="Attendance" fill="#2196F3" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="capacity" name="Capacity" fill="#9C27B0" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
   };
 
   const handleBack = () => {
@@ -143,21 +124,6 @@ export default function Analytics() {
       </div>
 
       <div className="analytics-content">
-        <div className="sidebar-filters">
-          <button
-            className={`filter-button ${activeFilter === "profitVsTickets" ? "active" : ""}`}
-            onClick={() => setActiveFilter("profitVsTickets")}
-          >
-            Profit vs Tickets Sold
-          </button>
-          <button
-            className={`filter-button ${activeFilter === "attendance" ? "active" : ""}`}
-            onClick={() => setActiveFilter("attendance")}
-          >
-            Attendance
-          </button>
-        </div>
-
         {/* Chart area */}
         <div className="chart-area">
           {/* Month and Year Filters */}
@@ -193,10 +159,7 @@ export default function Analytics() {
               <option value="2025">2025</option>
             </select>
           </div>
-          <h2 className="chart-title">
-            {activeFilter === "profitVsTickets" && "Profit vs Tickets Sold"}
-            {activeFilter === "attendance" && "Attendance Analysis"}
-          </h2>
+          <h2 className="chart-title">Attendance Analysis</h2>
           {renderChart()}
         </div>
       </div>

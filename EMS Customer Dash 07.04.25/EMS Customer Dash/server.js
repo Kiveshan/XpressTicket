@@ -2229,23 +2229,6 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.user;
 
-    // Query for Profit vs Tickets Sold
-    const profitVsTicketsQuery = `
-      SELECT 
-        e.event_id,
-        e.name AS event,
-        COALESCE(SUM(tp.amount), 0) AS tickets_sold,
-        COALESCE(SUM(tp.amount), 0) - COALESCE(p.amount, 0) AS profit,
-        TO_CHAR(e.startdate, 'Month') AS month,
-        TO_CHAR(e.startdate, 'YYYY') AS year
-      FROM events e
-      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.status = 'Approved'
-      LEFT JOIN payments p ON e.event_id = p.event_id
-      WHERE e.user_id = $1
-      GROUP BY e.event_id, e.name, p.amount, e.startdate
-      ORDER BY e.startdate DESC;
-    `;
-
     // Query for Attendance
     const attendanceQuery = `
       SELECT 
@@ -2262,20 +2245,10 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
       ORDER BY e.startdate DESC;
     `;
 
-    const [profitVsTicketsResult, attendanceResult] = await Promise.all([
-      client.query(profitVsTicketsQuery, [userId]),
-      client.query(attendanceQuery, [userId]),
-    ]);
+    const attendanceResult = await client.query(attendanceQuery, [userId]);
 
     // Format data for frontend
     const analyticsData = {
-      profitVsTickets: profitVsTicketsResult.rows.map(row => ({
-        event: row.event,
-        profit: parseFloat(row.profit) || 0,
-        ticketsSold: parseFloat(row.tickets_sold) || 0,
-        month: row.month.trim(),
-        year: row.year,
-      })),
       attendance: attendanceResult.rows.map(row => ({
         event: row.event,
         attendance: parseInt(row.attendance, 10) || 0,
