@@ -185,7 +185,7 @@ async function initializeLookupTables() {
 
 
 
-   
+
     // Seed sample data if no faculties present
     const { rows } = await client.query('SELECT COUNT(*)::int AS count FROM faculties');
     if (rows[0].count === 0) {
@@ -1126,7 +1126,140 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
   }
 });
 
+// Get single event by ID
+app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const { userId, role } = req.user;
 
+    let query = `
+      SELECT 
+        e.event_id as id,
+        e.name,
+        e.description,
+        e.terms_and_conditions,
+        e.location,
+        e.startdate as start_date,
+        e.enddate as end_date,
+        e.time as start_time,
+        e.endtime as end_time,
+        e.duration,
+        e.deadlinetime as registration_deadline_time,
+        e.deadlinedate as registration_deadline_date,
+        e.type as event_type,
+        e.capacity,
+        e.attendees,
+        e.contactnum,
+        e.email,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.status,
+        e.admin_comment,
+        e.user_id,
+        up.firstname as organizer_first_name,
+        up.surname as organizer_last_name,
+        up.cellnumber as organizer_phone,
+        up.email as organizer_email
+      FROM events e
+      LEFT JOIN user_profiles up ON e.user_id = up.user_id
+      WHERE e.event_id = $1
+    `;
+
+    let queryParams = [eventId];
+
+    if (role !== 'Admin') {
+      query += ` AND e.user_id = $2`;
+      queryParams.push(userId);
+    }
+
+    console.log('Fetching event with ID:', eventId, 'for userId:', userId, 'role:', role);
+    console.log('Query:', query);
+    console.log('Params:', queryParams);
+
+    const result = await client.query(query, queryParams);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found or access denied' });
+    }
+
+    const event = result.rows[0];
+
+    let coverImageUrl = '/default-profile-picture.jpg';
+    if (event.coverimage) {
+      const coverKey = event.coverimage.split('/').slice(3).join('/');
+      try {
+        coverImageUrl = await generatePresignedUrl(coverKey);
+      } catch (e) {
+        console.warn('Failed to generate signed URL for cover image:', e);
+      }
+    }
+
+    const parsedTabs = event.tabs
+      ? event.tabs.map(tab => {
+        try {
+          return JSON.parse(tab);
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e);
+          return {};
+        }
+      })
+      : [];
+
+    const parsedPackages = event.packages
+      ? event.packages.map(pkg => {
+        try {
+          return JSON.parse(pkg);
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e);
+          return {};
+        }
+      })
+      : [];
+
+    const response = {
+      id: event.id,
+      name: event.name,
+      description: event.description,
+      terms_and_conditions: event.terms_and_conditions,
+      location: event.location,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      start_time: event.start_time,
+      end_time: event.end_time,
+      duration: event.duration,
+      registration_deadline_time: event.registration_deadline_time,
+      registration_deadline_date: event.registration_deadline_date,
+      event_type: event.event_type,
+      capacity: event.capacity,
+      attendees: event.attendees,
+      contactnum: event.contactnum,
+      email: event.email,
+      coverimage: coverImageUrl,
+      tabs: parsedTabs,
+      packages: parsedPackages,
+      status: event.status,
+      admin_comment: event.admin_comment,
+      organizer: {
+        name: `${event.organizer_first_name || ''} ${event.organizer_last_name || ''}`.trim(),
+        phone: event.organizer_phone || 'N/A',
+        email: event.organizer_email || 'N/A'
+      }
+    };
+
+    console.log('Event fetched:', response);
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    res.status(500).json({
+      error: 'Failed to fetch event',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
 
 
 
