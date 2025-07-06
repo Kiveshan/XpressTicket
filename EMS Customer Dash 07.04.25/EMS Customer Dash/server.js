@@ -51,9 +51,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'ems2.0',
+  database: 'xpress-03-07-2025',
   password: '123456',
-  port: 5433,
+  port: 5432,
 })
 
 
