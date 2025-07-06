@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 export default function EventForm() {
   const nav = useNavigate();
 
-  // Helper function to get today's date in YYYY-MM-DD format
+  // Helper functions (unchanged)
   const getTodayDateString = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -16,7 +16,6 @@ export default function EventForm() {
     return `${year}-${month}-${day}`;
   };
 
-  // Helper function to get current time in HH:MM format
   const getCurrentTimeString = () => {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, "0");
@@ -24,7 +23,6 @@ export default function EventForm() {
     return `${hours}:${minutes}`;
   };
 
-  // Compute duration in hours between start and end date/time
   const computeDuration = (startDate, endDate, startTime, endTime) => {
     try {
       const start = new Date(`${startDate}T${startTime}`);
@@ -41,6 +39,7 @@ export default function EventForm() {
     }
   };
 
+  // State management (unchanged)
   const [formData, setFormData] = useState(() => {
     const today = getTodayDateString();
     const now = getCurrentTimeString();
@@ -84,8 +83,9 @@ export default function EventForm() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentSection, setCurrentSection] = useState("eventInfo");
 
-  // Effect for computing duration
+  // Effect for computing duration (unchanged)
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -93,7 +93,7 @@ export default function EventForm() {
     }));
   }, [formData.startdate, formData.enddate, formData.start_time, formData.end_time]);
 
-  // Effect for form validation
+  // Effect for form validation (unchanged)
   useEffect(() => {
     validateForm();
   }, [
@@ -116,6 +116,7 @@ export default function EventForm() {
     coverImageFile,
   ]);
 
+  // Validation function (unchanged)
   const validateForm = () => {
     const newErrors = {};
 
@@ -213,6 +214,7 @@ export default function EventForm() {
     setIsFormValid(Object.keys(newErrors).length === 0);
   };
 
+  // Input handlers (unchanged)
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -320,10 +322,11 @@ export default function EventForm() {
     } else {
       console.error("Invalid cover image:", file ? { type: file.type, size: file.size } : "No file selected");
       alert("Please select a valid PNG or JPEG file for cover image.");
-      setCoverImageFile(null); // Clear invalid file
+      setCoverImageFile(null);
     }
   };
 
+  // Form submission (unchanged)
   const handleSendRequest = async () => {
     setErrorMessage("");
     setShowSuccess(false);
@@ -373,11 +376,6 @@ export default function EventForm() {
     formDataToSend.append("packages", JSON.stringify(packages));
     formDataToSend.append("cover_image", coverImageFile);
 
-    console.log("FormData contents:");
-    for (const pair of formDataToSend.entries()) {
-      console.log(`${pair[0]}:`, pair[1] instanceof File ? `${pair[1].name} (${pair[1].type}, ${pair[1].size} bytes)` : pair[1]);
-    }
-
     try {
       const response = await fetch("http://localhost:5000/api/events", {
         method: "POST",
@@ -420,531 +418,608 @@ export default function EventForm() {
     }
   };
 
+  // Section navigation handlers
+  const showEventInfo = () => setCurrentSection("eventInfo");
+  const showPackagesTabs = () => setCurrentSection("packagesTabs");
+  const showTerms = () => setCurrentSection("terms");
+
   return (
-    <div className="event-form">
-      <button className="back-button" onClick={() => nav("/organiser-dash")}>
+    <div className="event-form p-4 h-screen flex flex-col">
+      <button className="back-button mb-4" onClick={() => nav("/organiser-dash")}>
         Back
       </button>
-      <div className="grid-two">
-        <div className="event-info">
-          <div className="form-grid">
-            <div className="left-column">
-              <div className="form-group">
-                <label htmlFor="name" className="form-label">
-                  Event Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  className={`form-input ${errors.name ? "error" : ""}`}
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="ICTAS"
-                  required
-                />
-                {errors.name && (
-                  <div className="error-message">
-                    <i className="fas fa-exclamation-circle"></i>
-                    {errors.name}
+      <div className="flex space-x-4 mb-4">
+        <button
+          className={`px-4 py-2 rounded-md text-white ${currentSection === "eventInfo" ? "bg-teal-600" : "bg-gray-400"}`}
+          onClick={showEventInfo}
+        >
+          Event Info & Client Types
+        </button>
+        <button
+          className={`px-4 py-2 rounded-md text-white ${currentSection === "packagesTabs" ? "bg-teal-600" : "bg-gray-400"}`}
+          onClick={showPackagesTabs}
+        >
+          Packages & Tabs
+        </button>
+        <button
+          className={`px-4 py-2 rounded-md text-white ${currentSection === "terms" ? "bg-teal-600" : "bg-gray-400"}`}
+          onClick={showTerms}
+        >
+          Terms & Conditions
+        </button>
+      </div>
+
+      <div className="section-container flex-grow overflow-hidden">
+        {currentSection === "eventInfo" && (
+          <div className="h-full overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Event Info & Client Types</h2>
+            <div className="grid-two">
+              <div className="event-info">
+                <div className="form-grid">
+                  <div className="left-column">
+                    <div className="form-group">
+                      <label htmlFor="name" className="form-label">
+                        Event Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        className={`form-input ${errors.name ? "error" : ""}`}
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        placeholder="ICTAS"
+                        required
+                      />
+                      {errors.name && (
+                        <div className="error-message">
+                          <i className="fas fa-exclamation-circle"></i>
+                          {errors.name}
+                        </div>
+                      )}
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="startdate" className="form-label">
+                        Starting Date *
+                      </label>
+                      <input
+                        type="date"
+                        id="startdate"
+                        name="startdate"
+                        className={`form-input ${errors.startdate ? "error" : ""}`}
+                        value={formData.startdate}
+                        onChange={handleDateChange}
+                        required
+                      />
+                      {errors.startdate && (
+                        <div className="error-message">
+                          <i className="fas fa-exclamation-circle"></i>
+                          {errors.startdate}
+                        </div>
+                      )}
+                    </div>
+                    <div className="time-group">
+                      <div className="form-group time-input">
+                        <label htmlFor="start_time" className="form-label">
+                          Start Time *
+                        </label>
+                        <input
+                          type="time"
+                          id="start_time"
+                          name="start_time"
+                          className={`form-input ${errors.start_time ? "error" : ""}`}
+                          value={formData.start_time}
+                          onChange={handleDateChange}
+                          required
+                        />
+                        {errors.start_time && (
+                          <div className="error-message">
+                            <i className="fas fa-exclamation-circle"></i>
+                            {errors.start_time}
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-group time-input">
+                        <label htmlFor="end_time" className="form-label">
+                          End Time *
+                        </label>
+                        <input
+                          type="time"
+                          id="end_time"
+                          name="end_time"
+                          className={`form-input ${errors.end_time ? "error" : ""}`}
+                          value={formData.end_time}
+                          onChange={handleDateChange}
+                          required
+                        />
+                        {errors.end_time && (
+                          <div className="error-message">
+                            <i className="fas fa-exclamation-circle"></i>
+                            {errors.end_time}
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-group time-input">
+                        <label htmlFor="deadlinedate" className="form-label">
+                          Registration Deadline Date *
+                        </label>
+                        <input
+                          type="date"
+                          id="deadlinedate"
+                          name="deadlinedate"
+                          className={`form-input ${errors.deadlinedate ? "error" : ""}`}
+                          value={formData.deadlinedate}
+                          onChange={handleDateChange}
+                          max={formData.startdate}
+                          required
+                        />
+                        {errors.deadlinedate && (
+                          <div className="error-message">
+                            <i className="fas fa-exclamation-circle"></i>
+                            {errors.deadlinedate}
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-group time-input">
+                        <label htmlFor="deadlinetime" className="form-label">
+                          Registration Deadline Time *
+                        </label>
+                        <input
+                          type="time"
+                          id="deadlinetime"
+                          name="deadlinetime"
+                          className={`form-input ${errors.deadlinetime ? "error" : ""}`}
+                          value={formData.deadlinetime}
+                          onChange={handleDateChange}
+                          required
+                        />
+                        {errors.deadlinetime && (
+                          <div className="error-message">
+                            <i className="fas fa-exclamation-circle"></i>
+                            {errors.deadlinetime}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="time-group">
+                      <div className="form-group time-input">
+                        <label htmlFor="type" className="form-label">
+                          Event Type *
+                        </label>
+                        <input
+                          type="text"
+                          id="type"
+                          name="type"
+                          className={`form-input ${errors.type ? "error" : ""}`}
+                          value={formData.type}
+                          onChange={handleInputChange}
+                          placeholder="Conference"
+                          required
+                        />
+                        {errors.type && (
+                          <div className="error-message">
+                            <i className="fas fa-exclamation-circle"></i>
+                            {errors.type}
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-group time-input">
+                        <label htmlFor="capacity" className="form-label">
+                          Max Capacity *
+                        </label>
+                        <div className="number-input">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                capacity: Math.max(1, prev.capacity - 1),
+                              }))
+                            }
+                            className="number-btn minus"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="text"
+                            id="capacity"
+                            name="capacity"
+                            className={`form-input ${errors.capacity ? "error" : ""}`}
+                            value={formData.capacity}
+                            onChange={handleNumberInput}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                capacity: prev.capacity + 1,
+                              }))
+                            }
+                            className="number-btn plus"
+                          >
+                            +
+                          </button>
+                        </div>
+                        {errors.capacity && (
+                          <div className="error-message">{errors.capacity}</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="startdate" className="form-label">
-                  Starting Date *
-                </label>
-                <input
-                  type="date"
-                  id="startdate"
-                  name="startdate"
-                  className={`form-input ${errors.startdate ? "error" : ""}`}
-                  value={formData.startdate}
-                  onChange={handleDateChange}
-                  required
-                />
-                {errors.startdate && (
-                  <div className="error-message">
-                    <i className="fas fa-exclamation-circle"></i>
-                    {errors.startdate}
+                  <div className="right-column">
+                    <div className="form-group">
+                      <label htmlFor="location" className="form-label">
+                        Location *
+                      </label>
+                      <input
+                        type="text"
+                        id="location"
+                        name="location"
+                        className={`form-input ${errors.location ? "error" : ""}`}
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        placeholder="Ballito, Whatever Venue"
+                        required
+                      />
+                      {errors.location && (
+                        <div className="error-message">
+                          <i className="fas fa-exclamation-circle"></i>
+                          {errors.location}
+                        </div>
+                      )}
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="enddate" className="form-label">
+                        Ending Date *
+                      </label>
+                      <input
+                        type="date"
+                        id="enddate"
+                        name="enddate"
+                        className={`form-input ${errors.enddate ? "error" : ""}`}
+                        value={formData.enddate}
+                        onChange={handleDateChange}
+                        min={formData.startdate}
+                        required
+                      />
+                      {errors.enddate && (
+                        <div className="error-message">
+                          <i className="fas fa-exclamation-circle"></i>
+                          {errors.enddate}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-              <div className="time-group">
-                <div className="form-group time-input">
-                  <label htmlFor="start_time" className="form-label">
-                    Start Time *
-                  </label>
-                  <input
-                    type="time"
-                    id="start_time"
-                    name="start_time"
-                    className={`form-input ${errors.start_time ? "error" : ""}`}
-                    value={formData.start_time}
-                    onChange={handleDateChange}
-                    required
-                  />
-                  {errors.start_time && (
-                    <div className="error-message">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {errors.start_time}
-                    </div>
-                  )}
                 </div>
-                <div className="form-group time-input">
-                  <label htmlFor="end_time" className="form-label">
-                    End Time *
+                <div className="event-details-container">
+                  <label htmlFor="description" className="form-label">
+                    Event Details *
                   </label>
-                  <input
-                    type="time"
-                    id="end_time"
-                    name="end_time"
-                    className={`form-input ${errors.end_time ? "error" : ""}`}
-                    value={formData.end_time}
-                    onChange={handleDateChange}
-                    required
-                  />
-                  {errors.end_time && (
-                    <div className="error-message">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {errors.end_time}
-                    </div>
-                  )}
-                </div>
-                <div className="form-group time-input">
-                  <label htmlFor="deadlinedate" className="form-label">
-                    Registration Deadline Date *
-                  </label>
-                  <input
-                    type="date"
-                    id="deadlinedate"
-                    name="deadlinedate"
-                    className={`form-input ${errors.deadlinedate ? "error" : ""}`}
-                    value={formData.deadlinedate}
-                    onChange={handleDateChange}
-                    max={formData.startdate}
-                    required
-                  />
-                  {errors.deadlinedate && (
-                    <div className="error-message">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {errors.deadlinedate}
-                    </div>
-                  )}
-                </div>
-                <div className="form-group time-input">
-                  <label htmlFor="deadlinetime" className="form-label">
-                    Registration Deadline Time *
-                  </label>
-                  <input
-                    type="time"
-                    id="deadlinetime"
-                    name="deadlinetime"
-                    className={`form-input ${errors.deadlinetime ? "error" : ""}`}
-                    value={formData.deadlinetime}
-                    onChange={handleDateChange}
-                    required
-                  />
-                  {errors.deadlinetime && (
-                    <div className="error-message">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {errors.deadlinetime}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="time-group">
-                <div className="form-group time-input">
-                  <label htmlFor="type" className="form-label">
-                    Event Type *
-                  </label>
-                  <input
-                    type="text"
-                    id="type"
-                    name="type"
-                    className={`form-input ${errors.type ? "error" : ""}`}
-                    value={formData.type}
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Conference"
+                    placeholder="Provide detailed information about the event"
+                    className={`form-input ${errors.description ? "error" : ""}`}
                     required
-                  />
-                  {errors.type && (
-                    <div className="error-message">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {errors.type}
-                    </div>
+                  ></textarea>
+                  {errors.description && (
+                    <div className="error-message">{errors.description}</div>
                   )}
                 </div>
-                <div className="form-group time-input">
-                  <label htmlFor="capacity" className="form-label">
-                    Max Capacity *
-                  </label>
-                  <div className="number-input">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          capacity: Math.max(1, prev.capacity - 1),
-                        }))
-                      }
-                      className="number-btn minus"
-                    >
-                      -
-                    </button>
+              </div>
+              <div className="upload-section">
+                <h4>Upload Cover Image *</h4>
+                <div className="upload-container">
+                  <div className="upload-box">
                     <input
-                      type="text"
-                      id="capacity"
-                      name="capacity"
-                      className={`form-input ${errors.capacity ? "error" : ""}`}
-                      value={formData.capacity}
-                      onChange={handleNumberInput}
+                      type="file"
+                      id="cover_image"
+                      name="cover_image"
+                      onChange={handleCoverImageChange}
+                      accept="image/png,image/jpeg"
+                      style={{ display: "none" }}
                       required
                     />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          capacity: prev.capacity + 1,
-                        }))
-                      }
-                      className="number-btn plus"
-                    >
-                      +
-                    </button>
+                    {coverImageFile ? (
+                      <div className="image-preview">
+                        <img
+                          src={URL.createObjectURL(coverImageFile)}
+                          alt="Preview"
+                          className="preview-image"
+                        />
+                      </div>
+                    ) : (
+                      <div className="upload-instructions">
+                        <p>Drop image here</p>
+                        <p>Supported format: PNG, JPG</p>
+                      </div>
+                    )}
                   </div>
-                  {errors.capacity && (
-                    <div className="error-message">{errors.capacity}</div>
+                  {!coverImageFile ? (
+                    <label htmlFor="cover_image" className="browse-button">
+                      Select Image
+                    </label>
+                  ) : (
+                    <div className="file-actions">
+                      <label htmlFor="cover_image" className="change-image-button">
+                        Change Image
+                      </label>
+                      <button
+                        type="button"
+                        className="remove-image-button"
+                        onClick={() => {
+                          setCoverImageFile(null);
+                          validateForm();
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                  {errors.cover_image && (
+                    <div className="error-message">{errors.cover_image}</div>
+                  )}
+                </div>
+                <div className="client-types">
+                  <label>Client Types Available *</label>
+                  <div className="client-types-list">
+                    {selectedClientTypes.map((type, index) => (
+                      <div key={index} className="client-type-item">
+                        <span>{type}</span>
+                        <button
+                          type="button"
+                          className="remove-btn"
+                          onClick={() => handleRemoveClientType(type)}
+                          aria-label={`Remove ${type}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="client-type-dropdown">
+                    <select value={clientTypeSelection} onChange={handleClientTypeChange} required>
+                      <option value="">Select Client Type</option>
+                      <option value="Guest">Guest</option>
+                      <option value="Attendee">Attendee</option>
+                      <option value="Key Speaker">Key Speaker</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    {clientTypeSelection === "Other" && (
+                      <div className="custom-client-type">
+                        <input
+                          type="text"
+                          value={customClientType}
+                          onChange={(e) => setCustomClientType(e.target.value)}
+                          placeholder="Enter custom client type"
+                          onKeyPress={(e) => e.key === "Enter" && handleAddCustomClientType()}
+                          required
+                        />
+                        <button
+                          className="add-btn"
+                          onClick={handleAddCustomClientType}
+                          disabled={!customClientType.trim()}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {errors.attendees && (
+                    <div className="error-message">{errors.attendees}</div>
                   )}
                 </div>
               </div>
             </div>
-            <div className="right-column">
-              <div className="form-group">
-                <label htmlFor="location" className="form-label">
-                  Location *
-                </label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  className={`form-input ${errors.location ? "error" : ""}`}
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder="Ballito, Whatever Venue"
-                  required
-                />
-                {errors.location && (
-                  <div className="error-message">
-                    <i className="fas fa-exclamation-circle"></i>
-                    {errors.location}
-                  </div>
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="enddate" className="form-label">
-                  Ending Date *
-                </label>
-                <input
-                  type="date"
-                  id="enddate"
-                  name="enddate"
-                  className={`form-input ${errors.enddate ? "error" : ""}`}
-                  value={formData.enddate}
-                  onChange={handleDateChange}
-                  min={formData.startdate}
-                  required
-                />
-                {errors.enddate && (
-                  <div className="error-message">
-                    <i className="fas fa-exclamation-circle"></i>
-                    {errors.enddate}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="event-details-container">
-            <label htmlFor="description" className="form-label">
-              Event Details *
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Provide detailed information about the event"
-              className={`form-input ${errors.description ? "error" : ""}`}
-              required
-            ></textarea>
-            {errors.description && (
-              <div className="error-message">{errors.description}</div>
-            )}
-          </div>
-          <div className="event-details-container">
-            <label htmlFor="terms_and_conditions" className="form-label">
-              Terms and Conditions *
-            </label>
-            <textarea
-              id="terms_and_conditions"
-              name="terms_and_conditions"
-              value={formData.terms_and_conditions}
-              onChange={handleInputChange}
-              placeholder="Specify terms and conditions"
-              className={`form-input ${errors.terms_and_conditions ? "error" : ""}`}
-              required
-            ></textarea>
-            {errors.terms_and_conditions && (
-              <div className="error-message">{errors.terms_and_conditions}</div>
-            )}
-          </div>
-        </div>
-        <div className="upload-section">
-          <h4>Upload Cover Image *</h4>
-          <div className="upload-container">
-            <div className="upload-box">
-              <input
-                type="file"
-                id="cover_image"
-                name="cover_image"
-                onChange={handleCoverImageChange}
-                accept="image/png,image/jpeg"
-                style={{ display: "none" }}
-                required
-              />
-              {coverImageFile ? (
-                <div className="image-preview">
-                  <img
-                    src={URL.createObjectURL(coverImageFile)}
-                    alt="Preview"
-                    className="preview-image"
-                  />
-                </div>
-              ) : (
-                <div className="upload-instructions">
-                  <p>Drop image here</p>
-                  <p>Supported format: PNG, JPG</p>
-                </div>
-              )}
-            </div>
-            {!coverImageFile ? (
-              <label htmlFor="cover_image" className="browse-button">
-                Select Image
-              </label>
-            ) : (
-              <div className="file-actions">
-                <label htmlFor="cover_image" className="change-image-button">
-                  Change Image
-                </label>
-                <button
-                  type="button"
-                  className="remove-image-button"
-                  onClick={() => {
-                    setCoverImageFile(null);
-                    validateForm(); // Re-validate to update errors
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
-            )}
-            {errors.cover_image && (
-              <div className="error-message">{errors.cover_image}</div>
-            )}
-          </div>
-          <div className="client-types">
-            <label>Client Types Available *</label>
-            <div className="client-types-list">
-              {selectedClientTypes.map((type, index) => (
-                <div key={index} className="client-type-item">
-                  <span>{type}</span>
-                  <button
-                    type="button"
-                    className="remove-btn"
-                    onClick={() => handleRemoveClientType(type)}
-                    aria-label={`Remove ${type}`}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="client-type-dropdown">
-              <select value={clientTypeSelection} onChange={handleClientTypeChange} required>
-                <option value="">Select Client Type</option>
-                <option value="Guest">Guest</option>
-                <option value="Attendee">Attendee</option>
-                <option value="Key Speaker">Key Speaker</option>
-                <option value="Other">Other</option>
-              </select>
-              {clientTypeSelection === "Other" && (
-                <div className="custom-client-type">
-                  <input
-                    type="text"
-                    value={customClientType}
-                    onChange={(e) => setCustomClientType(e.target.value)}
-                    placeholder="Enter custom client type"
-                    onKeyPress={(e) => e.key === "Enter" && handleAddCustomClientType()}
-                    required
-                  />
-                  <button
-                    className="add-btn"
-                    onClick={handleAddCustomClientType}
-                    disabled={!customClientType.trim()}
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
-            </div>
-            {errors.attendees && (
-              <div className="error-message">{errors.attendees}</div>
-            )}
-          </div>
-        </div>
-      </div>
-      <button onClick={addTab}>Add a Tab *</button>
-      {tabs.map((tab, idx) => (
-        <div key={idx} className="form-item">
-          <div className="form-grid">
-            <div>
-              <label>Tab Name *</label>
-              <input
-                type="text"
-                value={tab.name}
-                onChange={(e) => handleTabChange(idx, "name", e.target.value)}
-                required
-              />
-              {errors[`tab_name_${idx}`] && (
-                <div className="error-message">{errors[`tab_name_${idx}`]}</div>
-              )}
-            </div>
-          </div>
-          <label>Tab Content *</label>
-          <textarea
-            value={tab.content}
-            onChange={(e) => handleTabChange(idx, "content", e.target.value)}
-            required
-          ></textarea>
-          {errors[`tab_content_${idx}`] && (
-            <div className="error-message">{errors[`tab_content_${idx}`]}</div>
-          )}
-        </div>
-      ))}
-      {errors.tabs && <div className="error-message">{errors.tabs}</div>}
-      <button onClick={addPackage}>Add a Package *</button>
-      {packages.map((pkg, idx) => (
-        <div key={idx} className="form-item">
-          <div className="form-grid">
-            <div>
-              <label>Select Type *</label>
-              <select
-                value={pkg.selectType}
-                onChange={(e) => handlePackageChange(idx, "selectType", e.target.value)}
-                required
+            <div className="flex justify-end mt-4">
+              <button
+                className="px-4 py-2 bg-teal-600 text-white rounded-md"
+                onClick={showPackagesTabs}
               >
-                <option value="">Select</option>
-                {pkg.typeOptions.map((opt, i) => (
-                  <option key={i}>{opt}</option>
-                ))}
-              </select>
-              <button onClick={() => addDropdownOption(idx)} className="plus-button">
-                +
+                Next: Packages & Tabs
               </button>
-              {errors[`package_selectType_${idx}`] && (
-                <div className="error-message">{errors[`package_selectType_${idx}`]}</div>
-              )}
             </div>
-            <div>
-              <label>Package Type *</label>
-              <input
-                type="text"
-                value={pkg.packageType}
-                onChange={(e) => handlePackageChange(idx, "packageType", e.target.value)}
-                required
-              />
-              {errors[`package_type_${idx}`] && (
-                <div className="error-message">{errors[`package_type_${idx}`]}</div>
-              )}
-            </div>
-            <div>
-              <label>Location *</label>
-              <input
-                type="text"
-                value={pkg.location}
-                onChange={(e) => handlePackageChange(idx, "location", e.target.value)}
-                required
-              />
-              {errors[`package_location_${idx}`] && (
-                <div className="error-message">{errors[`package_location_${idx}`]}</div>
-              )}
-            </div>
-            <div>
-              <label>Duration *</label>
-              <input
-                type="text"
-                value={pkg.duration}
-                onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
-                required
-              />
-              {errors[`package_duration_${idx}`] && (
-                <div className="error-message">{errors[`package_duration_${idx}`]}</div>
-              )}
-            </div>
-            <div>
-              <label>Date Choices *</label>
-              <input
-                type="text"
-                value={pkg.dateChoices}
-                onChange={(e) => handlePackageChange(idx, "dateChoices", e.target.value)}
-                required
-              />
-              {errors[`package_dateChoices_${idx}`] && (
-                <div className="error-message">{errors[`package_dateChoices_${idx}`]}</div>
-              )}
-            </div>
-            <div>
-              <label>Pricing *</label>
-              <input
-                type="text"
-                value={pkg.pricing}
-                onChange={(e) => handlePackageChange(idx, "pricing", e.target.value)}
-                required
-              />
-              {errors[`package_pricing_${idx}`] && (
-                <div className="error-message">{errors[`package_pricing_${idx}`]}</div>
-              )}
-            </div>
-          </div>
-          <label>Package Details *</label>
-          <textarea
-            value={pkg.details}
-            onChange={(e) => handlePackageChange(idx, "details", e.target.value)}
-            required
-          ></textarea>
-          {errors[`package_details_${idx}`] && (
-            <div className="error-message">{errors[`package_details_${idx}`]}</div>
-          )}
-        </div>
-      ))}
-      {errors.packages && <div className="error-message">{errors.packages}</div>}
-      <div className="p-4">
-        <button
-          onClick={handleSendRequest}
-          className="request-button"
-          disabled={isSubmitting || !isFormValid}
-        >
-          {isSubmitting ? "Submitting..." : "Request Event"}
-        </button>
-        {showSuccess && (
-          <div className="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-            ✅ Successfully sent event request!
           </div>
         )}
-        {errorMessage && (
-          <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            ❌ {errorMessage}
+
+        {currentSection === "packagesTabs" && (
+          <div className="h-full overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Packages & Tabs</h2>
+            <button onClick={addTab} className="mb-4">
+              Add a Tab *
+            </button>
+            {tabs.map((tab, idx) => (
+              <div key={idx} className="form-item">
+                <div className="form-grid">
+                  <div>
+                    <label>Tab Name *</label>
+                    <input
+                      type="text"
+                      value={tab.name}
+                      onChange={(e) => handleTabChange(idx, "name", e.target.value)}
+                      required
+                    />
+                    {errors[`tab_name_${idx}`] && (
+                      <div className="error-message">{errors[`tab_name_${idx}`]}</div>
+                    )}
+                  </div>
+                </div>
+                <label>Tab Content *</label>
+                <textarea
+                  value={tab.content}
+                  onChange={(e) => handleTabChange(idx, "content", e.target.value)}
+                  required
+                ></textarea>
+                {errors[`tab_content_${idx}`] && (
+                  <div className="error-message">{errors[`tab_content_${idx}`]}</div>
+                )}
+              </div>
+            ))}
+            {errors.tabs && <div className="error-message">{errors.tabs}</div>}
+            <button onClick={addPackage} className="mt-4">
+              Add a Package *
+            </button>
+            {packages.map((pkg, idx) => (
+              <div key={idx} className="form-item mt-4">
+                <div className="form-grid">
+                  <div>
+                    <label>Select Type *</label>
+                    <select
+                      value={pkg.selectType}
+                      onChange={(e) => handlePackageChange(idx, "selectType", e.target.value)}
+                      required
+                    >
+                      <option value="">Select</option>
+                      {pkg.typeOptions.map((opt, i) => (
+                        <option key={i}>{opt}</option>
+                      ))}
+                    </select>
+                    <button onClick={() => addDropdownOption(idx)} className="plus-button">
+                      +
+                    </button>
+                    {errors[`package_selectType_${idx}`] && (
+                      <div className="error-message">{errors[`package_selectType_${idx}`]}</div>
+                    )}
+                  </div>
+                  <div>
+                    <label>Package Type *</label>
+                    <input
+                      type="text"
+                      value={pkg.packageType}
+                      onChange={(e) => handlePackageChange(idx, "packageType", e.target.value)}
+                      required
+                    />
+                    {errors[`package_type_${idx}`] && (
+                      <div className="error-message">{errors[`package_type_${idx}`]}</div>
+                    )}
+                  </div>
+                  <div>
+                    <label>Location *</label>
+                    <input
+                      type="text"
+                      value={pkg.location}
+                      onChange={(e) => handlePackageChange(idx, "location", e.target.value)}
+                      required
+                    />
+                    {errors[`package_location_${idx}`] && (
+                      <div className="error-message">{errors[`package_location_${idx}`]}</div>
+                    )}
+                  </div>
+                  <div>
+                    <label>Duration *</label>
+                    <input
+                      type="text"
+                      value={pkg.duration}
+                      onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
+                      required
+                    />
+                    {errors[`package_duration_${idx}`] && (
+                      <div className="error-message">{errors[`package_duration_${idx}`]}</div>
+                    )}
+                  </div>
+                  <div>
+                    <label>Date Choices *</label>
+                    <input
+                      type="text"
+                      value={pkg.dateChoices}
+                      onChange={(e) => handlePackageChange(idx, "dateChoices", e.target.value)}
+                      required
+                    />
+                    {errors[`package_dateChoices_${idx}`] && (
+                      <div className="error-message">{errors[`package_dateChoices_${idx}`]}</div>
+                    )}
+                  </div>
+                  <div>
+                    <label>Pricing *</label>
+                    <input
+                      type="text"
+                      value={pkg.pricing}
+                      onChange={(e) => handlePackageChange(idx, "pricing", e.target.value)}
+                      required
+                    />
+                    {errors[`package_pricing_${idx}`] && (
+                      <div className="error-message">{errors[`package_pricing_${idx}`]}</div>
+                    )}
+                  </div>
+                </div>
+                <label>Package Details *</label>
+                <textarea
+                  value={pkg.details}
+                  onChange={(e) => handlePackageChange(idx, "details", e.target.value)}
+                  required
+                ></textarea>
+                {errors[`package_details_${idx}`] && (
+                  <div className="error-message">{errors[`package_details_${idx}`]}</div>
+                )}
+              </div>
+            ))}
+            {errors.packages && <div className="error-message">{errors.packages}</div>}
+            <div className="flex justify-between mt-4">
+              <button
+                className="px-4 py-2 bg-teal-600 text-white rounded-md"
+                onClick={showEventInfo}
+              >
+                Back: Event Info
+              </button>
+              <button
+                className="px-4 py-2 bg-teal-600 text-white rounded-md"
+                onClick={showTerms}
+              >
+                Next: Terms & Conditions
+              </button>
+            </div>
+          </div>
+        )}
+
+        {currentSection === "terms" && (
+          <div className="h-full overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Terms & Conditions</h2>
+            <div className="event-details-container">
+              <label htmlFor="terms_and_conditions" className="form-label">
+                Terms and Conditions *
+              </label>
+              <textarea
+                id="terms_and_conditions"
+                name="terms_and_conditions"
+                value={formData.terms_and_conditions}
+                onChange={handleInputChange}
+                placeholder="Specify terms and conditions"
+                className={`form-input ${errors.terms_and_conditions ? "error" : ""}`}
+                required
+              ></textarea>
+              {errors.terms_and_conditions && (
+                <div className="error-message">{errors.terms_and_conditions}</div>
+              )}
+            </div>
+            <div className="flex justify-between mt-4">
+              <button
+                className="px-4 py-2 bg-teal-600 text-white rounded-md"
+                onClick={showPackagesTabs}
+              >
+                Back: Packages & Tabs
+              </button>
+              <button
+                onClick={handleSendRequest}
+                className="px-4 py-2 bg-yellow-500 text-gray-800 font-bold rounded-md"
+                disabled={isSubmitting || !isFormValid}
+              >
+                {isSubmitting ? "Submitting..." : "Request Event"}
+              </button>
+            </div>
+            {showSuccess && (
+              <div className="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                ✅ Successfully sent event request!
+              </div>
+            )}
+            {errorMessage && (
+              <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                ❌ {errorMessage}
+              </div>
+            )}
           </div>
         )}
       </div>
