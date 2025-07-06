@@ -219,7 +219,7 @@ const EventRequest = () => {
               >
                 LogOut
               </button>
-            )}
+            )} 
           </div>
         </header>
         <div className="back-button-container1">

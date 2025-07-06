@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../Organiser/OrganiserDash.css";
 
 const OrganiserDash = () => {
-  const nav = useNavigate();
+  const nav = useNavigate(); // 👈 required for the back button
 
   const cards = [
     { label: "Host", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-form" },

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './TicketsPayment.css';
 import { useNavigate } from 'react-router-dom';
-
+ 
 const TicketPaymentList = () => {
   const nav = useNavigate();
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+ 
   useEffect(() => {
     const fetchPurchases = async () => {
       try {
@@ -35,13 +35,13 @@ const TicketPaymentList = () => {
         setLoading(false);
       }
     };
-
+ 
     fetchPurchases();
   }, [nav]);
-
+ 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
-
+ 
   return (
     <div className="container">
       <header className="dashboard-header1">
@@ -56,7 +56,7 @@ const TicketPaymentList = () => {
           </button>
         </div>
       </header>
-
+ 
       <div className="back-button-container1">
         <button className="backbutton20" onClick={() => nav('/organiser-dash')}>
           Back
@@ -107,5 +107,6 @@ const TicketPaymentList = () => {
     </div>
   );
 };
-
+ 
 export default TicketPaymentList;
+ 

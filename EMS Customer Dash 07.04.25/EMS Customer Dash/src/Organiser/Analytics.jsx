@@ -81,7 +81,6 @@ export default function Analytics() {
     return null;
   };
 
-  // Render different charts based on the active filter
   const renderChart = () => {
     switch (activeFilter) {
       case "profitVsTickets":
@@ -144,7 +143,6 @@ export default function Analytics() {
       </div>
 
       <div className="analytics-content">
-        {/* Sidebar filters */}
         <div className="sidebar-filters">
           <button
             className={`filter-button ${activeFilter === "profitVsTickets" ? "active" : ""}`}
