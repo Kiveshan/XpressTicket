@@ -1,66 +1,62 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import '../shared/ModernDashboard.css';
-import { FaSignOutAlt, FaArrowLeft, FaCalendarPlus, FaClipboardList, FaChartBar, FaMoneyBillWave } from 'react-icons/fa';
+import "../Organiser/OrganiserDash.css";
 
 const OrganiserDash = () => {
-  const nav = useNavigate();
+  const nav = useNavigate(); // 👈 required for the back button
 
   const cards = [
-    { label: "Host", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-form" },
-    { label: "Requests", image: "/pexels-photo-7163361.jpeg", path: "/requestcard" },
-    { label: "Analytics", image: "/pexels-photo-185576.jpeg", path: "/analytics" },
+    {
+      label: "Host",
+      image: "/wedding-wedding-day-marriage-marry-161018.jpeg",
+      path: "/event-form",
+    },
+    {
+      label: "Requests",
+      image: "/pexels-photo-7163361.jpeg",
+      path: "/requestcard",
+    },
+    {
+      label: "Analytics",
+      image: "/pexels-photo-185576.jpeg",
+      path: "/analytics",
+    },
     { label: "Payments", image: "/Customer2.jpg", path: "/ticketspaymentlist" },
   ];
 
   return (
-    <div className="modern-dashboard-container">
-      {/* Modern Header */}
-      <header className="modern-header">
+    <div className="dashboard-container1">
+      <header className="dashboard-header1">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
-          className="modern-logo"
+          className="dashboard-logo1"
         />
-        <div className="modern-header-actions">
-          <button className="modern-logout-btn" onClick={() => nav('/')}>
-            <FaSignOutAlt /> Logout
+        <div className="profile-section">
+          <button className="backbutton22" onClick={() => nav("/")}>
+            LogOut{" "}
           </button>
         </div>
       </header>
 
-      {/* Back Button */}
-      <div className="modern-back-button">
-        <button className="modern-back-btn" onClick={() => nav('/mainmenu')}>
-          <FaArrowLeft /> Back to Main Menu
+      <div className="back-button-container1">
+        <button className="backbutton20" onClick={() => nav("/mainmenu")}>
+          Back
         </button>
       </div>
+      <br />
 
-      {/* Main Content */}
-      <main className="modern-main-content">
-        <h1 className="modern-page-title">Organizer Dashboard</h1>
-        
-        {/* Card Grid */}
-        <div className="modern-card-grid">
-          {organizerCards.map((card, index) => (
-            <div 
-              key={index} 
-              className="modern-card" 
+      <main className="dashboard-main1">
+        <div className="card-container">
+          {cards.map((card, index) => (
+            <div
+              className="card1"
+              key={index}
               onClick={() => nav(card.path)}
+              style={{ cursor: "pointer" }}
             >
-              <div className="modern-card-image-container">
-                <img 
-                  src={card.image} 
-                  alt={card.title} 
-                  className="modern-card-image" 
-                />
-              </div>
-              <div className="modern-card-content">
-                <h3 className="modern-card-title">
-                  {card.icon} {card.title}
-                </h3>
-                <p className="modern-card-description">{card.description}</p>
-              </div>
+              <img src={card.image} alt={card.label} />
+              <div className="label">{card.label}</div>
             </div>
           ))}
         </div>
