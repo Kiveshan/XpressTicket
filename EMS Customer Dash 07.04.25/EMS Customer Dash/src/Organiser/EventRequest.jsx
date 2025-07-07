@@ -317,7 +317,7 @@ const EventRequest = () => {
                       e.target.classList.add('image-error');
                     }
                   }}
-                  loading="lazy"
+
                 />
                 {!event.file_url && (
                   <div className="image-placeholder">
