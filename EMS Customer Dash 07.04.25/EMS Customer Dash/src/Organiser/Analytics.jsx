@@ -13,16 +13,26 @@ import {
 } from "recharts";
 import "../Organiser/Analytics.css";
 import { useNavigate } from "react-router-dom";
-
+ 
 export default function Analytics() {
+  const currentDate = new Date();
+  const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+  const currentYear = currentDate.getFullYear().toString();
+ 
   const [activeFilter, setActiveFilter] = useState("attendance");
   const [chartData, setChartData] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState("All");
-  const [selectedYear, setSelectedYear] = useState("All");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-
+ 
+  // Generate dynamic years (2022 to current year)
+  const years = Array.from(
+    { length: currentYear - 2021 },
+    (_, i) => (2022 + i).toString()
+  );
+ 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       try {
@@ -32,29 +42,32 @@ export default function Analytics() {
           navigate('/');
           return;
         }
-
+ 
         setLoading(true);
         const response = await fetch('http://localhost:5000/api/organiser/analytics', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-
+ 
         if (!response.ok) {
           throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         }
-
+ 
         const data = await response.json();
         // Filter data by month and year
         let filteredData = data[activeFilter];
-
-        if (selectedMonth !== "All") {
+ 
+        // Always filter by selected month for eventStatus
+        if (activeFilter === "eventStatus" && selectedMonth !== "All") {
+          filteredData = filteredData.filter((item) => item.month === selectedMonth);
+        } else if (selectedMonth !== "All") {
           filteredData = filteredData.filter((item) => item.month === selectedMonth);
         }
         if (selectedYear !== "All") {
           filteredData = filteredData.filter((item) => item.year === selectedYear);
         }
-
+ 
         setChartData(filteredData);
         setLoading(false);
       } catch (err) {
@@ -63,10 +76,10 @@ export default function Analytics() {
         setLoading(false);
       }
     };
-
+ 
     fetchAnalyticsData();
   }, [activeFilter, selectedMonth, selectedYear, navigate]);
-
+ 
   // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -83,10 +96,10 @@ export default function Analytics() {
     }
     return null;
   };
-
+ 
   // Colors for pie chart
   const COLORS = ['#FF9800', '#2196F3', '#4CAF50', '#F44336', '#9C27B0', '#FFC107'];
-
+ 
   const renderChart = () => {
     switch (activeFilter) {
       case "attendance":
@@ -143,14 +156,14 @@ export default function Analytics() {
         return null;
     }
   };
-
+ 
   const handleBack = () => {
     navigate("/organiser-dash");
   };
-
+ 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
-
+ 
   return (
     <div className="analytics-container">
       <header className="dashboard-header3">
@@ -165,13 +178,13 @@ export default function Analytics() {
           </button>
         </div>
       </header>
-
+ 
       <div className="back-button-container1">
         <button className="backbutton20" onClick={handleBack}>
           Back
         </button>
       </div>
-
+ 
       <div className="analytics-content">
         <div className="sidebar-filters">
           <button
@@ -193,7 +206,7 @@ export default function Analytics() {
             Tickets Sold
           </button>
         </div>
-
+ 
         {/* Chart area */}
         <div className="chart-area">
           {/* Month and Year Filters */}
@@ -219,14 +232,15 @@ export default function Analytics() {
             </select>
             <select
               className="filter-dropdown"
-              value={selectedMonth}
+              value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
             >
               <option value="All">All Years</option>
-              <option value="2022">2022</option>
-              <option value="2023">2023</option>
-              <option value="2024">2024</option>
-              <option value="2025">2025</option>
+              {years.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
             </select>
           </div>
           <h2 className="chart-title">
@@ -237,6 +251,7 @@ export default function Analytics() {
           {renderChart()}
         </div>
       </div>
-    </div >
+    </div>
   );
 }
+ 

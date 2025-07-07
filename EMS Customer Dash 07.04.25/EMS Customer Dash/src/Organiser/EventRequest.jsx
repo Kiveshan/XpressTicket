@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import './EventRequest.css';
 import { useNavigate } from 'react-router-dom';
@@ -122,17 +121,54 @@ const EventRequest = () => {
 
         const eventsData = Array.isArray(data) ? data : [];
 
-        const eventsWithStatus = eventsData.map((event) => ({
-          id: event.id,
-          eventid: event.id,
-          event_name: event.name || 'Unnamed Event',
-          location: event.location || 'Location not specified',
-          date: event.start_date || 'Date not specified',
-          time: event.start_time || 'Time not specified',
-          price: event.paid_amount ? `R ${parseFloat(event.paid_amount).toFixed(2)}` : 'N/A',
-          status: (event.status || 'Pending').toLowerCase(),
-          file_url: event.coverimage || '/default-event-image.jpg',
-        }));
+        const eventsWithStatus = eventsData.map((event) => {
+          // Debug the packages array
+          console.log(`Event ${event.id} packages:`, event.packages);
+
+          // Format date to remove time portion
+          const formattedDate = event.start_date
+            ? new Date(event.start_date).toLocaleDateString('en-ZA', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            : 'Date not specified';
+
+          // Get price from the first package
+          let price = 'N/A';
+          try {
+            if (event.packages && Array.isArray(event.packages) && event.packages.length > 0) {
+              const firstPackage = event.packages[0];
+              console.log(`First package for event ${event.id}:`, firstPackage);
+              if (firstPackage && firstPackage.price != null) {
+                const parsedPrice = parseFloat(firstPackage.price);
+                if (!isNaN(parsedPrice)) {
+                  price = `R ${parsedPrice.toFixed(2)}`;
+                } else {
+                  console.warn(`Invalid price format for event ${event.id}:`, firstPackage.price);
+                }
+              } else {
+                console.warn(`No price field in first package for event ${event.id}`);
+              }
+            } else {
+              console.warn(`No packages or empty packages array for event ${event.id}`);
+            }
+          } catch (e) {
+            console.error(`Error processing packages for event ${event.id}:`, e);
+          }
+
+          return {
+            id: event.id,
+            eventid: event.id,
+            event_name: event.name || 'Unnamed Event',
+            location: event.location || 'Location not specified',
+            date: formattedDate,
+            time: event.start_time || 'Time not specified',
+            price: price,
+            status: (event.status || 'Pending').toLowerCase(),
+            file_url: event.coverimage || '/default-event-image.jpg',
+          };
+        });
 
         if (isMounted) {
           setEvents(eventsWithStatus);

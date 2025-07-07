@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './AdminViewEventRequest.css';
+import  "../Admin/AdminViewEventRequest.css";
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const AdminViewEventRequest = () => {
