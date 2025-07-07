@@ -1,417 +1,47 @@
-/* General container styling */
-.event-form {
-  background: #fff;
-  min-height: 100vh;
-  font-family: Arial, sans-serif;
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* Back button styling */
-.back-button {
-  background: #6c757d;
+.approve-btn {
+  background-color: #4caf50;
   color: white;
-  padding: 0.75rem 1.5rem;
+  padding: 0.6rem 1.5rem;
+  margin: 0 0.5rem;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.2s ease, transform 0.2s ease;
-  margin-bottom: 2rem;
-}
-
-.back-button:hover {
-  background: #5a6268;
-  transform: translateY(-2px);
-}
-
-/* Form container for horizontal scrolling */
-.form-container {
-  position: relative;
-  overflow-x: hidden;
-}
-
-/* Sections wrapper for horizontal layout */
-.sections-wrapper {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  width: 100%;
-  gap: 2rem;
-  min-height: fit-content;
-}
-
-/* Individual section styling */
-.section {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-  padding: 2rem;
-  box-sizing: border-box;
-  min-width: 100%;
-}
-
-/* Grid layout for event-info-upload section */
-.grid-two {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 3rem;
-  align-items: start;
-  margin-top: 1.5rem;
-}
-
-/* Form grid for inputs */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-/* Input and textarea styling */
-input[type="text"],
-input[type="date"],
-input[type="number"],
-select,
-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
-  color: #333;
-  background: #f9f9f9;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-input[readOnly],
-textarea[readOnly] {
-  background: #e9ecef;
-  cursor: not-allowed;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
-}
-
-/* Textarea specific styling */
-textarea {
-  min-height: 120px;
-  resize: vertical;
-}
-
-/* Label styling */
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #333;
-  font-size: 1rem;
-}
-
-/* Section headers */
-h4 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 1.5rem;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 0.5rem;
-}
-
-/* Upload section */
-.upload-section {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding: 1rem;
-  width: 100%;
-}
-
-/* Upload box */
-.upload-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  width: 100%;
-  max-width: 400px;
-}
-
-.upload-box img {
-  width: 100%;
-  height: 250px;
-  max-width: 400px;
-  object-fit: cover;
-  object-position: center;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  display: block;
+  cursor: pointer;
 }
-
-.upload-box input[type="file"] {
-  padding: 0.5rem;
-  font-size: 0.9rem;
-  width: 100%;
-  max-width: 350px;
+.approve-btn:hover {
+  background-color: #45a049;
 }
-
-/* Client types section */
-.client-types {
-  width: 100%;
-  min-width: 200px; /* Optional: ensures right column doesn’t collapse */
-  word-break: break-word;
-}
-
-.client-types label {
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.client-type-item {
-    width: 100%;
-  }
-
-.client-type-item input {
-  flex: 1;
-}
-
- .client-type-item button {
-    width: 100%;
-    text-align: center;
-  }
-
-.client-type-item button:hover {
-  background: #c82333;
-}
-
-/* Package and Tab sections */
-.form-item {
-  background: #f8f9fa;
-  padding: 1.5rem;
+.edit-request-btn {
+  background-color: #ff9800;
+  color: white;
+  padding: 0.6rem 1.5rem;
+  margin: 0 0.5rem;
+  border: none;
   border-radius: 8px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.form-item button {
-  background: #dc3545;
-  color: white;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
-  font-size: 0.9rem;
-  margin-top: 1rem;
 }
-
-.form-item button:hover {
-  background: #c82333;
+.edit-request-btn:hover {
+  background-color: #e68a00;
 }
-
-/* Add buttons */
-button[type="button"] {
-  background: #28a745;
+.reject-btn {
+  background-color: #f44336;
   color: white;
-  padding: 0.75rem 1.5rem;
+  padding: 0.6rem 1.5rem;
+  margin: 0 0.5rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 1rem;
-  margin-top: 1.5rem;
-  transition: background-color 0.2s ease, transform 0.2s ease;
 }
-
-button[type="button"]:hover {
-  background: #218838;
-  transform: translateY(-2px);
+.approve-btn:hover {
+  background-color: #45a049;
 }
-
-/* Submit button */
-.submit-button {
-  background: #007bff;
-  color: white;
-  padding: 0.75rem 2rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  margin-top: 2rem;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+ 
+.image {
+  max-width: 100%; /* Ensure image doesn't overflow container */
+  height: 200px; /* Fixed height for consistency */
+  object-fit: cover; /* Maintain aspect ratio */
+  border-radius: 5px;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 15px;
 }
-
-.submit-button:hover {
-  background: #0056b3;
-  transform: translateY(-2px);
-}
-
-/* Button container */
-.button-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 2rem;
-}
-
-/* Navigation arrows */
-.nav-arrow {
-  position: fixed;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  font-size: 1.4rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.2s ease;
-  z-index: 1000;
-}
-
-.nav-arrow:hover {
-  background: #0056b3;
-  transform: translateY(-50%) scale(1.1);
-}
-
-.left-arrow {
-  left: 1.5rem;
-}
-
-.right-arrow {
-  right: 1.5rem;
-}
-
-/* Error message */
-.error {
-  color: #dc3545;
-  font-size: 1rem;
-  text-align: center;
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 6px;
-}
-
-/* Loading state */
-.event-form > p {
-  text-align: center;
-  font-size: 1.1rem;
-  color: #666;
-  margin: 2rem 0;
-}
-
-/* Event details textarea specific styling */
-.form-item textarea {
-  min-height: 150px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .event-form {
-    padding: 1.5rem;
-  }
-
-  .sections-wrapper {
-    flex-direction: column;
-    overflow-x: visible;
-    scroll-snap-type: none;
-  }
-
-  .section {
-    flex: 1 1 auto;
-    min-width: 100%;
-    padding: 1.5rem;
-  }
-
-  .grid-two {
-  display: grid;
-  grid-template-columns: 2fr 1fr; /* or try 3fr 1.5fr */
-  gap: 3rem;
-  align-items: start;
-  margin-top: 1.5rem;
-  min-width: 0; /* Add this to fix overflow */
-}
-  .form-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  .upload-box {
-    max-width: 100%;
-  }
-
-  .upload-box img {
-    max-width: 100%;
-    height: 180px;
-    max-height: 180px;
-  }
-
-  .upload-box input[type="file"] {
-    max-width: 100%;
-  }
-
-  .submit-button,
-  .back-button,
-  button[type="button"] {
-    width: 100%;
-    text-align: center;
-  }
-
-  .nav-arrow {
-    width: 45px;
-    height: 45px;
-    font-size: 1.2rem;
-  }
-
-  .left-arrow {
-    left: 1rem;
-  }
-
-  .right-arrow {
-    right: 1rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .event-form {
-    padding: 1rem;
-  }
-
-  .section {
-    padding: 1rem;
-  }
-
-  h4 {
-    font-size: 1.2rem;
-  }
-
-  input,
-  textarea,
-  select {
-    font-size: 0.9rem;
-    padding: 0.6rem;
-  }
-
-  .upload-box img {
-    height: 160px;
-    max-height: 160px;
-  }
-
-  .grid-two {
-    gap: 1.5rem;
-  }
-
-  .form-grid {
-    gap: 1rem;
-  }
-}
+ 
+ 

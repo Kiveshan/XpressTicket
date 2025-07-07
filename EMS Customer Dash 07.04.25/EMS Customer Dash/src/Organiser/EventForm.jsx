@@ -333,7 +333,7 @@ export default function EventForm() {
     }
   }
 
-  // Form submission - FIXED to match backend expectations
+  // Form submission - UPDATED to use sessionStorage instead of localStorage
   const handleSendRequest = async () => {
     setErrorMessage("")
     setShowSuccess(false)
@@ -347,8 +347,8 @@ export default function EventForm() {
     }
 
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem("token")
+      // Get token from sessionStorage instead of localStorage
+      const token = sessionStorage.getItem("token")
       if (!token) {
         throw new Error("No authentication token found. Please log in.")
       }
