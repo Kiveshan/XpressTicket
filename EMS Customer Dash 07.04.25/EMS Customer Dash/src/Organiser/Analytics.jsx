@@ -33,52 +33,53 @@ export default function Analytics() {
     (_, i) => (2022 + i).toString()
   );
  
-  useEffect(() => {
-    const fetchAnalyticsData = async () => {
-      try {
-        const token = sessionStorage.getItem('token');
-        if (!token) {
-          setError('No authentication token found. Please log in.');
-          navigate('/');
-          return;
-        }
- 
-        setLoading(true);
-        const response = await fetch('http://localhost:5000/api/organiser/analytics', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
- 
-        if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-        }
- 
-        const data = await response.json();
-        // Filter data by month and year
-        let filteredData = data[activeFilter];
- 
-        // Always filter by selected month for eventStatus
-        if (activeFilter === "eventStatus" && selectedMonth !== "All") {
-          filteredData = filteredData.filter((item) => item.month === selectedMonth);
-        } else if (selectedMonth !== "All") {
+useEffect(() => {
+  const fetchAnalyticsData = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found. Please log in.');
+        navigate('/');
+        return;
+      }
+
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/organiser/analytics', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Initialize filteredData based on activeFilter
+      let filteredData = data[activeFilter] || []; // Fallback to empty array if undefined
+
+      // Apply filters only if filteredData is an array and not empty
+      if (Array.isArray(filteredData)) {
+        if (selectedMonth !== "All") {
           filteredData = filteredData.filter((item) => item.month === selectedMonth);
         }
         if (selectedYear !== "All") {
           filteredData = filteredData.filter((item) => item.year === selectedYear);
         }
- 
-        setChartData(filteredData);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching analytics data:', err);
-        setError(err.message);
-        setLoading(false);
       }
-    };
- 
-    fetchAnalyticsData();
-  }, [activeFilter, selectedMonth, selectedYear, navigate]);
+
+      setChartData(filteredData);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching analytics data:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  fetchAnalyticsData();
+}, [activeFilter, selectedMonth, selectedYear, navigate]);
  
   // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
