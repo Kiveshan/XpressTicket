@@ -1,0 +1,46 @@
+/* CSS to hide the proof of payment card */
+.proof-of-payment-section,
+div.proof-of-payment-section,
+div:has(h4:contains("Proof of Payment")),
+div:has(label[for="proof-of-payment"]),
+div:has(input#proof-of-payment),
+[id="proof-of-payment"],
+[id*="proof-of-payment"],
+[class*="proof-of-payment"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+/* Hide any elements with 'Proof of Payment' text */
+h4:contains("Proof of Payment"),
+label:contains("Proof of Payment"),
+p:contains("Proof of Payment"),
+span:contains("Proof of Payment"),
+div:contains("Proof of Payment") {
+  display: none !important;
+}
+
+/* Ensure submit button is always available */
+button[type="submit"],
+button.Submit,
+button.submit-button,
+button:contains("Submit") {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  display: block !important;
+}
+
+/* Remove any disabled attributes from submit buttons */
+button[disabled] {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+
+}

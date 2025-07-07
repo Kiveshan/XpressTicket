@@ -1,109 +1,260 @@
-.dashboard-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    margin-top: -10px;
-    
-  }
-  /* -------Nav----- */
-  .dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-bottom: 2px solid #20c997;
-    margin-top: -10px;
-  }
-  .dashboard-logo {
-    height: 120px;
-    margin-bottom: -20px;
-    margin-top: -30px;
-  }
-  .profile-section {
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-  }
-  
-  .profile-icon {
-    margin-left: 5px;
-  }
-  
+/* Purchase Page Styles */
+.purchase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 25px;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 
-  .dashboard-main1 {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    flex-wrap: wrap;
-    
-  }
-  .event-grid2 {
-    display: grid;
+.purchase-logo {
+  height: 60px;
+}
+
+.purchase-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.purchase-logout-btn {
+  background-color: transparent;
+  color: #20c997;
+  border: 1px solid #20c997;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.purchase-logout-btn:hover {
+  background-color: #20c997;
+  color: white;
+}
+
+.purchase-back-button {
+  margin: 20px 25px;
+}
+
+.purchase-back-btn {
+  background-color: transparent;
+  border: none;
+  color: #6c757d;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.2s ease;
+}
+
+.purchase-back-btn:hover {
+  color: #20c997;
+}
+
+.purchase-main-content {
+  padding: 0 15px 40px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.purchase-page-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #343a40;
+  margin-bottom: 8px;
+  border-bottom: 3px solid #20c997;
+  padding-bottom: 8px;
+  display: inline-block;
+}
+
+.purchase-page-description {
+  color: #6c757d;
+  margin-bottom: 30px;
+}
+
+.purchase-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  justify-content: stretch;
+  width: 100%;
+}
+
+@media (max-width: 1400px) {
+  .purchase-card-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    justify-content: center;
-    margin-top: 80px;
-
   }
-  .event-card1 {
-    background-color: #d7e9e6;
-  padding: 10px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px #17c4a3;
-  text-align: center;
-  max-width: 380px;
-  width: 900px;
-  height: 255px;
+}
+
+@media (max-width: 1100px) {
+  .purchase-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .purchase-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Purchase Event Cards */
+.purchase-event-container {
+  position: relative;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  align-items: center;
-    cursor: pointer;
-  }
-  .event-card1:hover {
-    transform: scale(1.05);
-  }
-  
-  .event-image {
-   width: 100%; ;
-  height: 150px; /* Adjust height as needed */
-  object-fit: cover;
-  border-radius: 5px;
-  border-bottom: 1px solid #ccc;
-  margin-bottom: 15px;
-  }
-  
-  .conference-info {
-    margin: 15px 0 5px;
-    align-items: center;
-    font-size: 20px;
-    font-weight: bold;
-    margin-right: 20px;
-  }
-  
-  .titleh{
-    align-items: center;
-    font-size: 20px;
-    font-weight: bold;
-    margin-right: 60px;
-    margin-top: 18px;
-  }
-  /* .conference-info.event-card.event-details p { 
-    font-size: 18px;
-    display: flex;
-    margin-top: -81px;
-    margin-left: 500px;
+  gap: 0;
+  width: 100%;
+}
 
-  } */
-  .event-card {
-    margin: 15px 0 5px;
-    align-items: center;
-    font-size: 15px;
-    
+@media (max-width: 1200px) {
+  .purchase-event-container {
+    width: 100%;
+    margin-bottom: 30px;
   }
-  
-  .eventinfo23{
-    
-    margin-left: -70px;
-    font-size: 12px;
-    font-weight: bold;
-  }
+}
+
+.purchase-event-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #28a745;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.purchase-event-status-past {
+  background-color: #6c757d;
+}
+
+.purchase-event-card {
+  background-color: white;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+.purchase-event-container:hover .purchase-event-card {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.purchase-event-image-container {
+  height: 160px;
+  overflow: hidden;
+}
+
+.purchase-event-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.purchase-event-container:hover .purchase-event-image {
+  transform: scale(1.05);
+}
+
+.purchase-event-title-container {
+  padding: 15px;
+  border-top: 1px solid #f1f1f1;
+}
+
+.purchase-event-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #343a40;
+}
+
+/* Event Card Layout */
+
+/* Purchase Event Details Card */
+.purchase-event-details-card {
+  background-color: white;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  margin-top: -5px;
+}
+
+.purchase-event-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #495057;
+  font-size: 14px;
+}
+
+.purchase-event-icon {
+  color: #20c997;
+  min-width: 16px;
+}
+
+.purchase-event-price {
+  font-weight: 600;
+  color: #28a745;
+  font-size: 16px;
+  margin-top: 5px;
+}
+
+/* Button Group Styles */
+.purchase-button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.purchase-view-tickets-btn {
+  background-color: #20c997;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex: 1;
+}
+
+.purchase-view-tickets-btn:hover {
+  background-color: #1ba17d;
+}
+
+.purchase-invoice-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex: 1;
+}
+
+.purchase-invoice-btn:hover {
+  background-color: #5a6268;
+}
