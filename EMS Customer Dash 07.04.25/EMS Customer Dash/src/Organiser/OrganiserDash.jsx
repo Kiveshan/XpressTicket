@@ -6,36 +6,11 @@ import { FaSignOutAlt, FaArrowLeft, FaCalendarPlus, FaClipboardList, FaChartBar,
 const OrganiserDash = () => {
   const nav = useNavigate();
 
-  // Organizer dashboard cards with more details and icons
-  const organizerCards = [
-    { 
-      title: "Create Event", 
-      description: "Create and publish a new event",
-      image: "/wedding-wedding-day-marriage-marry-161018.jpeg", 
-      path: "/event-form",
-      icon: <FaCalendarPlus />
-    },
-    { 
-      title: "Event Requests", 
-      description: "Manage pending event requests and approvals",
-      image: "/pexels-photo-7163361.jpeg", 
-      path: "/requestcard",
-      icon: <FaClipboardList />
-    },
-    { 
-      title: "Analytics", 
-      description: "View event performance and attendance metrics",
-      image: "/pexels-photo-185576.jpeg", 
-      path: "/event-list",
-      icon: <FaChartBar />
-    },
-    { 
-      title: "Payment Management", 
-      description: "Track and manage event payments",
-      image: "/Customer2.jpg", 
-      path: "/tickectspaymentlist",
-      icon: <FaMoneyBillWave />
-    },
+  const cards = [
+    { label: "Host", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-form" },
+    { label: "Requests", image: "/pexels-photo-7163361.jpeg", path: "/requestcard" },
+    { label: "Analytics", image: "/pexels-photo-185576.jpeg", path: "/analytics" },
+    { label: "Payments", image: "/Customer2.jpg", path: "/ticketspaymentlist" },
   ];
 
   return (
