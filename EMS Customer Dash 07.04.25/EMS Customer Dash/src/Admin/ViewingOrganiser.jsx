@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import '../Customer/InformationForm.css';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios'; // Make sure axios is installed with npm install axios
+import axios from 'axios';
+import '../shared/ModernDashboard.css';
+import { FaSignOutAlt, FaArrowLeft, FaUser, FaEnvelope, FaPhone, FaBuilding, FaGraduationCap, FaIdCard } from 'react-icons/fa';
 
 const ViewingOrganiser = () => {
   const nav = useNavigate();
@@ -93,148 +94,144 @@ const ViewingOrganiser = () => {
   }, [userId, nav]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div className="modern-loading">Loading...</div>;
   }
 
   return (
-    <>
-      <br />
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/users")}>
-          Back
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
+          </button>
+        </div>
+      </header>
+
+      {/* Back Button */}
+      <div className="modern-back-button">
+        <button className="modern-btn" onClick={() => nav("/users")}>
+          <FaArrowLeft /> Back to Users
         </button>
       </div>
-      <div className="form-container">
-        <form>
-          <div className="form-section">
-            <h2>Full Name</h2>
-            <div className="input-group">
-              <input
-                type="text"
-                name="name"
-                placeholder="Name here"
-                value={formData.name}
-                readOnly
-              />
-              <select
-                className="inputselect"
-                name="dropdown"
-                value={formData.dropdown}
-                disabled
-              >
-                <option value="">Title</option>
-                <option value="Mr">Mr</option>
-                <option value="Dr">Dr</option>
-                <option value="Miss">Miss</option>
-                <option value="Mrs">Mrs</option>
-              </select>
+
+      {/* Main Content */}
+      <main className="modern-main-content">
+        <h1 className="modern-page-title">Organiser Profile</h1>
+        
+        <div className="modern-profile-container">
+          {/* Profile Information */}
+          <div className="modern-profile-section">
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <h2><FaUser /> Personal Information</h2>
+              </div>
+              <div className="modern-card-body">
+                <div className="modern-info-row">
+                  <div className="modern-info-label">Full Name</div>
+                  <div className="modern-info-value">{formData.name}</div>
+                </div>
+                
+                <div className="modern-info-row">
+                  <div className="modern-info-label"><FaEnvelope /> Email</div>
+                  <div className="modern-info-value">{formData.email}</div>
+                </div>
+                
+                <div className="modern-info-row">
+                  <div className="modern-info-label"><FaPhone /> Phone</div>
+                  <div className="modern-info-value">{formData.cellNumber}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <h2><FaBuilding /> Institution Details</h2>
+              </div>
+              <div className="modern-card-body">
+                <div className="modern-info-row">
+                  <div className="modern-info-label">Institution</div>
+                  <div className="modern-info-value">{formData.institutionLocation}</div>
+                </div>
+                
+                <div className="modern-info-row">
+                  <div className="modern-info-label"><FaGraduationCap /> Faculty</div>
+                  <div className="modern-info-value">{formData.faculty}</div>
+                </div>
+                
+                <div className="modern-info-row">
+                  <div className="modern-info-label">Department</div>
+                  <div className="modern-info-value">{formData.department}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modern-card">
+              <div className="modern-card-header">
+                <h2><FaIdCard /> Additional Information</h2>
+              </div>
+              <div className="modern-card-body">
+                <div className="modern-info-row">
+                  <div className="modern-info-label">IEEE Number</div>
+                  <div className="modern-info-value">{formData.ieeeNumber || 'Not provided'}</div>
+                </div>
+                
+                <div className="modern-info-row">
+                  <div className="modern-info-label">VAT Number</div>
+                  <div className="modern-info-value">{formData.organVAT || 'Not provided'}</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="form-section">
-            <h2>Email</h2>
-            <div className="input-group">
-              <input
-                className="inputselect"
-                type="email"
-                name="email"
-                placeholder="Email here"
-                value={formData.email}
-                readOnly
-              />
-              <input
-                className="inputselect"
-                type="tel"
-                name="cellNumber"
-                placeholder="Cell Number"
-                value={formData.cellNumber}
-                readOnly
-              />
+          {/* Events Table */}
+          <div className="modern-card modern-full-width">
+            <div className="modern-card-header">
+              <h2>Events Hosted</h2>
+            </div>
+            <div className="modern-table-container">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.length > 0 ? events.map((event) => (
+                    <tr key={event.id}>
+                      <td>{event.eventName}</td>
+                      <td>{event.formattedDate || new Date(event.date).toLocaleDateString()}</td>
+                      <td>{event.amount}</td>
+                      <td>
+                        <span className={`modern-badge ${
+                          event.status === 'Active' ? 'modern-badge-success' : 
+                          event.status === 'Pending' ? 'modern-badge-warning' : 
+                          'modern-badge-info'
+                        }`}>
+                          {event.status}
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan="4" className="modern-no-data">No events found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-
-          <div className="form-section">
-            <h2>Institution Name</h2>
-            <div className="input-group">
-              <input
-                className="inputselect"
-                type="text"
-                name="institutionLocation"
-                placeholder="Institution Location"
-                value={formData.institutionLocation}
-                readOnly
-              />
-              <input
-                className="inputselect"
-                type="text"
-                name="faculty"
-                placeholder="Faculty"
-                value={formData.faculty}
-                readOnly
-              />
-              <input
-                className="inputselect"
-                type="text"
-                name="department"
-                placeholder="Department"
-                value={formData.department}
-                readOnly
-              />
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h2>IEEE Number</h2>
-            <div className="input-group">
-              <input
-                className="inputselect"
-                type="text"
-                name="ieeeNumber"
-                placeholder="IEEE Number"
-                value={formData.ieeeNumber}
-                readOnly
-              />
-            </div>
-            <h2>Organ VAT</h2>
-            <div className="input-group">
-              <input
-                className="inputselect"
-                type="text"
-                name="organVAT"
-                placeholder="Organ VAT"
-                value={formData.organVAT}
-                readOnly
-              />
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {/* Events Table */}
-      <div className="events-table-container">
-        <h2>Events Hosted</h2>
-        <table className="events-table">
-          <thead>
-            <tr>
-              <th>Event Name</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((event) => (
-              <tr key={event.id}>
-                <td>{event.eventName}</td>
-                <td>{event.formattedDate || new Date(event.date).toLocaleDateString()}</td>
-                <td>{event.amount}</td>
-                <td>{event.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
+        </div>
+      </main>
+    </div>
   );
 };
 

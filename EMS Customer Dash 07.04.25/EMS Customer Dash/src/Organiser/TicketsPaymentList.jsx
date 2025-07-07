@@ -1,6 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import './TicketsPayment.css';
 import { useNavigate } from 'react-router-dom';
+import '../shared/ModernDashboard.css';
+import { FaSignOutAlt, FaArrowLeft, FaSearch, FaFilter, FaEye, FaDownload } from 'react-icons/fa';
 
 const TicketPaymentList = () => {
   const nav = useNavigate();
@@ -48,14 +51,16 @@ const TicketPaymentList = () => {
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
-          className="dashboard-logo1"
+          className="modern-logo"
         />
+
         <div className="profile-section">
           <button className="backbutton22" onClick={() => nav('/')}>
             LogOut
           </button>
         </div>
       </header>
+
 
       <div className="back-button-container1">
         <button className="backbutton20" onClick={() => nav('/organiser-dash')}>

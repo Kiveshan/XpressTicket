@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import "../Organiser/OrganiserDash.css";
+import '../shared/ModernDashboard.css';
+import { FaSignOutAlt, FaArrowLeft, FaCalendarPlus, FaClipboardList, FaChartBar, FaMoneyBillWave } from 'react-icons/fa';
 
 const OrganiserDash = () => {
   const nav = useNavigate();
@@ -13,40 +14,56 @@ const OrganiserDash = () => {
   ];
 
   return (
-    <div className="dashboard-container1">
-      <header className="dashboard-header1">
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
-          className="dashboard-logo1"
+          className="modern-logo"
         />
-         <div className="profile-section">
-              <button className="backbutton22" onClick={()=> nav('/')}>LogOut </button>
-          </div>
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
+          </button>
+        </div>
       </header>
 
-      
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/mainmenu")}>
-          Back
+      {/* Back Button */}
+      <div className="modern-back-button">
+        <button className="modern-back-btn" onClick={() => nav('/mainmenu')}>
+          <FaArrowLeft /> Back to Main Menu
         </button>
       </div>
-      <br />
 
-      <main className="dashboard-main1">
-      <div className="card-container">
-  {cards.map((card, index) => (
-    <div
-      className="card1"
-      key={index}
-      onClick={() => nav(card.path)}
-      style={{ cursor: "pointer" }}
-    >
-      <img src={card.image} alt={card.label} />
-      <div className="label">{card.label}</div>
-    </div>
-  ))}
-</div>
+      {/* Main Content */}
+      <main className="modern-main-content">
+        <h1 className="modern-page-title">Organizer Dashboard</h1>
+        
+        {/* Card Grid */}
+        <div className="modern-card-grid">
+          {organizerCards.map((card, index) => (
+            <div 
+              key={index} 
+              className="modern-card" 
+              onClick={() => nav(card.path)}
+            >
+              <div className="modern-card-image-container">
+                <img 
+                  src={card.image} 
+                  alt={card.title} 
+                  className="modern-card-image" 
+                />
+              </div>
+              <div className="modern-card-content">
+                <h3 className="modern-card-title">
+                  {card.icon} {card.title}
+                </h3>
+                <p className="modern-card-description">{card.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </main>
     </div>
   );

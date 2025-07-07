@@ -1,45 +1,141 @@
-.approve-btn {
-  background-color: #4caf50;
-  color: white;
-  padding: 0.6rem 1.5rem;
-  margin: 0 0.5rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.approve-btn:hover {
-  background-color: #45a049;
-}
-.edit-request-btn {
-  background-color: #ff9800;
-  color: white;
-  padding: 0.6rem 1.5rem;
-  margin: 0 0.5rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.edit-request-btn:hover {
-  background-color: #e68a00;
-}
-.reject-btn {
-  background-color: #f44336;
-  color: white;
-  padding: 0.6rem 1.5rem;
-  margin: 0 0.5rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.approve-btn:hover {
-  background-color: #45a049;
+/* Event Request Specific Styles */
+
+/* Event Header */
+.modern-event-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
 }
 
-.image {
-  max-width: 100%; /* Ensure image doesn't overflow container */
-  height: 200px; /* Fixed height for consistency */
-  object-fit: cover; /* Maintain aspect ratio */
-  border-radius: 5px;
-  border-bottom: 1px solid #ccc;
-  margin-bottom: 15px;
+.modern-event-image {
+  flex: 0 0 300px;
+  max-width: 300px;
+}
+
+.modern-event-image img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.modern-event-details {
+  flex: 1;
+  min-width: 300px;
+}
+
+.modern-event-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.modern-event-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.modern-event-info-item .modern-icon {
+  color: #007bff;
+  margin-top: 4px;
+}
+
+.modern-event-info-item div {
+  display: flex;
+  flex-direction: column;
+}
+
+.modern-label {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-bottom: 4px;
+}
+
+.modern-value {
+  font-weight: 500;
+  color: #212529;
+}
+
+/* Description */
+.modern-description {
+  line-height: 1.6;
+  color: #212529;
+  white-space: pre-line;
+}
+
+/* Badge Container */
+.modern-badge-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Tabs Container */
+.modern-tabs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modern-tab-item {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modern-tab-header {
+  background-color: #f8f9fa;
+  padding: 12px 16px;
+  font-weight: 500;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.modern-tab-content {
+  padding: 16px;
+  white-space: pre-line;
+}
+
+/* Textarea */
+.modern-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* Action Buttons */
+.modern-action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+/* Loading Overlay */
+.modern-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Truncate text */
+.modern-truncate-text {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

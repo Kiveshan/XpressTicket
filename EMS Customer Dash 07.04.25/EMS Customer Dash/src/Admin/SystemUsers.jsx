@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './SystemUsers.css';
+import '../shared/ModernDashboard.css';
+import { FaSignOutAlt, FaArrowLeft, FaEye, FaCheck, FaBan, FaSearch } from 'react-icons/fa';
 
 const SystemUsers = () => {
   const nav = useNavigate();
@@ -11,15 +12,40 @@ const SystemUsers = () => {
   const [customers, setCustomers] = useState([]);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredOrganisers, setFilteredOrganisers] = useState([]);
+  const [filteredGeneralUsers, setFilteredGeneralUsers] = useState([]);
+  const [filteredPayments, setFilteredPayments] = useState([]);
 
   useEffect(() => {
     // Define the API base URL
     const API_BASE_URL = 'http://localhost:5000'; // Server is running on port 5000
     
+    // Get token from sessionStorage (where it's stored during login)
+    const storedToken = sessionStorage.getItem('token');
+    if (storedToken) {
+      console.log('Token found in sessionStorage');
+      setToken(storedToken);
+    } else {
+      console.log('No token found in sessionStorage');
+      // If no token is found, redirect to login
+      alert('Please log in to access this page');
+      nav('/');
+      return;
+    }
+    
     // Fetch organizers with events
     const fetchOrganisers = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/users-with-events`);
+        const response = await axios.get(
+          `${API_BASE_URL}/api/users-with-events`,
+          {
+            headers: {
+              'Authorization': `Bearer ${storedToken}`
+            }
+          }
+        );
         // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setOrganisers(response.data);
@@ -36,7 +62,14 @@ const SystemUsers = () => {
     // Fetch general users (users without events)
     const fetchGeneralUsers = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/users-without-events`);
+        const response = await axios.get(
+          `${API_BASE_URL}/api/users-without-events`,
+          {
+            headers: {
+              'Authorization': `Bearer ${storedToken}`
+            }
+          }
+        );
         // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setGeneralUsers(response.data);
@@ -53,7 +86,7 @@ const SystemUsers = () => {
     // Fetch payments
     const fetchPayments = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/payments`);
+        const response = await axios.get(`${API_BASE_URL}/api/payments-with-user-names`);
         // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setPayments(response.data);
@@ -72,134 +105,326 @@ const SystemUsers = () => {
     fetchPayments();
     setLoading(false);
   }, []);
+  
+  // Effect to filter data based on search term
+  useEffect(() => {
+    if (organisers.length > 0) {
+      const filtered = organisers.filter(organiser => {
+        const fullName = `${organiser.firstname} ${organiser.surname}`.toLowerCase();
+        const email = organiser.email.toLowerCase();
+        const eventName = organiser.event_name?.toLowerCase() || '';
+        const searchLower = searchTerm.toLowerCase();
+        
+        return fullName.includes(searchLower) || 
+               email.includes(searchLower) || 
+               eventName.includes(searchLower);
+      });
+      setFilteredOrganisers(filtered);
+    }
+    
+    if (generalUsers.length > 0) {
+      const filtered = generalUsers.filter(user => {
+        const fullName = `${user.firstname} ${user.surname}`.toLowerCase();
+        const email = user.email.toLowerCase();
+        const role = user.role?.toLowerCase() || '';
+        const searchLower = searchTerm.toLowerCase();
+        
+        return fullName.includes(searchLower) || 
+               email.includes(searchLower) || 
+               role.includes(searchLower);
+      });
+      setFilteredGeneralUsers(filtered);
+    }
+    
+    if (payments.length > 0) {
+      const filtered = payments.filter(payment => {
+        const fullName = `${payment.firstname} ${payment.surname}`.toLowerCase();
+        const amount = payment.amount?.toString().toLowerCase() || '';
+        const searchLower = searchTerm.toLowerCase();
+        
+        return fullName.includes(searchLower) || 
+               amount.includes(searchLower);
+      });
+      setFilteredPayments(filtered);
+    }
+  }, [searchTerm, organisers, generalUsers, payments]);
+
+  // Function to toggle user's disabled status
+  const toggleUserStatus = async (userId, currentStatus) => {
+    try {
+      setLoading(true);
+      const API_BASE_URL = 'http://localhost:5000';
+      
+      // Get the token from sessionStorage where it's stored during login
+      const currentToken = sessionStorage.getItem('token');
+      
+      if (!currentToken) {
+        alert('Authentication token not found. Please log in again.');
+        nav('/');
+        return;
+      }
+      
+      console.log('Using token for toggle status:', currentToken.substring(0, 10) + '...');
+      
+      const response = await axios.post(
+        `${API_BASE_URL}/api/toggle-user-status`,
+        { userId },
+        {
+          headers: {
+            'Authorization': `Bearer ${currentToken}`
+          }
+        }
+      );
+      
+      // Refresh user lists after toggling status
+      const fetchOrganisers = async () => {
+        try {
+          const response = await axios.get(`${API_BASE_URL}/api/users-with-events`);
+          if (Array.isArray(response.data)) {
+            setOrganisers(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching organisers:', error);
+        }
+      };
+      
+      const fetchGeneralUsers = async () => {
+        try {
+          const response = await axios.get(`${API_BASE_URL}/api/users-without-events`);
+          if (Array.isArray(response.data)) {
+            setGeneralUsers(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching general users:', error);
+        }
+      };
+      
+      await fetchOrganisers();
+      await fetchGeneralUsers();
+      
+      alert(response.data.message);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      
+      // Check if it's an authentication error
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        alert('Your session has expired. Please log in again.');
+        sessionStorage.removeItem('token');
+        nav('/');
+      } else {
+        alert('Failed to update user status. Please try again.');
+      }
+      
+      setLoading(false);
+    }
+  };
 
   const renderTable = () => {
     if (loading) {
-      return <div>Loading...</div>;
+      return <div className="modern-loading">Loading...</div>;
     }
 
     if (activeTable === 'Organiser') {
       return (
-        <table className="package-table">
-          <thead>
-            <tr>
-              <th>Organiser Name</th>
-              <th>Email</th>
-              <th>Event</th>
-              <th>DATE OF EVENT</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.isArray(organisers) && organisers.length > 0 ? organisers.map((organiser, index) => (
-              <tr key={`organiser-${organiser.user_id}-${index}`}>
-                <td>{`${organiser.firstname} ${organiser.surname}`}</td>
-                <td>{organiser.email}</td>
-                <td>{organiser.event_name}</td>
-                <td>{organiser.formatted_date || new Date(organiser.startdate).toLocaleDateString()}</td>
-                <td>
-                  <button onClick={() => nav('/viewingorganiser', { state: { userId: organiser.user_id } })}>View</button>
-                </td>
+        <div className="modern-table-container">
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th>Organiser Name</th>
+                <th>Email</th>
+                <th>Event</th>
+                <th>Date of Event</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
-            )) : <tr key="no-organisers"><td colSpan="5">No organizers found</td></tr>}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {Array.isArray(filteredOrganisers) && filteredOrganisers.length > 0 ? filteredOrganisers.map((organiser, index) => (
+                <tr key={`organiser-${organiser.user_id}-${index}`}>
+                  <td>{`${organiser.firstname} ${organiser.surname}`}</td>
+                  <td>{organiser.email}</td>
+                  <td>{organiser.event_name}</td>
+                  <td>{organiser.formatted_date || new Date(organiser.startdate).toLocaleDateString()}</td>
+                  <td>
+                    <span className={`modern-badge ${
+                      organiser.is_disabled === 1 ? 'modern-badge-warning' : 'modern-badge-success'
+                    }`}>
+                      {organiser.is_disabled === 1 ? 'Disabled' : 'Enabled'}
+                    </span>
+                  </td>
+                  <td>
+                    <button 
+                      className="modern-action-btn" 
+                      onClick={() => nav('/viewingorganiser', { state: { userId: organiser.user_id } })}
+                      title="View organizer details"
+                    >
+                      <FaEye />
+                    </button>
+                    <button 
+                      className={`modern-action-btn ${organiser.is_disabled === 1 ? 'action-enable' : 'action-disable'}`}
+                      onClick={() => toggleUserStatus(organiser.user_id, organiser.is_disabled)}
+                      title={organiser.is_disabled === 1 ? 'Enable user' : 'Disable user'}
+                    >
+                      {organiser.is_disabled === 1 ? <FaCheck /> : <FaBan />}
+                    </button>
+                  </td>
+                </tr>
+              )) : <tr key="no-organisers"><td colSpan="6">No organizers found</td></tr>}
+            </tbody>
+          </table>
+        </div>
       );
     } else if (activeTable === 'General Users') {
       return (
-        <table className="package-table">
-          <thead>
-            <tr>
-              <th>Customer Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.isArray(generalUsers) && generalUsers.length > 0 ? generalUsers.map((user, index) => (
-              <tr key={`user-${user.user_id}-${index}`}>
-                <td>{`${user.firstname} ${user.surname}`}</td>
-                <td>{user.email}</td>
-                <td>{user.role}</td>
-                <td>
-                  <button onClick={() => nav('/viewingcustomer', { state: { userId: user.user_id } })}>View</button>
-                </td>
+        <div className="modern-table-container">
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
-            )) : <tr key="no-users"><td colSpan="4">No general users found</td></tr>}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {Array.isArray(filteredGeneralUsers) && filteredGeneralUsers.length > 0 ? filteredGeneralUsers.map((user, index) => (
+                <tr key={`user-${user.user_id}-${index}`}>
+                  <td>{`${user.firstname} ${user.surname}`}</td>
+                  <td>{user.email}</td>
+                  <td>
+                    <span className="modern-badge modern-badge-info">
+                      {user.role}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`modern-badge ${
+                      user.is_disabled === 1 ? 'modern-badge-warning' : 'modern-badge-success'
+                    }`}>
+                      {user.is_disabled === 1 ? 'Disabled' : 'Enabled'}
+                    </span>
+                  </td>
+                  <td>
+                    <button 
+                      className="modern-action-btn" 
+                      onClick={() => nav('/viewingcustomer', { state: { userId: user.user_id } })}
+                      title="View user details"
+                    >
+                      <FaEye />
+                    </button>
+                    <button 
+                      className={`modern-action-btn ${user.is_disabled === 1 ? 'action-enable' : 'action-disable'}`}
+                      onClick={() => toggleUserStatus(user.user_id, user.is_disabled)}
+                      title={user.is_disabled === 1 ? 'Enable user' : 'Disable user'}
+                    >
+                      {user.is_disabled === 1 ? <FaCheck /> : <FaBan />}
+                    </button>
+                  </td>
+                </tr>
+              )) : <tr key="no-users"><td colSpan="5">No general users found</td></tr>}
+            </tbody>
+          </table>
+        </div>
       );
     } else if (activeTable === 'Payment') {
       return (
-        <table className="package-table">
-          <thead>
-            <tr>
-              <th>Purchaser Name</th>
-              <th>Email</th>
-              <th>Event</th>
-              <th>Amount</th>
-              <th>Created At</th>
-              <th>Proof of Payment</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.isArray(payments) && payments.length > 0 ? payments.map((payment, index) => (
-              <tr key={`payment-${payment.payment_id}-${index}`}>
-                <td>{`${payment.firstname} ${payment.surname}`}</td>
-                <td>{payment.email}</td>
-                <td>{payment.event_name}</td>
-                <td>{payment.amount}</td>
-                <td>{payment.payment_date}</td>
-                <td>
-                  <button onClick={() => alert(`Viewing details for ${payment.firstname} ${payment.surname}`)}>View</button>
-                </td>
+        <div className="modern-table-container">
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th>Full Name</th>
+                <th>Amount</th>
+                <th>Proof of Payment</th>
               </tr>
-            )) : <tr key="no-payments"><td colSpan="6">No payments found</td></tr>}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {Array.isArray(filteredPayments) && filteredPayments.length > 0 ? filteredPayments.map((payment, index) => (
+                <tr key={`payment-${payment.payment_id}-${index}`}>
+                  <td>{`${payment.firstname} ${payment.surname}`}</td>
+                  <td>{payment.amount}</td>
+                  <td>
+                    <button 
+                      className="modern-action-btn"
+                      onClick={() => alert(`Viewing proof of payment for ${payment.firstname} ${payment.surname}`)}
+                      title="View payment proof"
+                    >
+                      <FaEye />
+                    </button>
+                  </td>
+                </tr>
+              )) : <tr key="no-payments"><td colSpan="3">No payments found</td></tr>}
+            </tbody>
+          </table>
+        </div>
       );
     }
   };
 
   return (
-    <div className="container12">
-      <header className="dashboard-header1">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>LogOut</button>
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
 
+      {/* Back Button - Original Style */}
       <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/admin-dash")}>Back</button>
-      </div>
-
-      <br />
-
-      <div className="button-group1">
-        <button
-          className={`organiser-button tab-button ${activeTable === 'Organiser' ? 'active' : ''}`}
-          onClick={() => setActiveTable('Organiser')}
-        >
-          Organiser
-        </button>
-        <button
-          className={`customer-button tab-button ${activeTable === 'General Users' ? 'active' : ''}`}
-          onClick={() => setActiveTable('General Users')}
-        >
-          General Users
-        </button>
-        <button
-          className={`payment-button tab-button ${activeTable === 'Payment' ? 'active' : ''}`}
-          onClick={() => setActiveTable('Payment')}
-        >
-          Payment
+        <button className="backbutton20" onClick={() => nav("/admin-dash")}>
+          Back
         </button>
       </div>
 
-      <br />
-      {renderTable()}
+      {/* Main Content */}
+      <main className="modern-main-content">
+        <h1 className="modern-page-title">System Users</h1>
+        
+        {/* Search Input */}
+        <div className="modern-search-filter">
+          <div className="modern-search-input">
+            <input 
+              type="text" 
+              placeholder="Search users..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <FaSearch className="modern-search-icon-right" />
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="modern-tabs">
+          <button
+            className={`modern-tab-button ${activeTable === 'Organiser' ? 'active' : ''}`}
+            onClick={() => setActiveTable('Organiser')}
+          >
+            Organiser
+          </button>
+          <button
+            className={`modern-tab-button ${activeTable === 'General Users' ? 'active' : ''}`}
+            onClick={() => setActiveTable('General Users')}
+          >
+            General Users
+          </button>
+          <button
+            className={`modern-tab-button ${activeTable === 'Payment' ? 'active' : ''}`}
+            onClick={() => setActiveTable('Payment')}
+          >
+            Payment
+          </button>
+        </div>
+
+        {renderTable()}
+      </main>
     </div>
   );
 };
