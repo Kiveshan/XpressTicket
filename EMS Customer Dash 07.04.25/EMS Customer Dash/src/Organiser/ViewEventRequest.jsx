@@ -1,565 +1,426 @@
-import React, { useState, useEffect } from 'react';
-import '../Admin/AdminViewEventRequest.css';
-import { useNavigate, useLocation } from 'react-router-dom';
- 
+"use client"
+
+import { useState, useEffect } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import "./EventForm.css"
+import "./ViewEventRequest.css"
+
 const ViewEventRequest = () => {
-  const nav = useNavigate();
-  const location = useLocation();
-  const eventid = location.state?.eventid;
- 
+  const navigate = useNavigate()
+  const location = useLocation()
+  const eventid = location.state?.eventid || new URLSearchParams(location.search).get("eventid")
+
   const [eventData, setEventData] = useState({
-    event_name: '',
-    location: '',
-    start_date: '',
-    end_date: '',
-    time: '',
-    deadline: '',
-    event_type: '',
-    capacity: '',
-    event_details: '',
-    terms_and_conditions: '',
-    file_url: '/default-profile-picture.jpg',
-    proof_of_payment_url: '',
-    payment_type: '',
-    amount: '',
-    admin_comment: '',
-    status: ''
-  });
-  const [proofOfPaymentSignedUrl, setProofOfPaymentSignedUrl] = useState('');
-  const [packages, setPackages] = useState([]);
-  const [tabs, setTabs] = useState([]);
-  const [clientTypes, setClientTypes] = useState([]);
-  const [sponsor, setSponsor] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    amount: '',
-  });
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
-  const [coverImageFile, setCoverImageFile] = useState(null);
-  const [proofOfPaymentFile, setProofOfPaymentFile] = useState(null);
-  const [isEditable, setIsEditable] = useState(false);
- 
+    event_name: "",
+    location: "",
+    start_date: "",
+    end_date: "",
+    start_time: "",
+    end_time: "",
+    deadline_date: "",
+    deadline_time: "",
+    event_type: "",
+    capacity: "",
+    event_details: "",
+    terms_and_conditions: "",
+    duration: "",
+    file_url: "/default-profile-picture.jpg",
+  })
+
+  const [packages, setPackages] = useState([])
+  const [tabs, setTabs] = useState([])
+  const [clientTypes, setClientTypes] = useState([])
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [imageError, setImageError] = useState(false)
+  const [currentSection, setCurrentSection] = useState("eventInfo")
+
   useEffect(() => {
-    console.log('Location state:', location.state);
-    console.log('Event ID:', eventid);
- 
+    console.log("Event ID:", eventid)
+
     if (!eventid) {
-      setError('No event ID provided. Redirecting to event requests...');
-      setLoading(false);
-      setTimeout(() => nav('/event-request'), 2000);
-      return;
+      setError("No event ID provided. Redirecting to event requests...")
+      setLoading(false)
+      setTimeout(() => navigate("/event-request"), 2000)
+      return
     }
- 
+
     const fetchEvent = async () => {
       try {
-        const token = sessionStorage.getItem('token');
-        const userId = sessionStorage.getItem('userId');
+        const token = sessionStorage.getItem("token")
+        const userId = sessionStorage.getItem("userId")
         if (!token || !userId) {
-          console.error('Missing token or userId:', { token, userId });
-          nav('/login');
-          return;
+          console.error("Missing token or userId:", { token, userId })
+          navigate("/login")
+          return
         }
- 
-        console.log('Fetching event with:', { token: token.slice(0, 10) + '...', userId, eventid });
+
+        console.log("Fetching event with:", { token: token.slice(0, 10) + "...", userId, eventid })
         const response = await fetch(`http://localhost:5000/api/events/${eventid}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        });
- 
+        })
+
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Fetch failed:', {
+          const errorData = await response.json().catch(() => ({}))
+          console.error("Fetch failed:", {
             status: response.status,
             statusText: response.statusText,
-            error: errorData.error || 'No error message provided',
-          });
+            error: errorData.error || "No error message provided",
+          })
           if (response.status === 401 || response.status === 403) {
-            sessionStorage.removeItem('token');
-            sessionStorage.removeItem('userId');
-            nav('/login');
-            return;
+            sessionStorage.removeItem("token")
+            sessionStorage.removeItem("userId")
+            navigate("/login")
+            return
           }
-          throw new Error(`Failed to fetch event: ${errorData.error || response.statusText}`);
+          throw new Error(`Failed to fetch event: ${errorData.error || response.statusText}`)
         }
- 
-        const data = await response.json();
-        console.log('Fetched event data:', data);
- 
+
+        const data = await response.json()
+        console.log("Fetched event data:", data)
+
         // Map backend fields to frontend state
         setEventData({
-          event_name: data.name || '',
-          location: data.location || '',
-          start_date: data.start_date ? new Date(data.start_date).toISOString().split('T')[0] : '',
-          end_date: data.end_date ? new Date(data.end_date).toISOString().split('T')[0] : '',
-          time: data.start_time || '',
-          deadline: data.registration_deadline_date ? new Date(data.registration_deadline_date).toISOString().split('T')[0] : '',
-          event_type: data.event_type || '',
-          capacity: data.capacity || '',
-          event_details: data.description || '',
-          terms_and_conditions: data.terms_and_conditions || '',
-          file_url: data.coverimage || '/default-profile-picture.jpg',
-          proof_of_payment_url: data.payment_proof_url || '',
-          payment_type: data.payment_type || '',
-          amount: data.paid_amount ? parseFloat(data.paid_amount).toFixed(2) : '',
-          admin_comment: data.admin_comment || '',
-          status: data.status || ''
-        });
- 
-        setIsEditable(data.status === 'Request Edit');
-        setClientTypes(data.attendees || []);
-        setTabs(data.tabs || []);
-        setPackages(data.packages || []);
- 
-        setSponsor({
-          name: data.sponsor?.name || '',
-          phone: data.sponsor?.phone || data.contactnum || '',
-          email: data.sponsor?.email || data.email || '',
-          amount: data.payment_type === 'Sponsor' && data.paid_amount ? parseFloat(data.paid_amount).toFixed(2) : '',
-        });
- 
-        setProofOfPaymentSignedUrl(data.payment_proof_url || '');
+          event_name: data.name || "",
+          location: data.location || "",
+          start_date: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
+          end_date: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
+          start_time: data.start_time || "",
+          end_time: data.end_time || "",
+          deadline_date: data.registration_deadline_date
+            ? new Date(data.registration_deadline_date).toISOString().split("T")[0]
+            : "",
+          deadline_time: data.registration_deadline_time || "",
+          event_type: data.event_type || "",
+          capacity: data.capacity || "",
+          event_details: data.description || "",
+          terms_and_conditions: data.terms_and_conditions || "",
+          duration: data.duration || "",
+          file_url: data.coverimage || "/default-profile-picture.jpg",
+        })
+
+        setClientTypes(data.attendees || [])
+        setTabs(data.tabs || [])
+        setPackages(data.packages || [])
       } catch (err) {
-        console.error('Error fetching event:', err);
-        setError(err.message);
+        console.error("Error fetching event:", err)
+        setError(err.message)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
- 
-    fetchEvent();
-  }, [eventid, nav]);
- 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEventData(prev => ({ ...prev, [name]: value }));
-  };
- 
-  const handleSponsorChange = (e) => {
-    const { name, value } = e.target;
-    setSponsor(prev => ({ ...prev, [name]: value }));
-  };
- 
-  const handleClientTypeChange = (index, value) => {
-    const newClientTypes = [...clientTypes];
-    newClientTypes[index] = value;
-    setClientTypes(newClientTypes);
-  };
- 
-  const addClientType = () => {
-    setClientTypes([...clientTypes, '']);
-  };
- 
-  const removeClientType = (index) => {
-    setClientTypes(clientTypes.filter((_, i) => i !== index));
-  };
- 
-  const handleTabChange = (index, field, value) => {
-    const newTabs = [...tabs];
-    newTabs[index] = { ...newTabs[index], [field]: value };
-    setTabs(newTabs);
-  };
- 
-  const addTab = () => {
-    setTabs([...tabs, { name: '', content: '' }]);
-  };
- 
-  const removeTab = (index) => {
-    setTabs(tabs.filter((_, i) => i !== index));
-  };
- 
-  const handlePackageChange = (index, field, value) => {
-    const newPackages = [...packages];
-    newPackages[index] = { ...newPackages[index], [field]: value };
-    setPackages(newPackages);
-  };
- 
-  const addPackage = () => {
-    setPackages([...packages, {
-      selectType: '',
-      packageType: '',
-      location: '',
-      duration: '',
-      dateChoices: '',
-      pricing: '',
-      details: '',
-      typeOptions: [] // Initialize typeOptions to avoid undefined error
-    }]);
-  };
- 
-  const removePackage = (index) => {
-    setPackages(packages.filter((_, i) => i !== index));
-  };
- 
-  const handleFileChange = (e, type) => {
-    const file = e.target.files[0];
-    if (type === 'cover_image') {
-      setCoverImageFile(file);
-      setEventData(prev => ({ ...prev, file_url: URL.createObjectURL(file) }));
-    } else if (type === 'proof_of_payment') {
-      setProofOfPaymentFile(file);
-      setProofOfPaymentSignedUrl(URL.createObjectURL(file));
     }
-  };
- 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!isEditable) return;
- 
-    const formData = new FormData();
-    formData.append('name', eventData.event_name);
-    formData.append('description', eventData.event_details);
-    formData.append('location', eventData.location);
-    formData.append('start_date', eventData.start_date);
-    formData.append('end_date', eventData.end_date);
-    formData.append('start_time', eventData.time);
-    formData.append('deadlinedate', eventData.deadline);
-    formData.append('event_type', eventData.event_type);
-    formData.append('capacity', eventData.capacity);
-    formData.append('attendees', JSON.stringify(clientTypes));
-    formData.append('tabs', JSON.stringify(tabs));
-    formData.append('packages', JSON.stringify(packages));
-    formData.append('terms_and_conditions', eventData.terms_and_conditions);
-    formData.append('payment_type', eventData.payment_type);
-    formData.append('payment_amount', eventData.amount);
-    formData.append('contactnum', sponsor.phone);
-    formData.append('email', sponsor.email);
- 
-    if (coverImageFile) formData.append('cover_image', coverImageFile);
-    if (proofOfPaymentFile) formData.append('proof_of_payment', proofOfPaymentFile);
- 
-    try {
-      const token = sessionStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/events/${eventid}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
- 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update event');
-      }
- 
-      const data = await response.json();
-      console.log('Event updated:', data);
-      nav('/event-request', { state: { message: 'Event updated successfully and set to pending' } });
-    } catch (err) {
-      console.error('Error updating event:', err);
-      setError(err.message);
-    }
-  };
- 
+
+    fetchEvent()
+  }, [eventid, navigate])
+
+  // Section navigation handlers
+  const showEventInfo = () => setCurrentSection("eventInfo")
+  const showClientTypes = () => setCurrentSection("clientTypes")
+  const showPackagesTabs = () => setCurrentSection("packagesTabs")
+  const showTerms = () => setCurrentSection("terms")
+
   if (loading) {
-    return <p>Loading event...</p>;
+    return (
+      <div className="modern-loading-overlay">
+        <div className="view-empty-state-icon">⏳</div>
+        <p>Loading event details...</p>
+      </div>
+    )
   }
- 
+
   if (error) {
-    return <p className="error">{error}</p>;
-  }
- 
-  return (
-    <div className="event-form">
-      <button className="back-button" onClick={() => nav('/event-request')}>
-        Back
-      </button>
- 
-      <form onSubmit={handleSubmit}>
-        <div className="grid-two">
-          <div className="event-info">
-            <div className="form-grid">
-              <div>
-                <label>Event Name</label>
-                <input
-                  type="text"
-                  name="event_name"
-                  value={eventData.event_name}
-                  onChange={handleInputChange}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Location</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={eventData.location}
-                  onChange={handleInputChange}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Starting Date</label>
-                <input
-                  type="date"
-                  name="start_date"
-                  value={eventData.start_date}
-                  onChange={handleInputChange}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Ending Date</label>
-                <input
-                  type="date"
-                  name="end_date"
-                  value={eventData.end_date}
-                  onChange={handleInputChange}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Time</label>
-                <input
-                  type="text"
-                  name="time"
-                  value={eventData.time}
-                  onChange={handleInputChange}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Deadline</label>
-                <input
-                  type="date"
-                  name="deadline"
-                  value={eventData.deadline}
-                  onChange={handleInputChange}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Event Type</label>
-                <input
-                  type="text"
-                  name="event_type"
-                  value={eventData.event_type}
-                  onChange={handleInputChange}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Max Capacity</label>
-                <input
-                  type="number"
-                  name="capacity"
-                  value={eventData.capacity}
-                  onChange={handleInputChange}
-                  readOnly={!isEditable}
-                />
-              </div>
-            </div>
- 
-            <label>Event Details</label>
-            <textarea
-              name="event_details"
-              value={eventData.event_details}
-              onChange={handleInputChange}
-              readOnly={!isEditable}
-            ></textarea>
+    return (
+      <div className="view-event-container">
+        <div className="view-event-card">
+          <div className="view-empty-state">
+            <div className="view-empty-state-icon">❌</div>
+            <p>{error}</p>
           </div>
- 
-          <div className="upload-section">
-            <h4>Image</h4>
-            <div className="upload-box">
-              <img
-                className="image"
-                src={imageError ? '/default-profile-picture.jpg' : (eventData.file_url || '/default-profile-picture.jpg')}
-                alt="Event"
-                onError={(e) => {
-                  console.error('Image load error:', {
-                    src: eventData.file_url,
-                    message: e?.message || e?.target?.error?.message,
-                    status: e?.target?.status,
-                  });
-                  setImageError(true);
-                }}
-                onLoad={() => console.log('Image loaded successfully:', eventData.file_url)}
-              />
-              {isEditable && (
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  onChange={(e) => handleFileChange(e, 'cover_image')}
-                />
-              )}
-            </div>
- 
-            <div className="client-types">
-              <label>Client Types Available</label>
-              {clientTypes.map((type, index) => (
-                <div key={index} className="client-type-item">
-                  <input
-                    type="text"
-                    value={type}
-                    onChange={(e) => handleClientTypeChange(index, e.target.value)}
-                    readOnly={!isEditable}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="view-event-container">
+      <div className="view-event-card">
+        <div className="view-event-header">
+          <button className="view-back-button" onClick={() => navigate("/event-request")}>
+            ← Back to Events
+          </button>
+          <div className="view-section-nav">
+            <button
+              className={`view-nav-button ${currentSection === "eventInfo" ? "active" : ""}`}
+              onClick={showEventInfo}
+            >
+              Event Information
+            </button>
+            <button
+              className={`view-nav-button ${currentSection === "clientTypes" ? "active" : ""}`}
+              onClick={showClientTypes}
+            >
+              Client Types
+            </button>
+            <button
+              className={`view-nav-button ${currentSection === "packagesTabs" ? "active" : ""}`}
+              onClick={showPackagesTabs}
+            >
+              Packages & Tabs
+            </button>
+            <button className={`view-nav-button ${currentSection === "terms" ? "active" : ""}`} onClick={showTerms}>
+              Terms & Conditions
+            </button>
+          </div>
+        </div>
+
+        <div className="view-section-content">
+          {/* Section 1: Event Information */}
+          {currentSection === "eventInfo" && (
+            <div>
+              <h2 className="view-section-title">Event Information</h2>
+
+              <div className="view-event-showcase">
+                <div className="view-event-image-container">
+                  <img
+                    src={
+                      imageError ? "/default-profile-picture.jpg" : eventData.file_url || "/default-profile-picture.jpg"
+                    }
+                    alt="Event Cover"
+                    className="view-event-image"
+                    onError={(e) => {
+                      console.error("Image load error:", eventData.file_url)
+                      setImageError(true)
+                    }}
+                    onLoad={() => console.log("Image loaded successfully:", eventData.file_url)}
                   />
-                  {isEditable && (
-                    <button type="button" onClick={() => removeClientType(index)}>
-                      Remove
-                    </button>
+                </div>
+
+                <div className="view-event-details-grid">
+                  <div className="view-info-card">
+                    <div className="view-info-label">Event Name</div>
+                    <div className="view-info-value">{eventData.event_name}</div>
+                  </div>
+
+                  <div className="view-info-card">
+                    <div className="view-info-label">Location</div>
+                    <div className="view-info-value">{eventData.location}</div>
+                  </div>
+
+                  <div className="view-info-card">
+                    <div className="view-info-label">Start Date</div>
+                    <div className="view-info-value">{eventData.start_date}</div>
+                  </div>
+
+                  <div className="view-info-card">
+                    <div className="view-info-label">End Date</div>
+                    <div className="view-info-value">{eventData.end_date}</div>
+                  </div>
+
+                  <div className="view-info-card">
+                    <div className="view-info-label">Start Time</div>
+                    <div className="view-info-value">{eventData.start_time}</div>
+                  </div>
+
+                  <div className="view-info-card">
+                    <div className="view-info-label">End Time</div>
+                    <div className="view-info-value">{eventData.end_time}</div>
+                  </div>
+
+                  <div className="view-info-card">
+                    <div className="view-info-label">Registration Deadline</div>
+                    <div className="view-info-value">
+                      {eventData.deadline_date} at {eventData.deadline_time}
+                    </div>
+                  </div>
+
+                  <div className="view-info-card">
+                    <div className="view-info-label">Event Type</div>
+                    <div className="view-info-value">{eventData.event_type}</div>
+                  </div>
+
+                  <div className="view-info-card">
+                    <div className="view-info-label">Max Capacity</div>
+                    <div className="view-info-value">{eventData.capacity}</div>
+                  </div>
+
+                  {eventData.duration && (
+                    <div className="view-info-card">
+                      <div className="view-info-label">Duration</div>
+                      <div className="view-info-value">{eventData.duration}</div>
+                    </div>
                   )}
                 </div>
-              ))}
-              {isEditable && (
-                <button type="button" onClick={addClientType}>
-                  Add Client Type
+              </div>
+
+              <div className="view-description-card">
+                <div className="view-description-title">Event Details</div>
+                <div className="view-description-text">{eventData.event_details}</div>
+              </div>
+
+              <div className="view-section-footer">
+                <div></div>
+                <button className="view-nav-btn view-next-nav" onClick={showClientTypes}>
+                  Next: Client Types →
                 </button>
-              )}
-            </div>
-          </div>
-        </div>
- 
-        <h4>Packages</h4>
-        {packages.map((pkg, idx) => (
-          <div key={idx} className="form-item">
-            <div className="form-grid">
-              <div>
-                <label>Select</label>
-                <select
-                  value={pkg.selectType}
-                  onChange={(e) => handlePackageChange(idx, 'selectType', e.target.value)}
-                  disabled={!isEditable}
-                >
-                  <option value="">Select</option>
-                  {(pkg.typeOptions || []).map((opt, i) => (
-                    <option key={i}>{opt}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label>Package Type</label>
-                <input
-                  type="text"
-                  value={pkg.packageType}
-                  onChange={(e) => handlePackageChange(idx, 'packageType', e.target.value)}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Location</label>
-                <input
-                  type="text"
-                  value={pkg.location}
-                  onChange={(e) => handlePackageChange(idx, 'location', e.target.value)}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Duration</label>
-                <input
-                  type="text"
-                  value={pkg.duration}
-                  onChange={(e) => handlePackageChange(idx, 'duration', e.target.value)}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Date Choices</label>
-                <input
-                  type="text"
-                  value={pkg.dateChoices}
-                  onChange={(e) => handlePackageChange(idx, 'dateChoices', e.target.value)}
-                  readOnly={!isEditable}
-                />
-              </div>
-              <div>
-                <label>Pricing</label>
-                <input
-                  type="text"
-                  value={pkg.pricing}
-                  onChange={(e) => handlePackageChange(idx, 'pricing', e.target.value)}
-                  readOnly={!isEditable}
-                />
               </div>
             </div>
-            <label>Package Details</label>
-            <textarea
-              value={pkg.details}
-              onChange={(e) => handlePackageChange(idx, 'details', e.target.value)}
-              readOnly={!isEditable}
-            ></textarea>
-            {isEditable && (
-              <button type="button" onClick={() => removePackage(idx)}>
-                Remove Package
-              </button>
-            )}
-          </div>
-        ))}
-        {isEditable && (
-          <button type="button" onClick={addPackage}>
-            Add Package
-          </button>
-        )}
- 
-        <h4>Tabs</h4>
-        {tabs.map((tab, idx) => (
-          <div key={idx} className="form-item">
-            <div className="form-grid">
-              <div>
-                <label>Name of Tab</label>
-                <input
-                  type="text"
-                  value={tab.name}
-                  onChange={(e) => handleTabChange(idx, 'name', e.target.value)}
-                  readOnly={!isEditable}
-                />
+          )}
+
+          {/* Section 2: Client Types */}
+          {currentSection === "clientTypes" && (
+            <div>
+              <h2 className="view-section-title">Client Types Available</h2>
+
+              <div className="view-client-types-container">
+                {clientTypes.length === 0 ? (
+                  <div className="view-empty-state">
+                    <div className="view-empty-state-icon">👥</div>
+                    <p>No client types available for this event</p>
+                  </div>
+                ) : (
+                  <div className="view-badges-grid">
+                    {clientTypes.map((type, index) => (
+                      <div key={index} className="view-client-badge">
+                        {type}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="view-section-footer">
+                <button className="view-nav-btn view-back-nav" onClick={showEventInfo}>
+                  ← Back: Event Information
+                </button>
+                <button className="view-nav-btn view-next-nav" onClick={showPackagesTabs}>
+                  Next: Packages & Tabs →
+                </button>
               </div>
             </div>
-            <label>Tab Content</label>
-            <textarea
-              value={tab.content}
-              onChange={(e) => handleTabChange(idx, 'content', e.target.value)}
-              readOnly={!isEditable}
-            ></textarea>
-            {isEditable && (
-              <button type="button" onClick={() => removeTab(idx)}>
-                Remove Tab
-              </button>
-            )}
-          </div>
-        ))}
-        {isEditable && (
-          <button type="button" onClick={addTab}>
-            Add Tab
-          </button>
-        )}
- 
-        <div className="form-row">
-          <label>Terms and Conditions</label>
-          <textarea
-            name="terms_and_conditions"
-            value={eventData.terms_and_conditions}
-            onChange={handleInputChange}
-            readOnly={!isEditable}
-          ></textarea>
+          )}
+
+          {/* Section 3: Packages & Tabs */}
+          {currentSection === "packagesTabs" && (
+            <div>
+              <h2 className="view-section-title">Packages & Tabs</h2>
+
+              <div className="view-packages-tabs-layout">
+                {/* Tabs Section */}
+                <div className="view-section-card">
+                  <div className="view-section-header">
+                    <span className="view-section-icon">📋</span>
+                    <h3>Event Tabs</h3>
+                  </div>
+
+                  {tabs.length === 0 ? (
+                    <div className="view-empty-state">
+                      <div className="view-empty-state-icon">📄</div>
+                      <p>No tabs available</p>
+                    </div>
+                  ) : (
+                    <div className="view-tabs-list">
+                      {tabs.map((tab, idx) => (
+                        <div key={idx} className="view-tab-card">
+                          <div className="view-tab-header">{tab.name}</div>
+                          <div className="view-tab-content">{tab.content}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Packages Section */}
+                <div className="view-section-card">
+                  <div className="view-section-header">
+                    <span className="view-section-icon">📦</span>
+                    <h3>Event Packages</h3>
+                  </div>
+
+                  {packages.length === 0 ? (
+                    <div className="view-empty-state">
+                      <div className="view-empty-state-icon">📦</div>
+                      <p>No packages available</p>
+                    </div>
+                  ) : (
+                    <div className="view-packages-list">
+                      {packages.map((pkg, idx) => (
+                        <div key={idx} className="view-package-card">
+                          <div className="view-package-header">Package {idx + 1}</div>
+                          <div className="view-package-details">
+                            <div className="view-package-grid">
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Select Type</div>
+                                <div className="view-package-item-value">{pkg.selectType}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Package Type</div>
+                                <div className="view-package-item-value">{pkg.packageType}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Location</div>
+                                <div className="view-package-item-value">{pkg.location}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Duration</div>
+                                <div className="view-package-item-value">{pkg.duration}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Date Choices</div>
+                                <div className="view-package-item-value">{pkg.dateChoices}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Pricing</div>
+                                <div className="view-package-item-value">{pkg.pricing}</div>
+                              </div>
+                            </div>
+                            <div className="view-package-description">
+                              <div className="view-package-description-title">Package Details</div>
+                              <div className="view-package-description-text">{pkg.details}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="view-section-footer">
+                <button className="view-nav-btn view-back-nav" onClick={showClientTypes}>
+                  ← Back: Client Types
+                </button>
+                <button className="view-nav-btn view-next-nav" onClick={showTerms}>
+                  Next: Terms & Conditions →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Section 4: Terms & Conditions */}
+          {currentSection === "terms" && (
+            <div>
+              <h2 className="view-section-title">Terms & Conditions</h2>
+
+              <div className="view-terms-container">
+                <div className="view-terms-card">
+                  <div className="view-terms-text">{eventData.terms_and_conditions}</div>
+                </div>
+              </div>
+
+              <div className="view-section-footer">
+                <button className="view-nav-btn view-back-nav" onClick={showPackagesTabs}>
+                  ← Back: Packages & Tabs
+                </button>
+                <div></div>
+              </div>
+            </div>
+          )}
         </div>
- 
-        <div className="form-row" style={{ marginTop: '-1rem', width: '800px' }}>
-          <label>Admin Comments</label>
-          <textarea
-            placeholder="No comments available"
-            value={eventData.admin_comment || ''}
-            readOnly
-          ></textarea>
-        </div>
- 
-        {isEditable && (
-          <button type="submit" className="submit-button">
-            Update Event
-          </button>
-        )}
-      </form>
-      {error && <p className="error">{error}</p>}
+      </div>
     </div>
-  );
-};
- 
-export default ViewEventRequest;
- 
+  )
+}
+
+export default ViewEventRequest
