@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 const OrganiserDash = () => {
   const nav = useNavigate()
@@ -14,27 +14,27 @@ const OrganiserDash = () => {
   const [error, setError] = useState(null)
 
   const cards = [
-    { label: "Host", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-form" },
-    { label: "Requests", image: "/pexels-photo-7163361.jpeg", path: "/requestcard" },
-    { label: "Analytics", image: "/pexels-photo-185576.jpeg", path: "/analytics" },
-    { label: "Payments", image: "/Customer2.jpg", path: "/ticketspaymentlist" },
+    { label: 'Host', image: '/wedding-wedding-day-marriage-marry-161018.jpeg', path: '/event-form' },
+    { label: 'Requests', image: '/pexels-photo-7163361.jpeg', path: '/requestcard' },
+    { label: 'Analytics', image: '/pexels-photo-185576.jpeg', path: '/analytics' },
+    { label: 'Payments', image: '/Customer2.jpg', path: '/ticketspaymentlist' },
   ]
 
-  // Colors for charts (keeping original colors)
-  const COLORS = ["#FF9800", "#2196F3", "#4CAF50", "#F44336", "#9C27B0", "#FFC107"]
+  // Colors for charts
+  const COLORS = ['#FF9800', '#2196F3', '#4CAF50', '#F44336', '#9C27B0', '#FFC107']
 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       try {
-        const token = sessionStorage.getItem("token")
+        const token = sessionStorage.getItem('token')
         if (!token) {
-          setError("No authentication token found. Please log in.")
-          nav("/")
+          setError('No authentication token found. Please log in.')
+          nav('/')
           return
         }
 
         setLoading(true)
-        const response = await fetch("http://localhost:5000/api/organiser/analytics", {
+        const response = await fetch('http://localhost:5000/api/organiser/analytics', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -45,10 +45,11 @@ const OrganiserDash = () => {
         }
 
         const data = await response.json()
+        console.log('Fetched analytics data:', data) // Debug log
         setAnalyticsData(data)
         setLoading(false)
       } catch (err) {
-        console.error("Error fetching analytics data:", err)
+        console.error('Error fetching analytics data:', err)
         setError(err.message)
         setLoading(false)
       }
@@ -75,6 +76,15 @@ const OrganiserDash = () => {
   }
 
   const renderEventStatusChart = () => {
+    if (!analyticsData.eventStatus || !analyticsData.eventStatus.length) {
+      return (
+        <div className="chart-container-dash">
+          <h3 className="chart-title-dash">Event Status Analysis</h3>
+          <div>No event status data available</div>
+        </div>
+      )
+    }
+
     return (
       <div className="chart-container-dash">
         <h3 className="chart-title-dash">Event Status Analysis</h3>
@@ -94,6 +104,15 @@ const OrganiserDash = () => {
   }
 
   const renderTicketsSoldChart = () => {
+    if (!analyticsData.ticketsSold || !analyticsData.ticketsSold.length) {
+      return (
+        <div className="chart-container-dash">
+          <h3 className="chart-title-dash">Tickets Sold Analysis</h3>
+          <div>No ticket sales data available</div>
+        </div>
+      )
+    }
+
     return (
       <div className="chart-container-dash">
         <h3 className="chart-title-dash">Tickets Sold Analysis</h3>
@@ -126,14 +145,14 @@ const OrganiserDash = () => {
       <header className="dashboard-header1">
         <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
         <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav("/")}>
+          <button className="backbutton22" onClick={() => nav('/')}>
             LogOut
           </button>
         </div>
       </header>
 
       <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/mainmenu")}>
+        <button className="backbutton20" onClick={() => nav('/mainmenu')}>
           Back
         </button>
       </div>
@@ -159,8 +178,8 @@ const OrganiserDash = () => {
           <h2 className="cards-header">Quick Actions</h2>
           <div className="card-container-split">
             {cards.map((card, index) => (
-              <div className="card1" key={index} onClick={() => nav(card.path)} style={{ cursor: "pointer" }}>
-                <img src={card.image || "/placeholder.svg"} alt={card.label} />
+              <div className="card1" key={index} onClick={() => nav(card.path)} style={{ cursor: 'pointer' }}>
+                <img src={card.image || '/placeholder.svg'} alt={card.label} />
                 <div className="label">{card.label}</div>
               </div>
             ))}

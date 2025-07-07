@@ -2685,59 +2685,54 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.user;
 
-    // Query for Profit vs Tickets Sold
-    const profitVsTicketsQuery = `
+    // Query for Tickets Sold
+    const ticketsSoldQuery = `
       SELECT 
         e.event_id,
         e.name AS event,
-        COALESCE(SUM(tp.amount), 0) AS tickets_sold,
-        COALESCE(SUM(tp.amount), 0) - COALESCE(p.amount, 0) AS profit,
+        COALESCE(SUM(tp.number_of_tickets), 0) AS tickets_sold,
         TO_CHAR(e.startdate, 'Month') AS month,
         TO_CHAR(e.startdate, 'YYYY') AS year
       FROM events e
-      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.status = 'Approved'
-      LEFT JOIN payments p ON e.event_id = p.event_id
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.request_status = 'Approved'
       WHERE e.user_id = $1
-      GROUP BY e.event_id, e.name, p.amount, e.startdate
-      ORDER BY e.startdate DESC;
+      GROUP BY e.event_id, e.name, e.startdate
+      ORDER BY e.startdate DESC
     `;
 
-    // Query for Attendance
-    const attendanceQuery = `
+    // Query for Event Status
+    const eventStatusQuery = `
       SELECT 
-        e.event_id,
-        e.name AS event,
-        COALESCE(SUM(tp.number_of_tickets), 0) AS attendance,
-        e.capacity,
-        TO_CHAR(e.startdate, 'Month') AS month,
-        TO_CHAR(e.startdate, 'YYYY') AS year
-      FROM events e
-      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.status = 'Approved'
-      WHERE e.user_id = $1
-      GROUP BY e.event_id, e.name, e.capacity, e.startdate
-      ORDER BY e.startdate DESC;
+        TO_CHAR(startdate, 'Month') AS month,
+        TO_CHAR(startdate, 'YYYY') AS year,
+        COUNT(*) FILTER (WHERE status = 'Approved') AS approved,
+        COUNT(*) FILTER (WHERE status = 'Rejected') AS rejected,
+        COUNT(*) FILTER (WHERE status = 'pending') AS pending
+      FROM events
+      WHERE user_id = $1
+      GROUP BY TO_CHAR(startdate, 'Month'), TO_CHAR(startdate, 'YYYY')
+      ORDER BY year DESC, month
     `;
 
-    const [profitVsTicketsResult, attendanceResult] = await Promise.all([
-      client.query(profitVsTicketsQuery, [userId]),
-      client.query(attendanceQuery, [userId]),
+    const [ticketsSoldResult, eventStatusResult] = await Promise.all([
+      client.query(ticketsSoldQuery, [userId]),
+      client.query(eventStatusQuery, [userId]),
     ]);
 
     // Format data for frontend
     const analyticsData = {
-      profitVsTickets: profitVsTicketsResult.rows.map(row => ({
+      ticketsSold: ticketsSoldResult.rows.map(row => ({
         event: row.event,
-        profit: parseFloat(row.profit) || 0,
-        ticketsSold: parseFloat(row.tickets_sold) || 0,
+        ticketsSold: parseInt(row.tickets_sold, 10) || 0,
         month: row.month.trim(),
         year: row.year,
       })),
-      attendance: attendanceResult.rows.map(row => ({
-        event: row.event,
-        attendance: parseInt(row.attendance, 10) || 0,
-        capacity: parseInt(row.capacity, 10) || 0,
+      eventStatus: eventStatusResult.rows.map(row => ({
         month: row.month.trim(),
         year: row.year,
+        approved: parseInt(row.approved, 10) || 0,
+        rejected: parseInt(row.rejected, 10) || 0,
+        pending: parseInt(row.pending, 10) || 0,
       })),
     };
 
