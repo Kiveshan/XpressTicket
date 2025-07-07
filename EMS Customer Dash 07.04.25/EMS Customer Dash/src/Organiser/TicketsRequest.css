@@ -5,14 +5,14 @@
   min-height: 100vh;
   margin-top: -20px;
 }
-
+ 
 .tickets-request-title {
   text-align: center;
   font-size: 24px;
   font-weight: bold;
   margin-bottom: 20px;
 }
-
+ 
 .tickets-request-table {
   width: 70%;
   border-collapse: collapse;
@@ -22,13 +22,13 @@
   overflow: hidden;
   margin-left: 212px;
 }
-
+ 
 .tickets-request-table td {
   padding: 6px 8px;
   border-bottom: 1px solid #ddd;
   text-align: left;
 }
-
+ 
 .tickets-request-table th {
   background-color: #20c997;
   color: rgb(0, 0, 0);
@@ -37,11 +37,11 @@
   border-bottom: 1px solid #ddd;
   text-align: left;
 }
-
+ 
 .tickets-request-table tr:hover {
   background-color: #dbeee9;
 }
-
+ 
 .view-proof-button {
   padding: 8px 12px;
   background-color: #28a745;
@@ -52,16 +52,16 @@
   font-size: 14px;
   margin-right: 8px;
 }
-
+ 
 .view-proof-button:hover {
   background-color: #218838;
 }
-
+ 
 .button-container {
   margin-bottom: 20px;
   text-align: center;
 }
-
+ 
 .download-button {
   padding: 10px 20px;
   background-color: #007bff;
@@ -72,7 +72,8 @@
   font-size: 16px;
   font-weight: bold;
 }
-
+ 
 .download-button:hover {
   background-color: #0056b3;
 }
+ 
