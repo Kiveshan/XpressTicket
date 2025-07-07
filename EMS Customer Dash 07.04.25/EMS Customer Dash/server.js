@@ -15,7 +15,7 @@ const port = 5000;
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow all origins for testing
+origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -1229,7 +1229,6 @@ app.get('/api/events', authenticateToken, async (req, res) => {
     `;
 
     let queryParams = [];
-
     if (role !== 'Admin') {
       query += ` WHERE e.user_id = $1`;
       queryParams.push(userId);
@@ -1237,15 +1236,10 @@ app.get('/api/events', authenticateToken, async (req, res) => {
 
     query += ` ORDER BY e.startdate DESC, e.time DESC`;
 
-    console.log('Fetching events for userId:', userId, 'role:', role);
-    console.log('Query:', query);
-    console.log('Params:', queryParams);
-
     const result = await client.query(query, queryParams);
 
     const eventsWithPresignedUrls = await Promise.all(result.rows.map(async (event) => {
       let coverImageUrl = '/default-profile-picture.jpg';
-
       if (event.coverimage) {
         const coverKey = event.coverimage.split('/').slice(3).join('/');
         try {
@@ -1281,7 +1275,6 @@ app.get('/api/events', authenticateToken, async (req, res) => {
       };
     }));
 
-    console.log('Events fetched:', eventsWithPresignedUrls);
     res.json(eventsWithPresignedUrls);
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -1293,7 +1286,6 @@ app.get('/api/events', authenticateToken, async (req, res) => {
     client.release();
   }
 });
-
 
 
 app.post('/api/events', authenticateToken, upload.fields([
