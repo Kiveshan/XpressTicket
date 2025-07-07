@@ -500,33 +500,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1rem;
-}
-
-/* Status Styles */
-.status {
-  padding: 0.3rem 0.8rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: white;
-}
-
-.status-approved {
-  background-color: #28a745;
-}
-
-.status-rejected {
-  background-color: #dc3545;
-}
-
-.status-other {
-  background-color: #6c757d;
-}
-
-.pending {
-  background-color: #ffc107;
-  color: #212529;
+  margin-top: 16px;
 }
 
 .status {

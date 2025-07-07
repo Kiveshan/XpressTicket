@@ -40,7 +40,6 @@ import TicketPayment from "../Organiser/TicketPayment";
 // Admin
 import AdminDash from "../Admin/AdminDash";
 import EventApproval from "../Admin/EventApproval";
-import EventsHistory from "../Admin/EventsHistory";
 import AdminViewEventRequest from "../Admin/AdminViewEventRequest";
 import SystemUsers from "../Admin/SystemUsers";
 import ViewingCustomer from "../Admin/ViewingCustomer";
@@ -67,9 +66,9 @@ function App() {
           <Route path= "/parchasedticket" element={<ParchasedTicket />}/>
           <Route path= "/view-more-details" element={<ViewMoreDetails />}/>
           <Route path= "/ticketdetails" element={<TicketDetails />}/>
-          <Route path= "/customerviewevent/:eventId" element={<CustomerViewEvent />}/>
-          <Route path= "/eventticketpackage/:eventId" element={<EventTicketPackage />}/>      
-          <Route path="/customerticketdetails1/:eventId/:packageIndex" element={<CustomerFillinTicketPack1 />} />
+          <Route path= "/customerviewevent" element={<CustomerViewEvent />}/>
+          <Route path= "/eventticketpackage" element={<EventTicketPackage />}/>      
+          <Route path="/customerticketdetails1" element={<CustomerFillinTicketPack1 />} />
           <Route path= "/customer-ticket-details2" element={<Conference />} />
           <Route path= "/customer-ticket-details3" element={<Daypass />} />
           <Route path= "/invoice" element={<Invoice />} />
@@ -78,7 +77,7 @@ function App() {
           <Route path= "/viewtickets" element={<ViewTickets />} />
           <Route path= "/viewinvoice" element={<VieWInvoice />} />
           <Route path= "/uploadpop" element={<CustomerUploadPOP />} />
-          <Route path="/confirm-ticket-package/:eventId/:packageIndex" element={<ConfirmTicketPackage />} />
+          <Route path="/confirm-ticket-package" element={<ConfirmTicketPackage />} />
 
 
           {/* Organiser */}
@@ -100,7 +99,6 @@ function App() {
           {/* Admin */}
           <Route path="/admin-dash" element={<AdminDash />} />
           <Route path="/event-approval" element={<EventApproval />} />
-          <Route path="/events-history" element={<EventsHistory />} />
           <Route path="/adminvieweventrequest" element={<AdminViewEventRequest />} />
           <Route path="/users" element={<SystemUsers />} />
           <Route path="/viewingcustomer" element={<ViewingCustomer />} />

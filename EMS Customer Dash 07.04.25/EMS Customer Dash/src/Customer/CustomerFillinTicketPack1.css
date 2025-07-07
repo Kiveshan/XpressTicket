@@ -159,11 +159,6 @@ body {
   margin-left: 80px;
 }
 .eventdestription {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   align-items: center;
   border-radius: 5px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
@@ -174,42 +169,6 @@ body {
   margin-left: 80px;
   text-align: justify;
 }
-
-.event-info-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 6px;
-}
-
-.package-info-section {
-  margin-top: 20px;
-  padding: 15px;
-  border-top: 1px solid #eee;
-}
-
-.package-features {
-  list-style-type: none;
-  padding: 0;
-  margin: 15px 0;
-}
-
-.package-features li {
-  padding: 8px 0;
-  border-bottom: 1px dotted #eee;
-}
-
-.terms-section {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 6px;
-  border-left: 4px solid #007bff;
-}
-
 .eventdestription p{
   align-items: center;
   

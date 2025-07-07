@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import '../shared/ModernDashboard.css';
 import './AdminViewEventRequest.css';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaUsers, FaInfoCircle, FaImage, FaBox, FaFileAlt, FaMoneyBillWave, FaCommentAlt, FaCheck, FaPencilAlt, FaTimes } from 'react-icons/fa';
-import { MdEventAvailable } from 'react-icons/md';
 
 const AdminViewEventRequest = () => {
   const nav = useNavigate();
@@ -63,84 +60,18 @@ const AdminViewEventRequest = () => {
           }
           return img;
         })(),
-        // Use the attendees array from the database if available
-        client_type: data.attendees && Array.isArray(data.attendees) ? 
-          data.attendees : 
-          // Fallback to old format if attendees array is not available
-          data.client_type || [],
-        // Use the tabs array from the database if available
-        tabs: data.tabs && Array.isArray(data.tabs) ? 
-          data.tabs.map(tab => {
-            // If tab is a string (likely JSON), try to parse it
-            if (typeof tab === 'string') {
-              try {
-                const parsedTab = JSON.parse(tab);
-                return { name: parsedTab.name || '', content: parsedTab.content || '' };
-              } catch (e) {
-                console.error('Error parsing tab:', e);
-                return { name: '', content: '' };
-              }
-            }
-            // If tab is already an object
-            return { name: tab.name || '', content: tab.content || '' };
-          }) : 
-          // Fallback to old format if tabs array is not available
-          (data.tab_num > 0 ? [{ name: data.tab_name, content: data.tab_content }] : []),
-        
-        // Use the packages array from the database if available
-        packages: data.packages && Array.isArray(data.packages) ? 
-          data.packages.map(pkg => {
-            // If package is a string (likely JSON), try to parse it
-            if (typeof pkg === 'string') {
-              try {
-                const parsedPkg = JSON.parse(pkg);
-                return {
-                  selectType: parsedPkg.selectType || '',
-                  packageType: parsedPkg.packageType || '',
-                  location: parsedPkg.location || '',
-                  duration: parsedPkg.duration || '',
-                  dateChoices: parsedPkg.dateChoices || '',
-                  pricing: parsedPkg.pricing ? parsedPkg.pricing : 'N/A',
-                  details: parsedPkg.details || '',
-                  typeOptions: [parsedPkg.selectType, 'Day'].filter(Boolean),
-                };
-              } catch (e) {
-                console.error('Error parsing package:', e);
-                return {
-                  selectType: '',
-                  packageType: '',
-                  location: '',
-                  duration: '',
-                  dateChoices: '',
-                  pricing: 'N/A',
-                  details: '',
-                  typeOptions: ['Day'],
-                };
-              }
-            }
-            // If package is already an object
-            return {
-              selectType: pkg.selectType || '',
-              packageType: pkg.packageType || '',
-              location: pkg.location || '',
-              duration: pkg.duration || '',
-              dateChoices: pkg.dateChoices || '',
-              pricing: pkg.pricing ? pkg.pricing : 'N/A',
-              details: pkg.details || '',
-              typeOptions: [pkg.selectType, 'Day'].filter(Boolean),
-            };
-          }) : 
-          // Fallback to old format if packages array is not available
-          (data.package_num > 0 ? [{
-            selectType: data.select_type,
-            packageType: data.package_type,
-            location: data.loc_ation,
-            duration: data.duration,
-            dateChoices: data.date_choices,
-            pricing: data.pricing ? `R${Number.parseFloat(data.pricing).toFixed(2)}` : 'N/A',
-            details: data.package_details,
-            typeOptions: [data.select_type, 'Day'].filter(Boolean),
-          }] : []),
+        client_type: data.client_type || [],
+        tabs: data.tab_num > 0 ? [{ name: data.tab_name, content: data.tab_content }] : [],
+        packages: data.package_num > 0 ? [{
+          selectType: data.select_type,
+          packageType: data.package_type,
+          location: data.loc_ation,
+          duration: data.duration,
+          dateChoices: data.date_choices,
+          pricing: data.pricing ? `R${Number.parseFloat(data.pricing).toFixed(2)}` : 'N/A',
+          details: data.package_details,
+          typeOptions: [data.select_type, 'Day'].filter(Boolean),
+        }] : [],
         sponsor: {
           name: data.sponser_name || '',
           phone: data.cell_num || '',
@@ -247,346 +178,226 @@ const AdminViewEventRequest = () => {
   };
 
   if (loading) {
-    return (
-      <div className="modern-dashboard-container">
-        <div className="modern-loading">
-          <div className="modern-spinner"></div>
-          <p>Loading event details...</p>
-        </div>
-      </div>
-    );
+    return <p>Loading event...</p>;
   }
 
   if (error) {
-    return (
-      <div className="modern-dashboard-container">
-        <div className="modern-error">
-          <FaInfoCircle size={24} />
-          <p>{error}</p>
-          <button className="modern-btn" onClick={() => nav('/event-approval')}>
-            <FaArrowLeft /> Back to Event Approval
-          </button>
-        </div>
-      </div>
-    );
+    return <p className="error">{error}</p>;
   }
 
   if (!event) {
-    return (
-      <div className="modern-dashboard-container">
-        <div className="modern-error">
-          <FaInfoCircle size={24} />
-          <p>No event data available</p>
-          <button className="modern-btn" onClick={() => nav('/event-approval')}>
-            <FaArrowLeft /> Back to Event Approval
-          </button>
-        </div>
-      </div>
-    );
+    return <p>No event data available</p>;
   }
 
+  console.log('Event state after set:', event);
   return (
-    <div className="modern-dashboard-container">
-      {/* Header */}
-      <div className="modern-header">
-        <div className="modern-header-logo">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="modern-logo" />
-          <h1>Event Request Review</h1>
-        </div>
-        <button className="modern-logout-btn" onClick={() => nav('/login')}>
-          Logout
-        </button>
-      </div>
-      
-      {/* Back button */}
-      <div className="modern-back-button">
-        <button className="modern-back-btn" onClick={() => nav('/event-approval')}>
-          <FaArrowLeft /> Back to Event Approval
-        </button>
-      </div>
+    <div className="event-form">
+      <button className="back-button" onClick={() => nav('/event-approval')}>Back</button>
 
-      {/* Event Header */}
-      <div className="modern-card modern-full-width">
-        <div className="modern-card-header">
-          <h2><MdEventAvailable /> {event.event_name || 'Untitled Event'}</h2>
-        </div>
-        <div className="modern-card-body">
-          <div className="modern-event-header">
-            <div className="modern-event-image">
-              <img
-                src={event.file_url || '/default-profile-picture.jpg'}
-                alt="Event"
-                onError={(e) => (e.target.src = '/default-profile-picture.jpg')}
-              />
+      <div className="grid-two">
+        <div className="event-info">
+          <div className="form-grid">
+            <div>
+              <label>Event Name</label>
+              <input type="text" value={event.event_name || ''} readOnly />
             </div>
-            <div className="modern-event-details">
-              <div className="modern-event-info-grid">
-                <div className="modern-event-info-item">
-                  <FaMapMarkerAlt className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Location</span>
-                    <span className="modern-value">{event.location || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="modern-event-info-item">
-                  <FaCalendarAlt className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Date</span>
-                    <span className="modern-value">
-                      {event.start_date ? new Date(event.start_date).toLocaleDateString() : 'Not set'}
-                      {event.end_date && event.end_date !== event.start_date ? 
-                        ` - ${new Date(event.end_date).toLocaleDateString()}` : ''}
-                    </span>
-                  </div>
-                </div>
-                <div className="modern-event-info-item">
-                  <FaClock className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Time</span>
-                    <span className="modern-value">{event.time || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="modern-event-info-item">
-                  <FaCalendarAlt className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Registration Deadline</span>
-                    <span className="modern-value">
-                      {event.deadline ? new Date(event.deadline).toLocaleDateString() : 'Not set'}
-                    </span>
-                  </div>
-                </div>
-                <div className="modern-event-info-item">
-                  <FaInfoCircle className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Event Type</span>
-                    <span className="modern-value">{event.event_type || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="modern-event-info-item">
-                  <FaUsers className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Capacity</span>
-                    <span className="modern-value">{event.capacity || 'Unlimited'}</span>
-                  </div>
-                </div>
+            <div>
+              <label>Location</label>
+              <input type="text" value={event.location || ''} readOnly />
+            </div>
+            <div>
+              <label>Starting Date</label>
+              <input type="date" value={event.start_date || ''} readOnly />
+            </div>
+            <div>
+              <label>Ending Date</label>
+              <input type="date" value={event.end_date || ''} readOnly />
+            </div>
+            <div>
+              <label>Time</label>
+              <input type="text" value={event.time || ''} readOnly />
+            </div>
+            <div>
+              <label>Deadline</label>
+              <input type="date" value={event.deadline || ''} readOnly />
+            </div>
+            <div>
+              <label>Event Type</label>
+              <input type="text" value={event.event_type || ''} readOnly />
+            </div>
+            <div>
+              <label>Max Capacity</label>
+              <input type="number" value={event.capacity || ''} readOnly />
+            </div>
+          </div>
+
+          <label>Event Details</label>
+          <textarea value={event.event_details || ''} readOnly></textarea>
+        </div>
+
+        <div className="upload-section">
+          <h4>Image</h4>
+          <div className="upload-box">
+            <img
+              className="image"
+              src={event.file_url || '/default-profile-picture.jpg'}
+              alt="Event"
+              onError={(e) => (e.target.src = '/default-profile-picture.jpg')}
+            />
+          </div>
+
+          <div className="client-types">
+            <label>Client Types Available</label>
+            {event.client_type.map((type, index) => (
+              <div key={index} className="client-type-item">
+                <label>{type}</label>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Event Details */}
-      <div className="modern-profile-container">
-        <div className="modern-profile-section">
-          {/* Event Description */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h2><FaInfoCircle /> Event Description</h2>
+      <h4>Packages</h4>
+      {event.packages.map((pkg, idx) => (
+        <div key={idx} className="form-item">
+          <div className="form-grid">
+            <div>
+              <label>Select</label>
+              <select value={pkg.selectType} disabled>
+                {pkg.typeOptions.map((opt, i) => (
+                  <option key={i}>{opt}</option>
+                ))}
+              </select>
             </div>
-            <div className="modern-card-body">
-              <p className="modern-description">{event.description || 'No description provided.'}</p>
+            <div>
+              <label>Package Type</label>
+              <input type="text" value={pkg.packageType || ''} readOnly />
+            </div>
+            <div>
+              <label>Location</label>
+              <input type="text" value={pkg.location || ''} readOnly />
+            </div>
+            <div>
+              <label>Duration</label>
+              <input type="text" value={pkg.duration || ''} readOnly />
+            </div>
+            <div>
+              <label>Date Choices</label>
+              <input type="text" value={pkg.dateChoices || ''} readOnly />
+            </div>
+            <div>
+              <label>Pricing</label>
+              <input type="text" value={pkg.pricing || ''} readOnly />
             </div>
           </div>
+          <label>Package Details</label>
+          <textarea value={pkg.details || ''} readOnly></textarea>
+        </div>
+      ))}
 
-          {/* Client Types */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h2><FaUsers /> Attendee Types</h2>
-            </div>
-            <div className="modern-card-body">
-              {event.client_type && event.client_type.length > 0 ? (
-                <div className="modern-badge-container">
-                  {event.client_type.map((type, index) => (
-                    <span key={index} className="modern-badge modern-badge-info">{type}</span>
-                  ))}
-                </div>
-              ) : (
-                <p className="modern-no-data">No attendee types specified</p>
-              )}
+      <h4>Tabs</h4>
+      {event.tabs.map((tab, idx) => (
+        <div key={idx} className="form-item">
+          <div className="form-grid">
+            <div>
+              <label>Name of Tab</label>
+              <input type="text" value={tab.name || ''} readOnly />
             </div>
           </div>
+          <label>Tab Content</label>
+          <textarea value={tab.content || ''} readOnly></textarea>
+        </div>
+      ))}
+
+      <div className="form-row">
+        <label>Insert Terms and Conditions Here</label>
+        <textarea value={event.terms_and_conditions || ''} readOnly></textarea>
+      </div>
+
+      <div className="form-grid">
+        <div>
+          <label>Payment</label>
+          <select value={event.payment_type} disabled>
+            <option value="">Select</option>
+            <option value="Direct">Direct</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Credit">Credit</option>
+            <option value="Sponsor">Sponsor</option>
+          </select>
         </div>
 
-        <div className="modern-profile-section">
-          {/* Terms and Conditions */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h2><FaFileAlt /> Terms and Conditions</h2>
-            </div>
-            <div className="modern-card-body">
-              <p className="modern-description">
-                {event.terms_and_conditions || 'No terms and conditions provided.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Payment Information */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h2><FaMoneyBillWave /> Payment Information</h2>
-            </div>
-            <div className="modern-card-body">
-              <div className="modern-info-row">
-                <div className="modern-info-label">Payment Type</div>
-                <div className="modern-info-value">
-                  <span className="modern-badge modern-badge-primary">
-                    {event.payment_type || 'Not specified'}
-                  </span>
-                </div>
-              </div>
-              
+        <table className="payment-table">
+          <thead>
+            <tr>
               {event.payment_type === 'Sponsor' ? (
                 <>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Sponsor Name</div>
-                    <div className="modern-info-value">{event.sponsor.name || 'Not provided'}</div>
-                  </div>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Sponsor Phone</div>
-                    <div className="modern-info-value">{event.sponsor.phone || 'Not provided'}</div>
-                  </div>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Sponsor Email</div>
-                    <div className="modern-info-value">{event.sponsor.email || 'Not provided'}</div>
-                  </div>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Amount</div>
-                    <div className="modern-info-value">{event.sponsor.amount || 'Not provided'}</div>
-                  </div>
+                  <th>Sponsor Name</th>
+                  <th>Cellphone Number</th>
+                  <th>Email</th>
+                  <th>Amount</th>
                 </>
               ) : (
                 <>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Amount</div>
-                    <div className="modern-info-value">{event.amount || 'N/A'}</div>
-                  </div>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Proof of Payment</div>
-                    <div className="modern-info-value">
-                      <button className="modern-btn modern-btn-sm" onClick={handleViewProofOfPayment}>
-                        View Document
-                      </button>
-                    </div>
-                  </div>
+                  <th>Amount</th>
+                  <th>Proof of Payment</th>
                 </>
               )}
-            </div>
-          </div>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {event.payment_type === 'Sponsor' ? (
+                <>
+                  <td><input type="text" value={event.sponsor.name} readOnly /></td>
+                  <td><input type="text" value={event.sponsor.phone} readOnly /></td>
+                  <td><input type="text" value={event.sponsor.email} readOnly /></td>
+                  <td><input type="text" value={event.sponsor.amount} readOnly /></td>
+                </>
+              ) : (
+                <>
+                  <td className="cell1"><input type="text" value={event.amount || 'N/A'} readOnly /></td>
+                  <td className="upload-cell">
+                    <button onClick={handleViewProofOfPayment}>View Proof of Payment</button>
+                  </td>
+                </>
+              )}
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      {/* Packages */}
-      <div className="modern-card modern-full-width">
-        <div className="modern-card-header">
-          <h2><FaBox /> Packages</h2>
-        </div>
-        <div className="modern-card-body">
-          {event.packages && event.packages.length > 0 ? (
-            <div className="modern-table-container">
-              <table className="modern-table">
-                <thead>
-                  <tr>
-                    <th>Package Type</th>
-                    <th>Location</th>
-                    <th>Duration</th>
-                    <th>Date Choices</th>
-                    <th>Pricing</th>
-                    <th>Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {event.packages.map((pkg, idx) => (
-                    <tr key={idx}>
-                      <td>{pkg.packageType || 'Not specified'}</td>
-                      <td>{pkg.location || 'Not specified'}</td>
-                      <td>{pkg.duration || 'Not specified'}</td>
-                      <td>{pkg.dateChoices || 'Not specified'}</td>
-                      <td>{pkg.pricing || 'N/A'}</td>
-                      <td>
-                        <div className="modern-truncate-text">
-                          {pkg.details || 'No details provided'}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="modern-no-data">No packages defined for this event</p>
-          )}
-        </div>
+      <div className="form-row" style={{ marginTop: '-1rem', width: '800px' }}>
+        <label>Comments</label>
+        <textarea
+          placeholder="Comments here"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        ></textarea>
       </div>
 
-      {/* Tabs */}
-      <div className="modern-card modern-full-width">
-        <div className="modern-card-header">
-          <h2><FaFileAlt /> Additional Tabs</h2>
-        </div>
-        <div className="modern-card-body">
-          {event.tabs && event.tabs.length > 0 ? (
-            <div className="modern-tabs-container">
-              {event.tabs.map((tab, idx) => (
-                <div key={idx} className="modern-tab-item">
-                  <div className="modern-tab-header">{tab.name || 'Unnamed Tab'}</div>
-                  <div className="modern-tab-content">
-                    <p>{tab.content || 'No content provided'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="modern-no-data">No additional tabs defined for this event</p>
-          )}
-        </div>
-      </div>
-
-      {/* Admin Comments */}
-      <div className="modern-card modern-full-width">
-        <div className="modern-card-header">
-          <h2><FaCommentAlt /> Admin Comments</h2>
-        </div>
-        <div className="modern-card-body">
-          <textarea
-            className="modern-textarea"
-            placeholder="Add your comments here..."
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          ></textarea>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="modern-action-buttons">
+      <div className="action-buttons" style={{ marginTop: '2rem', textAlign: 'center' }}>
         <button
-          className="modern-btn modern-btn-success"
+          className="approve-btn"
           onClick={() => handleStatusUpdate('Approved')}
           disabled={isSubmitting}
         >
-          <FaCheck /> Approve Event
+          ✅ Approve
         </button>
         <button
-          className="modern-btn modern-btn-warning"
+          className="edit-request-btn"
           onClick={() => handleStatusUpdate('Request Edit')}
           disabled={isSubmitting}
         >
-          <FaPencilAlt /> Request Edit
+          ✏️ Request Edit
         </button>
         <button
-          className="modern-btn modern-btn-danger"
+          className="reject-btn"
           onClick={() => handleStatusUpdate('Rejected')}
           disabled={isSubmitting}
         >
-          <FaTimes /> Reject Event
+          ❌ Reject
         </button>
       </div>
-      
-      {isSubmitting && (
-        <div className="modern-loading-overlay">
-          <div className="modern-spinner"></div>
-          <p>Processing your request...</p>
-        </div>
-      )}
     </div>
   );
 };

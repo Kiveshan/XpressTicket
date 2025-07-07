@@ -7,369 +7,72 @@
 .dashboard-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  margin-top: 5px;
+  height: 100vh;
+  margin-top: -10px;
+  margin: 6px ;
 }
-
-.dashboard-header2 {
+ /* -------Nav----- */
+ .dashboard-header2 {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px;
   border-bottom: 2px solid #20c997;
-  margin-top: -15px;
+  margin-top: -10px;
 }
-
 .dashboard-logo {
   height: 120px;
   margin-bottom: -20px;
-  margin-top: -10px;
+  margin-top: -30px;
 }
-
-.back-button-container1 {
-  margin-top: 10px;
-  margin-left: 20px;
-}
-
-.backbutton20 {
-  padding: 10px 20px;
-  background-color: #20c997;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.profile-section {
   font-size: 16px;
-  margin-top: 10px;
-}
-
-.backbutton20:hover {
-  background-color: #045344;
-}
-
-.backbutton22 {
-  padding: 10px 20px;
-  background-color: #20c997;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  margin-top: 10px;
-}
-
-.backbutton22:hover {
-  background-color: #045344;
-}
-
-.loading-container,
-.error-container {
-  text-align: center;
-  margin-top: 50px;
-  font-size: 18px;
-  color: #555;
-}
-
-.error-container {
-  color: #e74c3c;
-}
-
-/* Hero image styles */
-.event-hero-image {
-  width: 100%;
-  height: 400px;
-  overflow: hidden;
-  margin-bottom: 30px;
-  position: relative;
-}
-
-.hero-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-/* Content container with two columns */
-.event-content-container {
-  display: grid;
-  grid-template-columns: 1fr 350px;
-  gap: 30px;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-/* Left column - Event details */
-.event-left-content {
-  padding-right: 20px;
-}
-
-.event-title {
-  font-size: 28px;
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.event-meta {
-  margin-bottom: 20px;
-}
-
-.event-meta p {
-  font-size: 16px;
-  color: #555;
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin: 20px 0;
-  flex-wrap: wrap;
-}
-
-.tabs button {
-  padding: 10px 20px;
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.3s ease;
-}
-
-.tabs button:hover {
-  background-color: #e0e0e0;
-}
-
-.tabs button.active-tab {
-  background-color: #20c997;
-  color: white;
-  border-color: #20c997;
-}
-
-.event-description {
-  margin-top: 20px;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.tab-content h3,
-.description h3 {
-  margin-top: 0;
-  color: #333;
-  font-size: 20px;
-}
-
-.tab-content p,
-.description p {
-  line-height: 1.6;
-  color: #555;
-  font-size: 16px;
-}
-
-/* Right column - Packages */
-.event-right-content {
-  background-color: #f9f9f9;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.packages-title {
-  font-size: 22px;
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #333;
-  text-align: center;
-}
-
-.package-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.package-card {
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.package-card:hover {
-  transform: translateY(-4px);
-}
-
-.package-content {
-  padding: 15px;
-  flex-grow: 1;
-}
-
-.package-name {
-  font-size: 18px;
-  margin: 0 0 10px;
-  color: #333;
-}
-
-.price-container {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  margin-bottom: 15px;
-}
-
-.currency {
-  font-size: 16px;
-  color: #20c997;
-}
-
-.package-price {
-  font-size: 24px;
-  font-weight: 700;
-  color: #333;
-}
-
-.package-features {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 15px;
-}
-
-.package-features li {
-  padding: 5px 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
 }
 
-.package-features li::before {
-  content: '✓';
-  color: #20c997;
-  font-weight: bold;
+.profile-icon {
+  margin-left: 5px;
 }
 
-.cta-button {
-  background: #20c997;
+ .back-button1 {
+  background-color: #17c4a3;
   color: white;
+  padding: 10px ;
+  width: 80px;
   border: none;
-  padding: 12px;
-  width: 100%;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s ease;
-}
-
-.cta-button:hover {
-  background: #045344;
-}
-
-.arrow-icon {
-  font-size: 18px;
-}
-
-.no-packages {
-  text-align: center;
-  padding: 20px;
-  color: #777;
-}
-
-.btn.extra {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-  margin-bottom: 20px;
-}
-
-.btn.extra button {
-  padding: 10px 20px;
-  background-color: #20c997;
-  color: white;
-  border: none;
-  border-radius: 5px;
   cursor: pointer;
   font-size: 16px;
-  transition: background-color 0.3s ease;
-}
-
-.btn.extra button:hover {
-  background-color: #045344;
-}
-
-/* Responsive adjustments */
-@media (max-width: 900px) {
-  .event-content-container {
-    grid-template-columns: 1fr;
-  }
-  
-  .event-left-content {
-    padding-right: 0;
-  }
-  
-  .event-hero-image {
-    height: 300px;
-  }
-}
-
-.event-image-container {
-  width: 200px;
-  height: 150px;
-  overflow: hidden;
-  position: relative;
   border-radius: 5px;
-  background-color: #f0f0f0;
-  margin-bottom: 10px;
+  margin-top: -20px;
+  margin-left: 30px;
 }
-
-.ictas-logo {     
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 5px;
-  transition: opacity 0.3s ease;
+.back-button1-hover {
+  background-color: #14917a;
+} 
+/* -------- */
+.container{
+margin-top: 15px;
+align-items: center;
 }
-
-.event-details h4{
-  display: flex;
-  align-items: center;
-  margin-top: 30px;
-  margin-left: 200px;
-  gap: 15px;
-  font-weight: bold;
-}
-
-.event-description{
-  display: flex;
-  align-items: center;
-  margin-top: 30px;
-}
-
 .tabs button {
   margin-right: 10px;
-  margin-top: 80PX;
-  display: inline-block;
   padding: 8px 12px;
   cursor: pointer;
   border: none;
-  margin-top: 40px;
+  color: #000000;
+  background: #61e0c0;
+  border-radius: 5px;
+  margin-top: -20px;
 }
-
-.description-p{
-  text-align: justify;
-  width: 60%;
+.explore-button {
+  background: #61e0c0;
+  color: #000000;
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
 }
-
 .conference-info h3{
   display: flex;
   align-items: center;
@@ -377,17 +80,45 @@
   margin-top: -130px;
   margin-left: 260px;
 }
-
 .conference-info .ictas-logo {
   margin-left: 90px;
   width: 150px;
   height: auto;
   margin-top: -20px;
-}
 
+}
 h4{
   margin-left: 20px;
 }
+  .ictas-logo {     
+    width: 80px;
+    height: 80px;
+  }
+ 
+    .event-details h4{
+      display: flex;
+       align-items: center;
+       margin-top: 30px;
+      margin-left: 200px;
+      gap: 15px;
+      font-weight: bold;
+    }
+
+    .event-description{
+      display: flex;
+      align-items: center;
+      margin-top: 30px;
+    }
+
+    .tabs button {
+      margin-right: 10px;
+      margin-top: 80PX;
+      display: inline-block;
+      padding: 8px 12px;
+      cursor: pointer;
+      border: none;
+      margin-top: 40px;
+    }
     .description-p{
       text-align: justify;
       width: 60%;

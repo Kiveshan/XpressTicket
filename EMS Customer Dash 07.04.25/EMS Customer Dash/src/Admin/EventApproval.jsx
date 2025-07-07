@@ -91,24 +91,7 @@ const EventApproval = () => {
             if (/^\//.test(img) || img.startsWith('uploads/')) {
               img = `http://localhost:5000/${img.replace(/^\/+/, '')}`;
             }
-            
-            // Fix double-encoded S3 URLs
-            if (img && img.includes('xpressticket.s3')) {
-              // Check if URL is double-encoded (contains the S3 domain twice)
-              if (img.includes('xpressticket.s3') && img.includes('https%3A//xpressticket.s3')) {
-                try {
-                  // Extract the actual URL path after the domain
-                  const urlMatch = img.match(/https%3A\/\/xpressticket\.s3\.af-south-1\.amazonaws\.com\/(.+)/);
-                  if (urlMatch && urlMatch[1]) {
-                    // Reconstruct the URL properly
-                    img = `https://xpressticket.s3.af-south-1.amazonaws.com/${urlMatch[1]}`;
-                  }
-                } catch (err) {
-                  console.error('Error fixing double-encoded S3 URL:', err);
-                }
-              }
-              
-              // Correct common S3 host typos (missing ".s3.")
+                          // Correct common S3 host typos (missing ".s3.")
               try {
                 const url = new URL(img);
                 if (url.hostname.endsWith('.af-south-1.amazonaws.com') && !url.hostname.includes('.s3.')) {
@@ -118,20 +101,12 @@ const EventApproval = () => {
               } catch (err) {
                 // ignore malformed url
               }
-            }
-            
-            return img;
+              
+              return img;
           })(),
         }));
 
-        // Filter to only show events with pending status
-        const pendingEvents = eventsWithStatus.filter(event => 
-          event.status.toLowerCase() === 'pending' || 
-          event.status.toLowerCase() === 'awaiting approval' || 
-          event.status.toLowerCase() === 'review'
-        );
-        
-        setEvents(pendingEvents);
+        setEvents(eventsWithStatus);
       } catch (err) {
         console.error('Error fetching events:', err);
         setError(err.message);
@@ -170,7 +145,7 @@ const EventApproval = () => {
           Back
         </button>
       </div>
-      <h2 className="title">Events Pending Approval</h2>
+      <h2 className="title">Event Approval</h2>
 
       {error && <p className="error">{error}</p>}
       {loading && <p className="loading">Loading events...</p>}
@@ -187,12 +162,15 @@ const EventApproval = () => {
                 src={event.file_url}
                 alt={event.event_name}
                 className="card-image"
-                // Removed lazy loading to prevent flickering
+                loading="lazy" // Optimize image loading
                 onError={(e) => {
                   console.error(`Failed to load image for event ${event.eventid}: ${event.file_url}`);
                   e.target.onerror = null; // prevent infinite loop
-                  // Use a consistent data URI for the default image
-                  e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZWVlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5OTk5OTkiPkltYWdlIE5vdCBBdmFpbGFibGU8L3RleHQ+PC9zdmc+";
+                  e.target.src =
+                    'data:image/svg+xml;utf8,' +
+                    encodeURIComponent(
+                      `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="100%" height="100%" fill="%23cccccc"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23666" font-size="20">No Image</text></svg>`
+                    );
                 }}
               />
             </div>

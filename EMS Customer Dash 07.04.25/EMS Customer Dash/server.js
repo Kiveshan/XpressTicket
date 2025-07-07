@@ -15,7 +15,7 @@ const port = 5000;
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow all origins for testing
+  origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -53,20 +53,16 @@ const pool = new Pool({
   port: 5432,
 })
 
+
 // Test database connection
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('❌ Database connection failed:');
-    console.error('Error message:', err.message);
-    console.error('Error stack:', err.stack);
-    console.error('Error details:', JSON.stringify(err, null, 2));
-    // Don't exit process to allow debugging
-    // process.exit(1);
-  } else {
-    console.log('✅ Connected to ExpressTicket database');
-    initializeLookupTables();
-    release();
+    console.error('❌ Database connection failed:', err.stack);
+    process.exit(1);
   }
+  console.log('✅ Connected to ExpressTicket database');
+  initializeLookupTables();
+  release();
 });
 
 // Ensure faculties/departments tables and seed data
@@ -273,9 +269,7 @@ const upload = multer({
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
-  console.log('Headers:', JSON.stringify(req.headers));
   const authHeader = req.headers['authorization'];
-  console.log('Auth header:', authHeader);
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
@@ -284,7 +278,6 @@ const authenticateToken = (req, res, next) => {
   }
 
   console.log('Verifying token:', token.substring(0, 10) + '...');
-  console.log('JWT_SECRET is set:', !!process.env.JWT_SECRET);
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       console.error('Token verification failed:', err.message);
@@ -326,611 +319,21 @@ const logRequest = (req) => {
   console.log('======================\n');
 };
 
-// URL cache to store presigned URLs and reduce flickering
-const urlCache = new Map();
-
-// Helper function to generate presigned URL with caching
+// Helper function to generate presigned URL
 async function generatePresignedUrl(key) {
   if (!key) return null;
-  
-  // Check if URL is in cache and not expired (cache for 50 minutes to be safe)
-  const cachedItem = urlCache.get(key);
-  if (cachedItem && (Date.now() - cachedItem.timestamp) < 50 * 60 * 1000) {
-    console.log(`Using cached URL for ${key}`);
-    return cachedItem.url;
-  }
-  
   try {
     const command = new GetObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME,
       Key: key
     });
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
-    
-    // Cache the URL with timestamp
-    urlCache.set(key, {
-      url,
-      timestamp: Date.now()
-    });
-    
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 900 }); // 15 minutes
     return url;
   } catch (error) {
     console.error('Error generating presigned URL:', error);
     return null;
   }
 }
-
-// Admin endpoint to get all events
-app.get('/api/admin/events', authenticateToken, authenticateAdmin, async (req, res) => {
-  try {
-    console.log('Fetching all events for admin');
-    
-    const result = await pool.query(`
-      SELECT e.*, 
-             u.firstname, u.surname, u.email as user_email, u.cellnumber,
-             p.amount, p.payment_type, p.proof_of_payment
-      FROM events e
-      LEFT JOIN user_profiles u ON e.user_id = u.user_id
-      LEFT JOIN payments p ON e.event_id = p.event_id
-      ORDER BY e.startdate DESC
-    `);
-    
-    // Process the results to format them for the frontend
-    const events = await Promise.all(result.rows.map(async event => {
-      // Format dates for frontend
-      if (event.startdate) event.start_date = event.startdate;
-      if (event.enddate) event.end_date = event.enddate;
-      if (event.deadlinedate) event.deadline = event.deadlinedate;
-      
-      // Ensure event_name is set
-      event.event_name = event.name;
-      
-      // Generate presigned URL for the image if it exists
-      if (event.coverimage && event.coverimage.trim() !== '') {
-        try {
-          console.log(`Generating presigned URL for event ${event.event_id}, image key: ${event.coverimage}`);
-          const presignedUrl = await generatePresignedUrl(event.coverimage);
-          if (presignedUrl) {
-            console.log(`Successfully generated presigned URL: ${presignedUrl.substring(0, 50)}...`);
-            event.file_url = presignedUrl;
-          } else {
-            console.log(`Failed to generate presigned URL, using original key: ${event.coverimage}`);
-            event.file_url = event.coverimage;
-          }
-        } catch (err) {
-          console.error(`Error generating presigned URL for event ${event.event_id}:`, err);
-          event.file_url = event.coverimage;
-        }
-      } else {
-        console.log(`No coverimage found for event ${event.event_id}`);
-      }
-      
-      return event;
-    }));
-    
-    res.json(events);
-  } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({ error: 'Failed to fetch events' });
-  }
-});
-
-// Admin endpoint to get event details by ID
-app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    console.log(`Fetching event details for ID: ${eventId}`);
-    
-    const result = await pool.query(`
-      SELECT e.*, 
-             u.firstname, u.surname, u.email, u.cellnumber,
-             p.amount, p.payment_type, p.proof_of_payment
-      FROM events e
-      LEFT JOIN user_profiles u ON e.user_id = u.user_id
-      LEFT JOIN payments p ON e.event_id = p.event_id
-      WHERE e.event_id = $1
-    `, [eventId]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-    
-    const event = result.rows[0];
-    
-    // Format dates for frontend
-    if (event.startdate) event.start_date = event.startdate;
-    if (event.enddate) event.end_date = event.enddate;
-    if (event.deadlinedate) event.deadline = event.deadlinedate;
-    
-    // Ensure event_name is set
-    event.event_name = event.name;
-    
-    // Format image URL if needed
-    if (event.coverimage) {
-      event.file_url = event.coverimage;
-    }
-    
-    // Set event_type from type field
-    if (event.type) {
-      event.event_type = event.type;
-    }
-    
-    // Set client_type from attendees field
-    if (event.attendees && Array.isArray(event.attendees)) {
-      event.client_type = event.attendees;
-    } else if (typeof event.attendees === 'string') {
-      try {
-        // Try to parse as JSON if it's a string
-        event.client_type = JSON.parse(event.attendees);
-      } catch (e) {
-        // If parsing fails, split by commas or create a single-item array
-        event.client_type = event.attendees.includes(',') ? 
-          event.attendees.split(',').map(item => item.trim()) : 
-          [event.attendees];
-      }
-    } else {
-      // Default to empty array if attendees is not available
-      event.client_type = [];
-    }
-    
-    // Process tabs array to ensure it contains proper objects
-    if (event.tabs && Array.isArray(event.tabs)) {
-      console.log('Original tabs:', event.tabs);
-      
-      event.tabs = event.tabs.map((tab, index) => {
-        // If tab is a string, process it
-        if (typeof tab === 'string') {
-          // For the format seen in the database, the tab is just the content
-          // We'll use the content as the tab name too, but capitalized
-          const content = tab.trim();
-          
-          // If it's a single word like "exhibits" or "schedule", capitalize it for the name
-          if (!content.includes(':') && !content.includes('=') && !content.includes(' ')) {
-            const name = content.charAt(0).toUpperCase() + content.slice(1);
-            return { name, content };
-          }
-          
-          // If it looks like it might have a name and content separated
-          const separators = ['=', ':', '-', '–'];
-          for (const separator of separators) {
-            if (content.includes(separator)) {
-              const parts = content.split(separator);
-              const name = parts[0].trim();
-              const tabContent = parts.slice(1).join(separator).trim();
-              
-              // Only use this if the name part looks like a reasonable tab name
-              if (name.length > 0 && name.length < 20) {
-                return { 
-                  name: name.charAt(0).toUpperCase() + name.slice(1), 
-                  content: tabContent || content // Fallback to full content if split resulted in empty content
-                };
-              }
-            }
-          }
-          
-          // If we couldn't extract a name, use a generic name based on content
-          let name = 'Tab';
-          
-          // Try to generate a meaningful name from the content
-          if (content.toLowerCase().includes('exhibit')) name = 'Exhibits';
-          else if (content.toLowerCase().includes('schedule')) name = 'Schedule';
-          else if (content.toLowerCase().includes('speaker')) name = 'Speakers';
-          else if (content.toLowerCase().includes('program')) name = 'Program';
-          else if (content.toLowerCase().includes('agenda')) name = 'Agenda';
-          else if (content.toLowerCase().includes('venue')) name = 'Venue';
-          else if (content.toLowerCase().includes('contact')) name = 'Contact';
-          else name = `Tab ${index + 1}`;
-          
-          return { name, content };
-        }
-        
-        // If it's already an object, return it with defaults for missing fields
-        if (typeof tab === 'object' && tab !== null) {
-          return {
-            name: tab.name || `Tab ${index + 1}`,
-            content: tab.content || ''
-          };
-        }
-        
-        // Fallback: create a named tab based on index
-        return { 
-          name: `Tab ${index + 1}`, 
-          content: typeof tab === 'string' ? tab : `Tab ${index + 1} Content` 
-        };
-      });
-      
-      console.log('Processed tabs:', event.tabs);
-    }
-    
-    // Process packages array to ensure it contains proper objects
-    if (event.packages && Array.isArray(event.packages)) {
-      console.log('Original packages:', event.packages);
-      
-      event.packages = event.packages.map((pkg, index) => {
-        // If package is a string, try to parse it or extract information
-        if (typeof pkg === 'string') {
-          console.log(`Processing package string: ${pkg}`);
-          
-          // First try: Handle PostgreSQL character varying[] format with escaped quotes
-          // This format often looks like: {\"selectType\":\"Full Package\",...}
-          if (pkg.includes('\\"') || pkg.includes('details') || pkg.includes('pricing')) {
-            try {
-              // Clean up the string - PostgreSQL character varying[] format often has escaped quotes
-              let cleanedStr = pkg
-                .replace(/^\{\\"/, '{"')
-                .replace(/\\"\}$/, '"}')
-                .replace(/\\"/g, '"')
-                .replace(/\\\\/g, '\\');
-              
-              // Additional cleaning for other common formats
-              if (!cleanedStr.startsWith('{')) {
-                cleanedStr = '{' + cleanedStr;
-              }
-              if (!cleanedStr.endsWith('}')) {
-                cleanedStr = cleanedStr + '}';
-              }
-              
-              console.log('Cleaned package string:', cleanedStr);
-              
-              try {
-                const parsed = JSON.parse(cleanedStr);
-                console.log('Parsed package:', parsed);
-                
-                return {
-                  selectType: parsed.selectType || 'Full Package',
-                  packageType: parsed.packageType || 'Standard',
-                  location: parsed.location || '',
-                  duration: parsed.duration || '',
-                  dateChoices: parsed.dateChoices || '',
-                  pricing: parsed.pricing || 'N/A',
-                  details: parsed.details || '',
-                  typeOptions: Array.isArray(parsed.typeOptions) ? parsed.typeOptions : ['Full Package', 'Day']
-                };
-              } catch (parseError) {
-                console.log('JSON parse failed, trying alternative parsing methods');
-                // Continue to next parsing method
-              }
-            } catch (e) {
-              console.error('Error in initial package cleaning:', e);
-            }
-            
-            // Second try: Extract fields using regex patterns
-            try {
-              // More flexible regex patterns that can handle various formats
-              const detailsMatch = pkg.match(/["']?details["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                   pkg.match(/details\s*[:\=]\s*([^,}]+)/i);
-              const pricingMatch = pkg.match(/["']?pricing["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                  pkg.match(/pricing\s*[:\=]\s*([^,}]+)/i);
-              const durationMatch = pkg.match(/["']?duration["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                   pkg.match(/duration\s*[:\=]\s*([^,}]+)/i);
-              const locationMatch = pkg.match(/["']?location["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                   pkg.match(/location\s*[:\=]\s*([^,}]+)/i);
-              const packageTypeMatch = pkg.match(/["']?packageType["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                      pkg.match(/packageType\s*[:\=]\s*([^,}]+)/i) || 
-                                      pkg.match(/package[_\s-]?type\s*[:\=]\s*([^,}]+)/i);
-              const selectTypeMatch = pkg.match(/["']?selectType["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                     pkg.match(/selectType\s*[:\=]\s*([^,}]+)/i) || 
-                                     pkg.match(/select[_\s-]?type\s*[:\=]\s*([^,}]+)/i);
-              const dateChoicesMatch = pkg.match(/["']?dateChoices["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                      pkg.match(/dateChoices\s*[:\=]\s*([^,}]+)/i) || 
-                                      pkg.match(/date[_\s-]?choices\s*[:\=]\s*([^,}]+)/i);
-              
-              // If we found at least one field using regex, use this approach
-              if (detailsMatch || pricingMatch || durationMatch || locationMatch || 
-                  packageTypeMatch || selectTypeMatch || dateChoicesMatch) {
-                
-                console.log('Extracted package fields using regex');
-                
-                return {
-                  selectType: selectTypeMatch ? selectTypeMatch[1].trim().replace(/["']/g, '') : 'Full Package',
-                  packageType: packageTypeMatch ? packageTypeMatch[1].trim().replace(/["']/g, '') : 'Standard',
-                  location: locationMatch ? locationMatch[1].trim().replace(/["']/g, '') : '',
-                  duration: durationMatch ? durationMatch[1].trim().replace(/["']/g, '') : '',
-                  dateChoices: dateChoicesMatch ? dateChoicesMatch[1].trim().replace(/["']/g, '') : '',
-                  pricing: pricingMatch ? pricingMatch[1].trim().replace(/["']/g, '') : 'N/A',
-                  details: detailsMatch ? detailsMatch[1].trim().replace(/["']/g, '') : pkg,
-                  typeOptions: ['Full Package', 'Day']
-                };
-              }
-            } catch (regexError) {
-              console.error('Error extracting package fields with regex:', regexError);
-            }
-          }
-          
-          // Third try: Check if the string is a simple key-value format
-          if (pkg.includes(':') || pkg.includes('=')) {
-            const lines = pkg.split(/[,;\n]/).filter(line => line.trim());
-            const packageData = {};
-            
-            lines.forEach(line => {
-              const separators = [':', '='];
-              for (const separator of separators) {
-                if (line.includes(separator)) {
-                  const [key, value] = line.split(separator).map(part => part.trim());
-                  if (key && value) {
-                    const normalizedKey = key.toLowerCase().replace(/[\s-_]/g, '');
-                    if (normalizedKey === 'details' || normalizedKey === 'pricing' || 
-                        normalizedKey === 'duration' || normalizedKey === 'location' || 
-                        normalizedKey === 'packagetype' || normalizedKey === 'selecttype' || 
-                        normalizedKey === 'datechoices') {
-                      packageData[normalizedKey] = value.replace(/["']/g, '');
-                    }
-                  }
-                  break;
-                }
-              }
-            });
-            
-            if (Object.keys(packageData).length > 0) {
-              console.log('Extracted package from key-value format:', packageData);
-              
-              return {
-                selectType: packageData.selecttype || 'Full Package',
-                packageType: packageData.packagetype || 'Standard',
-                location: packageData.location || '',
-                duration: packageData.duration || '',
-                dateChoices: packageData.datechoices || '',
-                pricing: packageData.pricing || 'N/A',
-                details: packageData.details || pkg,
-                typeOptions: ['Full Package', 'Day']
-              };
-            }
-          }
-          
-          // If all parsing methods fail, treat the whole string as details
-          return {
-            selectType: 'Full Package',
-            packageType: 'Standard',
-            location: '',
-            duration: '',
-            dateChoices: '',
-            pricing: 'N/A',
-            details: pkg,
-            typeOptions: ['Full Package', 'Day']
-          };
-        }
-        
-        // If it's already an object, return it with defaults for missing fields
-        if (typeof pkg === 'object' && pkg !== null) {
-          return {
-            selectType: pkg.selectType || 'Full Package',
-            packageType: pkg.packageType || 'Standard',
-            location: pkg.location || '',
-            duration: pkg.duration || '',
-            dateChoices: pkg.dateChoices || '',
-            pricing: pkg.pricing || 'N/A',
-            details: pkg.details || '',
-            typeOptions: Array.isArray(pkg.typeOptions) ? pkg.typeOptions : ['Full Package', 'Day']
-          };
-        }
-        
-        // Fallback: create an empty package
-        return {
-          selectType: 'Full Package',
-          packageType: 'Standard',
-          location: '',
-          duration: '',
-          dateChoices: '',
-          pricing: 'N/A',
-          details: `Package ${index + 1}`,
-          typeOptions: ['Full Package', 'Day']
-        };
-      });
-      
-      console.log('Processed packages:', event.packages);
-    }
-    
-    res.json(event);
-  } catch (error) {
-    console.error('Error fetching event details:', error);
-    res.status(500).json({ error: 'Failed to fetch event details' });
-  }
-});
-
-// Endpoint to fetch available (approved) events for public display
-app.get('/api/events/available', async (req, res) => {
-  try {
-    console.log('Fetching available events');
-    
-    const result = await pool.query(`
-      SELECT 
-        event_id as id, 
-        name, 
-        location, 
-        startdate::text as date, 
-        time::text as time, 
-        coverimage,
-        description,
-        capacity,
-        type as event_type
-      FROM events 
-      WHERE status = 'Approved'
-      ORDER BY startdate ASC
-    `);
-    
-    // Process the results to format them for the frontend
-    const events = await Promise.all(result.rows.map(async event => {
-      // Generate a presigned URL for the image if it exists
-      let imageUrl = '/default-event-image.png';
-      if (event.coverimage && event.coverimage.trim() !== '') {
-        try {
-          const presignedUrl = await generatePresignedUrl(event.coverimage);
-          if (presignedUrl) {
-            imageUrl = presignedUrl;
-          }
-        } catch (err) {
-          console.error(`Error generating presigned URL for event ${event.id}:`, err);
-        }
-      }
-      
-      return {
-        ...event,
-        image: imageUrl,
-        link: `/customerviewevent/${event.id}`
-      };
-    }));
-    
-    console.log(`Found ${events.length} available events`);
-    res.json(events);
-  } catch (error) {
-    console.error('Error fetching available events:', error);
-    res.status(500).json({ error: 'Failed to fetch events' });
-  }
-});
-
-// Endpoint to fetch a single event by ID
-app.get('/api/events/:eventId', async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    console.log(`Fetching event details for ID: ${eventId}`);
-    
-    const result = await pool.query(`
-      SELECT 
-        event_id as id, 
-        name, 
-        location, 
-        startdate::text as date, 
-        time::text as time, 
-        coverimage,
-        description,
-        capacity,
-        type as event_type,
-        tabs,
-        packages,
-        terms_and_conditions,
-        attendees
-      FROM events 
-      WHERE event_id = $1
-    `, [eventId]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-    
-    const event = result.rows[0];
-    
-    // Generate a presigned URL for the image if it exists
-    if (event.coverimage && event.coverimage.trim() !== '') {
-      try {
-        const presignedUrl = await generatePresignedUrl(event.coverimage);
-        if (presignedUrl) {
-          event.image = presignedUrl;
-        }
-      } catch (err) {
-        console.error(`Error generating presigned URL for event ${event.id}:`, err);
-        event.image = '/default-event-image.png';
-      }
-    } else {
-      event.image = '/default-event-image.png';
-    }
-    
-    res.json(event);
-  } catch (error) {
-    console.error('Error fetching event details:', error);
-    res.status(500).json({ error: 'Failed to fetch event details' });
-  }
-});
-
-// Admin endpoint to update event status
-app.put('/api/admin/event/:eventId/status', authenticateToken, authenticateAdmin, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    const { status, comment } = req.body;
-    
-    console.log(`Updating status for event ID: ${eventId} to ${status}`);
-    
-    if (!['Approved', 'Rejected', 'Request Edit', 'pending'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status value' });
-    }
-    
-    const result = await pool.query(
-      'UPDATE events SET status = $1, admin_comment = $2 WHERE event_id = $3 RETURNING *',
-      [status, comment, eventId]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-    
-    res.json({ message: 'Event status updated successfully', event: result.rows[0] });
-  } catch (error) {
-    console.error('Error updating event status:', error);
-    res.status(500).json({ error: 'Failed to update event status' });
-  }
-});
-
-// Admin endpoint to get proof of payment for an event
-app.get('/api/admin/event/:eventId/proof-of-payment', authenticateToken, authenticateAdmin, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    
-    const result = await pool.query(
-      'SELECT proof_of_payment FROM payments WHERE event_id = $1',
-      [eventId]
-    );
-    
-    if (result.rows.length === 0 || !result.rows[0].proof_of_payment) {
-      return res.status(404).json({ error: 'Proof of payment not found' });
-    }
-    
-    // Generate a presigned URL for the proof of payment
-    const proofOfPaymentKey = result.rows[0].proof_of_payment;
-    const url = await generatePresignedUrl(proofOfPaymentKey);
-    
-    if (!url) {
-      return res.status(500).json({ error: 'Failed to generate URL for proof of payment' });
-    }
-    
-    res.json({ url });
-  } catch (error) {
-    console.error('Error fetching proof of payment:', error);
-    res.status(500).json({ error: 'Failed to fetch proof of payment' });
-  }
-});
-
-// Public endpoint to get approved events that haven't passed their deadline
-// No authentication required for this endpoint
-app.get('/api/events/available', async (req, res) => {
-  try {
-    console.log('Fetching available events...');
-    
-    // Return mock data without accessing the database
-    const mockEvents = [
-      {
-        id: 1,
-        name: 'Sample Event 1',
-        location: 'Sample Location 1',
-        date: 'July 15',
-        time: '9 am',
-        image: '/default-event-image.png',
-        link: '/customerviewevent/1',
-        description: 'This is a sample event description',
-        capacity: 100,
-        event_type: 'Conference'
-      },
-      {
-        id: 2,
-        name: 'Sample Event 2',
-        location: 'Sample Location 2',
-        date: 'July 20',
-        time: '10 am',
-        image: '/default-event-image.png',
-        link: '/customerviewevent/2',
-        description: 'Another sample event description',
-        capacity: 50,
-        event_type: 'Workshop'
-      }
-    ];
-    
-    console.log('Sending response with mock events:', mockEvents.length);
-    res.json(mockEvents);
-  } catch (error) {
-    console.error('Error in mock events endpoint:', error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ error: 'Failed to fetch available events' });
-  }
-});
 
 // User registration
 app.post('/api/register', async (req, res) => {
@@ -1031,7 +434,7 @@ app.post('/api/login', async (req, res) => {
     const result = await pool.query(
       `SELECT user_id, email, password, role, 
               firstname, surname, cellnumber, institution,
-              faculty_id, department_id, ieee_no, vat_no, is_disabled
+              faculty_id, department_id, ieee_no, vat_no
        FROM user_profiles
        WHERE email = $1`,
       [email.toLowerCase()]
@@ -1049,34 +452,20 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Check if user account is disabled
-    if (user.is_disabled === 1) {
-      return res.status(403).json({ message: 'This account has been disabled. Please contact an administrator.' });
-    }
-
     // Check if user is an admin based on role field
     const isAdmin = user.role === 'Admin';
 
     // Generate JWT token
-    console.log('Generating JWT token for user:', user.user_id, 'with role:', user.role);
-    console.log('JWT_SECRET is set:', !!process.env.JWT_SECRET);
-    
-    const payload = {
-      userId: user.user_id,
-      email: user.email,
-      role: user.role || 'user',
-      name: `${user.firstname || ''} ${user.surname || ''}`.trim() || user.email
-    };
-    
-    console.log('Token payload:', payload);
-    
     const token = jwt.sign(
-      payload,
+      {
+        userId: user.user_id,
+        email: user.email,
+        role: user.role || 'user',
+        name: `${user.firstname || ''} ${user.surname || ''}`.trim() || user.email
+      },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-    
-    console.log('Generated token (first 10 chars):', token.substring(0, 10) + '...');
 
     // Return user data without sensitive information
     const userResponse = {
@@ -1104,83 +493,6 @@ app.post('/api/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login', error: error.message });
-  }
-});
-
-// Toggle user disabled status
-app.post('/api/toggle-user-status', authenticateToken, authenticateAdmin, async (req, res) => {
-  try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ message: 'User ID is required' });
-    }
-    
-    // Get current user status
-    const userResult = await pool.query(
-      'SELECT is_disabled FROM user_profiles WHERE user_id = $1',
-      [userId]
-    );
-    
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    const currentStatus = userResult.rows[0].is_disabled || 0;
-    const newStatus = currentStatus === 1 ? 0 : 1;
-    
-    // Update user status
-    await pool.query(
-      'UPDATE user_profiles SET is_disabled = $1 WHERE user_id = $2',
-      [newStatus, userId]
-    );
-    
-    res.json({
-      message: `User account ${newStatus === 1 ? 'disabled' : 'enabled'} successfully`,
-      status: newStatus
-    });
-  } catch (error) {
-    console.error('Error toggling user status:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get users with events (organizers)
-app.get('/api/users-with-events', authenticateToken, authenticateAdmin, async (req, res) => {
-  try {
-    console.log('Fetching users with events, authenticated as:', req.user);
-    const result = await pool.query(`
-      SELECT DISTINCT u.user_id, u.firstname, u.surname, u.email, u.role, u.is_disabled,
-             e.name as event_name, e.startdate, TO_CHAR(e.startdate, 'DD/MM/YYYY') as formatted_date
-      FROM user_profiles u
-      JOIN events e ON u.user_id = e.user_id
-      ORDER BY u.surname, u.firstname
-    `);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching users with events:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get users without events (general users)
-app.get('/api/users-without-events', authenticateToken, authenticateAdmin, async (req, res) => {
-  try {
-    console.log('Fetching users without events, authenticated as:', req.user);
-    const result = await pool.query(`
-      SELECT u.user_id, u.firstname, u.surname, u.email, u.role, u.is_disabled
-      FROM user_profiles u
-      WHERE NOT EXISTS (
-        SELECT 1 FROM events e WHERE e.user_id = u.user_id
-      )
-      ORDER BY u.surname, u.firstname
-    `);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching users without events:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
@@ -2621,36 +1933,6 @@ app.get('/api/payments', async (req, res) => {
   }
 });
 
-
-// API endpoint to fetch payments with user full names
-app.get('/api/payments-with-user-names', async (req, res) => {
-  try {
-    const client = await pool.connect();
-    const query = `
-      SELECT 
-        p.payment_id, 
-        p.amount, 
-        p.proof_of_payment,
-        p.event_id,
-        e.name as event_name,
-        u.firstname,
-        u.surname
-      FROM 
-        payments p
-      JOIN 
-        events e ON p.event_id = e.event_id
-      JOIN 
-        user_profiles u ON e.user_id = u.user_id
-    `;
-    const result = await client.query(query);
-    client.release();
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching payments:', error);
-    res.status(500).json({ error: 'Failed to fetch payments' });
-  }
-});
-
 //----------------payments org start
 // Get all events with pending ticket request counts
 app.get('/api/organiser/events', authenticateToken, async (req, res) => {
@@ -3039,7 +2321,6 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
   }
 });
 //----------------payments org end
-
 
 // Start the server
 app.listen(port, () => {

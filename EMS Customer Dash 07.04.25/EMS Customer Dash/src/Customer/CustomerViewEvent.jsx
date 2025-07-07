@@ -1,153 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./CustomerViewEvent.css";
-import { useNavigate, useParams } from 'react-router-dom';
-import { fixS3ImageUrl, DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
+import { useNavigate } from 'react-router-dom';
 
+ 
 const CustomerViewEvent = () => {
-  const [activeTab, setActiveTab] = useState(0);
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [packages, setPackages] = useState([]);
-  const { eventId } = useParams();
-  const nav = useNavigate();
-  
-  useEffect(() => {
-    const fetchEventDetails = async () => {
-      try {
-        setLoading(true);
-        console.log(`Fetching event details for ID: ${eventId}`);
-        
-        const response = await fetch(`http://localhost:5000/api/events/${eventId}`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch event details: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fetched event details:', data);
-        setEvent(data);
-        
-        // Process packages from the event data
-        if (data.packages && Array.isArray(data.packages)) {
-          console.log('Raw packages from DB:', data.packages);
-          
-          const processedPackages = data.packages.map((pkg, index) => {
-            // Parse the package string format from the database
-            if (typeof pkg === 'string') {
-              try {
-                // First, try to parse it as JSON if it looks like a JSON string
-                if (pkg.startsWith('{') && pkg.endsWith('}')) {
-                  try {
-                    // Clean up escaped quotes
-                    const cleanedStr = pkg.replace(/\\|\\"/g, '"');
-                    const parsedData = JSON.parse(cleanedStr);
-                    
-                    return {
-                      name: parsedData.selectType?.replace(/\"/g, '') || `Package ${index + 1}`,
-                      price: parsedData.pricing?.replace(/\"/g, '') || '0.00',
-                      currency: 'R',
-                      features: [
-                        parsedData.selectType?.replace(/\"/g, '') || 'Full conference access',
-                        parsedData.details?.replace(/\"/g, '') || 'Conference materials',
-                        parsedData.Duration ? `Duration: ${parsedData.Duration.replace(/\"/g, '')}` : '',
-                        parsedData.DateChoices ? `Date: ${parsedData.DateChoices.replace(/\"/g, '')}` : '',
-                        parsedData.location ? `Location: ${parsedData.location.replace(/\"/g, '')}` : '',
-                        parsedData.PackageType ? `Package Type: ${parsedData.PackageType.replace(/\"/g, '')}` : '',
-                        parsedData.TypeOptions && parsedData.TypeOptions.replace(/\"/g, '') !== parsedData.selectType?.replace(/\"/g, '') ? 
-                          `Type: ${parsedData.TypeOptions.replace(/\"/g, '')}` : '',
-                        parsedData.Day ? `Day(s): ${parsedData.Day.replace(/\"/g, '')}` : ''
-                      ].filter(item => item !== ''),
-                      route: `/customerticketdetails1/${eventId}/${index}`
-                    };
-                  } catch (e) {
-                    console.error('Error parsing JSON package:', e);
-                  }
-                }
-                
-                // If not JSON or parsing failed, try to extract data using regex
-                const pricingMatch = pkg.match(/"pricing":"\\"([^\\]+)\\""/i);
-                const typeMatch = pkg.match(/"selectType":"\\"([^\\]+)\\""/i);
-                const durationMatch = pkg.match(/"Duration":"\\"([^\\]+)\\""/i);
-                const dateMatch = pkg.match(/"DateChoices":"\\"([^\\]+)\\""/i);
-                const locationMatch = pkg.match(/"location":"\\"([^\\]+)\\""/i);
-                const detailsMatch = pkg.match(/"details":"\\"([^\\]+)\\""/i);
-                const packageTypeMatch = pkg.match(/"PackageType":"\\"([^\\]+)\\""/i);
-                const typeOptionsMatch = pkg.match(/"TypeOptions":"\\"([^\\]+)\\""/i);
-                const dayMatch = pkg.match(/"Day":"\\"([^\\]+)\\""/i);
-                
-                // Extract all available information
-                return {
-                  name: typeMatch ? typeMatch[1] : `Package ${index + 1}`,
-                  price: pricingMatch ? pricingMatch[1] : '0.00',
-                  currency: 'R',
-                  features: [
-                    typeMatch ? typeMatch[1] : 'Full conference access',
-                    detailsMatch ? detailsMatch[1] : 'Conference materials',
-                    durationMatch ? `Duration: ${durationMatch[1]}` : '',
-                    dateMatch ? `Date: ${dateMatch[1]}` : '',
-                    locationMatch ? `Location: ${locationMatch[1]}` : '',
-                    packageTypeMatch ? `Package Type: ${packageTypeMatch[1]}` : '',
-                    typeOptionsMatch && typeOptionsMatch[1] !== typeMatch?.[1] ? `Type: ${typeOptionsMatch[1]}` : '',
-                    dayMatch ? `Day(s): ${dayMatch[1]}` : ''
-                  ].filter(item => item !== ''),
-                  route: `/customerticketdetails1/${eventId}/${index}`
-                };
-              } catch (e) {
-                console.error('Error extracting package data:', e);
-                return {
-                  name: `Package ${index + 1}`,
-                  price: '0.00',
-                  currency: 'R',
-                  features: ['Full conference access', 'Conference materials', 'Daily lunch & snacks'],
-                  route: `/customerticketdetails1/${eventId}/${index}`
-                };
-              }
-            }
-            
-            // If it's already an object, use it directly
-            return {
-              name: pkg.selectType || pkg.name || `Package ${index + 1}`,
-              price: pkg.pricing || pkg.price || '0.00',
-              currency: 'R',
-              features: [
-                pkg.selectType || 'Full conference access',
-                pkg.details || 'Conference materials',
-                pkg.Duration ? `Duration: ${pkg.Duration}` : '',
-                pkg.DateChoices ? `Date: ${pkg.DateChoices}` : '',
-                pkg.location ? `Location: ${pkg.location}` : '',
-                pkg.PackageType ? `Package Type: ${pkg.PackageType}` : '',
-                pkg.TypeOptions && pkg.TypeOptions !== pkg.selectType ? `Type: ${pkg.TypeOptions}` : '',
-                pkg.Day ? `Day(s): ${pkg.Day}` : ''
-              ].filter(item => item !== ''),
-              route: `/customerticketdetails1/${eventId}/${index}`
-            };
-          });
-          
-          console.log('Processed packages:', processedPackages);
-          setPackages(processedPackages);
-        } else {
-          // Fallback to default packages if none found in database
-          setPackages([{
-            name: 'Standard Ticket',
-            price: '80.00',
-            currency: 'R',
-            features: ['Event entry', 'Standard seating', 'Access to all areas'],
-            route: `/customerticketdetails1/${eventId}/0`
-          }]);
-        }
-      } catch (err) {
-        console.error('Error fetching event details:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (eventId) {
-      fetchEventDetails();
-    }
-  }, [eventId]);
+  const [showThemes, setShowThemes] = useState(false);
+  const nav= useNavigate();
   return (
     <div className="dashboard-container">
       <header className="dashboard-header2">
@@ -156,127 +14,108 @@ const CustomerViewEvent = () => {
           alt="EventXpress Logo"
           className="dashboard-logo"
         />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={()=> nav('/')}>LogOut </button>
-        </div>
+       <div className="profile-section">
+              <button className="backbutton22" onClick={()=> nav('/')}>LogOut </button>
+          </div>
       </header>
-      
-      <div className="back-button-container1">
+       <div className="back-button-container1">
         <button className="backbutton20" onClick={() => nav("/eventmenu")}>
           Back
         </button>
       </div>
 
-      {/* Buttons removed as they are now available in the Review Purchase page */}
-      
-      {loading ? (
-        <div className="loading-container">
-          <p>Loading event details...</p>
-        </div>
-      ) : error ? (
-        <div className="error-container">
-          <p>Error loading event details: {error}</p>
-        </div>
-      ) : !event ? (
-        <div className="error-container">
-          <p>Event not found</p>
-        </div>
-      ) : (
-        <>
-          {/* Full-width hero image */}
-          <div className="event-hero-image">
-            <img 
-              src={fixS3ImageUrl(event.image)}
-              alt={event.name} 
-              className="hero-image" 
-              onError={(e) => {
-                console.log('Image failed to load:', e.target.src);
-                e.target.onerror = null;
-                e.target.src = DEFAULT_IMAGE_DATA_URI;
-              }}
-            />
+<div className="btn extra">
+<button  onClick={()=> nav('/invoice')}>Invoice</button>
+<button  onClick={()=> nav('/tickets')}>Tickets</button>
+</div>
+<br />
+      <div className="container">
+        <div className="content">
+          <div className="conference-info">
+            <img src="ICTAS.png" alt="ICTAS Logo" className="ictas-logo" />
+            <h3>
+              9TH ANNUAL IEEE CONFERENCE ON INFORMATION COMMUNICATION TECHNOLOGY & SOCIETY (ICTAS 2025)
+            </h3>
           </div>
+
+          <div className="event-details">
+            <h4><strong>📍 Capital Zimbali Hotel, Ballito, KZN, South Africa | 📅 23rd June 2025 - 25th June 2025 |⏰ 9am - 3pm</strong></h4>
+
+          </div>
+          <nav className="tabs">
+            <button onClick={() => setShowThemes(false)}>About Us</button>
+            <button onClick={() => setShowThemes(true)}>Themes</button>
+            <button>Important Dates</button>
+            <button>Paper Submission Institution</button>
+          </nav>
+          <div className="event-description">
+        
           
-          <div className="event-content-container">
-            {/* Left side - Event details and description */}
-            <div className="event-left-content">
-              <h1 className="event-title">{event.name}</h1>
-              
-              <div className="event-meta">
-                <p><strong>📍 {event.location || 'TBA'} | 📅 {event.date || 'TBA'} | ⏰ {event.time || 'TBA'}</strong></p>
-              </div>
-              
-              <nav className="tabs">
-                {event.tabs && event.tabs.length > 0 ? (
-                  event.tabs.map((tab, index) => (
-                    <button 
-                      key={index} 
-                      onClick={() => setActiveTab(index)}
-                      className={activeTab === index ? 'active-tab' : ''}
-                    >
-                      {tab}
-                    </button>
-                  ))
-                ) : (
-                  <button onClick={() => setActiveTab(0)} className="active-tab">About Event</button>
-                )}
-              </nav>
-              
-              <div className="event-description">
-                {event.tabs && event.tabs.length > 0 ? (
-                  <div className="tab-content">
-                    <h3>{event.tabs[activeTab]}</h3>
-                    <p>
-                      {activeTab === 0 ? 
-                        (event.description || 'No description available for this event.') : 
-                        `Information about ${event.tabs[activeTab]} will be provided by the event organizer.`
-                      }
-                    </p>
-                  </div>
-                ) : (
-                  <div className="description">
-                    <p>{event.description || 'No description available for this event.'}</p>
-                  </div>
-                )}
-              </div>
+          {showThemes ? (
+            <div className="themes">
+              <div className="p-8 bg-gray-100 min-h-screen">
+      <h2 className="text-3xl font-bold text-center mb-8">Call for Submissions</h2>
+      <p className="text-center text-gray-600 mb-12">
+        We invite submissions of previously unpublished work on the following topics and technical areas of interest.
+      </p>
+      <div className="grid md:grid-cols-3 gap-8">
+        {/* Information Technology Track */}
+        <div className="bg-white p-6 rounded-2xl shadow-md">
+          <h3 className="text-xl font-semibold mb-4 text-blue-600">Information Technology Track</h3>
+          <ul className="list-disc pl-5 text-gray-700">
+            <li>Computer Networks and Cybersecurity</li>
+            <li>Data Science and Big Data</li>
+            <li>Digital Transformation</li>
+            <li>Edge, Cloud and Crowd Computing</li>
+            <li>Computer Vision and Image Processing</li>
+            <li>Information Systems</li>
+            <li>Artificial Intelligence and Machine Learning</li>
+            <li>Semantic Web Technologies</li>
+          </ul>
+        </div>
+        
+        {/* Engineering Track */}
+        <div className="bg-white p-6 rounded-2xl shadow-md">
+          <h3 className="text-xl font-semibold mb-4 text-green-600">Engineering Track</h3>
+          <ul className="list-disc pl-5 text-gray-700">
+            <li>Engineering Education</li>
+            <li>Renewable Energy Systems</li>
+            <li>Energy Sustainability</li>
+            <li>Smart Grids and Microgrids</li>
+            <li>Cybersecurity and Risk Analysis</li>
+            <li>Energy Storage</li>
+          </ul>
+        </div>
+
+        {/* Digital Finance Track */}
+        <div className="bg-white p-6 rounded-2xl shadow-md">
+          <h3 className="text-xl font-semibold mb-4 text-purple-600">Digital Finance Track</h3>
+          <ul className="list-disc pl-5 text-gray-700">
+            <li>Cryptocurrency and Blockchain</li>
+            <li>Digital Economy</li>
+            <li>Financial Inclusion</li>
+            <li>Cybersecurity in Finance</li>
+            <li>Regulatory Technology</li>
+            <li>Web2 Partnerships and Web3 Users</li>
+            <li>Real-World Assets</li>
+            <li>Tokenization and Data Security</li>
+          </ul>
+        </div>
+      </div>
+    </div>
             </div>
-            
-            {/* Right side - Packages */}
-            <div className="event-right-content">
-              <h2 className="packages-title">Tickets & Packages</h2>
-              
-              {packages.length === 0 ? (
-                <div className="no-packages">
-                  <p>No packages available for this event.</p>
-                </div>
-              ) : (
-                <div className="package-list">
-                  {packages.map((pkg, index) => (
-                    <article key={index} className="package-card">
-                      <div className="package-content">
-                        <h4 className="package-name">{pkg.name}</h4>
-                        <div className="price-container">
-                          <span className="currency">{pkg.currency}</span>
-                          <span className="package-price">{pkg.price}</span>
-                        </div>
-                        <ul className="package-features">
-                          {pkg.features && pkg.features.map((feature, i) => (
-                            <li key={i}>{feature}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <button className="cta-button" onClick={()=> nav(pkg.route)}>
-                        Select Package
-                        <span className="arrow-icon">→</span>
-                      </button>
-                    </article>
-                  ))}
-                </div>
-              )}
+          ) : (
+            <div className="description">
+              <p>
+              The annual ICTAS international conference, which was established in 2017 serves as an engagement platform for researchers in academia and industry to communicate their latest contributions in the disciplines of Information Communication Technology (ICT) and foster networking. Since its inception in 2017, each paper presented at the conference has been published on IEEE Xplore with a growing h5-index of 16 and h5-median of 23.The ICTAS conference encourages the exchange of creative ideas through keynotes, panel discussions, and industry exhibits to bridge the gap between academic and industry innovations. The 2025 IEEE ICTAS conference promises to showcase the most recent advancements in the disciplines of ICT, including Engineering and Digital Finance. <br /> Accepted papers that are physically presented at the conference will be submitted for consideration for inclusion in IEEE Xplore® database. IEEE has granted technical sponsorship for the hosting of ICTAS 2025 with application number 64866. 
+              </p>
             </div>
+          )}
           </div>
-        </>
-      )}
+          <br />
+          <button className="explore-button" onClick={()=> nav('/eventticketpackage')}>Explore Packages</button>
+        </div>
+      </div>
     </div>
   );
 };
