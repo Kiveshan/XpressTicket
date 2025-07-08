@@ -82,24 +82,24 @@ const ViewEventRequest = () => {
         console.log("Fetched event data:", data)
 
         // Map backend fields to frontend state
-        setEventData({
-          event_name: data.name || "",
-          location: data.location || "",
-          start_date: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
-          end_date: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
-          start_time: data.start_time || "",
-          end_time: data.end_time || "",
-          deadline_date: data.registration_deadline_date
-            ? new Date(data.registration_deadline_date).toISOString().split("T")[0]
-            : "",
-          deadline_time: data.registration_deadline_time || "",
-          event_type: data.event_type || "",
-          capacity: data.capacity || "",
-          event_details: data.description || "",
-          terms_and_conditions: data.terms_and_conditions || "",
-          duration: data.duration || "",
-          file_url: data.coverimage || "/default-profile-picture.jpg",
-        })
+       setEventData({
+  event_name: data.name || "",
+  location: data.location || "",
+  start_date: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
+  end_date: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
+  start_time: data.start_time || "",
+  end_time: data.end_time || "",
+  deadline_date: data.registration_deadline_date
+    ? new Date(data.registration_deadline_date).toISOString().split("T")[0]
+    : "",
+  deadline_time: data.registration_deadline_time || "",
+  event_type: data.event_type || "",
+  capacity: data.capacity || "",
+  event_details: data.description || "",
+  terms_and_conditions: data.terms_and_conditions || "",
+  duration: data.duration || "",
+  file_url: data.coverimage || "/default-profile-picture.jpg",
+});
 
         setClientTypes(data.attendees || [])
         setTabs(data.tabs || [])

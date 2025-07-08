@@ -1,153 +1,210 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import './EventRequest.css';
+"use client"
+
+import { useState, useEffect } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import "./RehostEventDetails.css"
 
 const RehostEventDetails = () => {
-  const nav = useNavigate();
-  const location = useLocation();
-  const { eventid } = location.state || {};
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const nav = useNavigate()
+  const location = useLocation()
+  const { eventid } = location.state || {}
+
+  const [event, setEvent] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [formData, setFormData] = useState({
-    startdate: '',
-    enddate: '',
-  });
-  const [submitError, setSubmitError] = useState(null);
-  const [submitSuccess, setSubmitSuccess] = useState(null);
+    startdate: "",
+    enddate: "",
+  })
+  const [submitError, setSubmitError] = useState(null)
+  const [submitSuccess, setSubmitSuccess] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     const fetchEventDetails = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        setLoading(true)
+        setError(null)
 
-        const token = sessionStorage.getItem('token');
+        const token = sessionStorage.getItem("token")
         if (!token) {
-          setError('No authentication token found. Please log in.');
-          nav('/login');
-          return;
+          setError("No authentication token found. Please log in.")
+          nav("/login")
+          return
         }
+
+        console.log("Fetching event with ID:", eventid)
 
         const response = await fetch(`http://localhost:5000/api/events/${eventid}`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          credentials: 'include',
-        });
+          credentials: "include",
+        })
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json()
           if (response.status === 401 || response.status === 403) {
-            sessionStorage.removeItem('token');
-            sessionStorage.removeItem('userId');
-            sessionStorage.removeItem('user');
-            nav('/login');
-            return;
+            sessionStorage.removeItem("token")
+            sessionStorage.removeItem("userId")
+            sessionStorage.removeItem("user")
+            nav("/login")
+            return
           }
-          throw new Error(errorData.message || `Server error: ${response.status} ${response.statusText}`);
+          throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`)
         }
 
-        const data = await response.json();
-        setEvent(data);
+        const data = await response.json()
+        console.log("Fetched event data:", data)
+
+        setEvent(data)
+
+        // Set form data with current dates
         setFormData({
-          startdate: data.startdate,
-          enddate: data.enddate,
-        });
-        setLoading(false);
+          startdate: data.startdate ? new Date(data.startdate).toISOString().split("T")[0] : "",
+          enddate: data.enddate ? new Date(data.enddate).toISOString().split("T")[0] : "",
+        })
       } catch (err) {
-        console.error('Fetch error:', err);
-        setError(err.message || 'Failed to load event details.');
-        setLoading(false);
+        console.error("Fetch error:", err)
+        setError(err.message || "Failed to load event details.")
+      } finally {
+        setLoading(false)
       }
-    };
+    }
 
     if (eventid) {
-      fetchEventDetails();
+      fetchEventDetails()
     } else {
-      setError('No event ID provided.');
-      setLoading(false);
+      setError("No event ID provided.")
+      setLoading(false)
     }
-  }, [eventid, nav]);
+  }, [eventid, nav])
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
+    console.log(`Input changed: ${name} = ${value}`)
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }));
-  };
+    }))
+    // Clear any previous errors when user starts typing
+    if (submitError) setSubmitError(null)
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitError(null);
-    setSubmitSuccess(null);
+    e.preventDefault()
+    setSubmitError(null)
+    setSubmitSuccess(null)
+    setIsSubmitting(true)
+
+    console.log("Form submitted with:", formData)
 
     try {
-      const token = sessionStorage.getItem('token');
+      const token = sessionStorage.getItem("token")
       if (!token) {
-        setSubmitError('No authentication token found. Please log in.');
-        nav('/login');
-        return;
+        setSubmitError("No authentication token found. Please log in.")
+        nav("/login")
+        return
       }
 
-      const currentDate = new Date().toISOString().split('T')[0];
-      if (new Date(formData.startdate) < new Date(currentDate)) {
-        setSubmitError('Start date must be today or in the future.');
-        return;
+      // Validation
+      const currentDate = new Date().toISOString().split("T")[0]
+
+      if (!formData.startdate || !formData.enddate) {
+        setSubmitError("Please select both start and end dates.")
+        return
       }
+
+      if (new Date(formData.startdate) < new Date(currentDate)) {
+        setSubmitError("Start date must be today or in the future.")
+        return
+      }
+
       if (new Date(formData.enddate) < new Date(formData.startdate)) {
-        setSubmitError('End date must be on or after the start date.');
-        return;
+        setSubmitError("End date must be on or after the start date.")
+        return
       }
 
       const response = await fetch(`http://localhost:5000/api/events/${eventid}/rehost`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           startdate: formData.startdate,
           enddate: formData.enddate,
-          status: 'pending',
+          resetAttendees: true,
         }),
-      });
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Server error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`)
       }
 
-      setSubmitSuccess('Event successfully submitted for rehosting. Awaiting admin approval.');
-      setTimeout(() => nav('/rehost-event'), 2000);
+      const result = await response.json()
+      console.log("Rehost response:", result)
+
+      setSubmitSuccess("Event successfully submitted for rehosting. Awaiting admin approval.")
+
+      // Navigate back after a delay
+      setTimeout(() => {
+        nav("/rehost-event")
+      }, 2000)
     } catch (err) {
-      console.error('Submit error:', err);
-      setSubmitError(err.message || 'Failed to submit rehost request.');
+      console.error("Submit error:", err)
+      setSubmitError(err.message || "Failed to submit rehost request.")
+    } finally {
+      setIsSubmitting(false)
     }
-  };
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not specified"
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    } catch (err) {
+      return "Invalid date"
+    }
+  }
+
+  const formatTime = (timeString) => {
+    if (!timeString) return "Not specified"
+    try {
+      // Handle time format (HH:MM:SS or HH:MM)
+      const timeParts = timeString.split(":")
+      const hours = Number.parseInt(timeParts[0], 10)
+      const minutes = timeParts[1] || "00"
+      const ampm = hours >= 12 ? "PM" : "AM"
+      const displayHours = hours % 12 || 12
+      return `${displayHours}:${minutes} ${ampm}`
+    } catch (err) {
+      return timeString
+    }
+  }
 
   if (loading) {
     return (
       <div className="container12">
         <header className="dashboard-header1">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="dashboard-logo1"
-          />
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
           <div className="profile-section">
             <button
               className="backbutton22"
               onClick={() => {
-                sessionStorage.removeItem('token');
-                sessionStorage.removeItem('userId');
-                sessionStorage.removeItem('user');
-                nav('/login');
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
               }}
             >
               LogOut
@@ -155,34 +212,31 @@ const RehostEventDetails = () => {
           </div>
         </header>
         <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => nav('/rehost-event')}>
+          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
             Back
           </button>
         </div>
         <div className="loading-container">
+          <div className="loading-spinner"></div>
           <p className="loading">Loading event details...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
       <div className="container12">
         <header className="dashboard-header1">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="dashboard-logo1"
-          />
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
           <div className="profile-section">
             <button
               className="backbutton22"
               onClick={() => {
-                sessionStorage.removeItem('token');
-                sessionStorage.removeItem('userId');
-                sessionStorage.removeItem('user');
-                nav('/login');
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
               }}
             >
               LogOut
@@ -190,7 +244,7 @@ const RehostEventDetails = () => {
           </div>
         </header>
         <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => nav('/rehost-event')}>
+          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
             Back
           </button>
         </div>
@@ -202,8 +256,9 @@ const RehostEventDetails = () => {
             <button
               className="retry-button"
               onClick={() => {
-                setError(null);
-                setLoading(true);
+                setError(null)
+                setLoading(true)
+                window.location.reload()
               }}
             >
               Try Again
@@ -211,93 +266,177 @@ const RehostEventDetails = () => {
           </div>
         </div>
       </div>
-    );
+    )
+  }
+
+  if (!event) {
+    return (
+      <div className="container12">
+        <div className="error-container">
+          <p>No event data available.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="container12">
       <header className="dashboard-header1">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
+        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
         <div className="profile-section">
           <button
             className="backbutton22"
             onClick={() => {
-              sessionStorage.removeItem('token');
-              sessionStorage.removeItem('userId');
-              sessionStorage.removeItem('user');
-              nav('/login');
+              sessionStorage.removeItem("token")
+              sessionStorage.removeItem("userId")
+              sessionStorage.removeItem("user")
+              nav("/login")
             }}
           >
             LogOut
           </button>
         </div>
       </header>
+
       <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/rehost-event')}>
+        <button className="backbutton20" onClick={() => nav("/rehost-event")}>
           Back
         </button>
       </div>
-      <h2 className="title">Rehost Event: {event.name}</h2>
-      <div className="card">
-        <div className="card-image-container">
-          <img
-            src={event.coverimage || '/default-event-image.jpg'}
-            alt={event.name}
-            className="card-image"
-            onError={(e) => {
-              if (e.target.src !== '/default-event-image.jpg') {
-                e.target.src = '/default-event-image.jpg';
-                e.target.classList.add('image-error');
-              }
-            }}
-          />
-        </div>
-        <div className="card-details">
-          <p><strong>Location:</strong> {event.location}</p>
-          <p><strong>Current Start Date:</strong> {event.startdate}</p>
-          <p><strong>Current End Date:</strong> {event.enddate}</p>
-          <p><strong>Time:</strong> {event.time}</p>
-          <p><strong>Duration:</strong> {event.duration}</p>
-          <p><strong>Capacity:</strong> {event.capacity}</p>
-          <p><strong>Type:</strong> {event.type}</p>
-          <p><strong>Description:</strong> {event.description || 'No description provided'}</p>
-        </div>
-        <form onSubmit={handleSubmit} className="rehost-form">
-          <div className="form-group">
-            <label htmlFor="startdate">New Start Date:</label>
-            <input
-              type="date"
-              id="startdate"
-              name="startdate"
-              value={formData.startdate}
-              onChange={handleInputChange}
-              required
+
+      <h2 className="title">Rehost Event: {event.name || "Unnamed Event"}</h2>
+
+      <div className="main-content">
+        {/* Event Details Card */}
+        <div className="event-details-card">
+          <div className="card-image-container">
+            <img
+              src={event.coverimage || "/default-event-image.jpg"}
+              alt={event.name || "Event"}
+              className="card-image"
+              onError={(e) => {
+                if (e.target.src !== "/default-event-image.jpg") {
+                  e.target.src = "/default-event-image.jpg"
+                  e.target.classList.add("image-error")
+                }
+              }}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="enddate">New End Date:</label>
-            <input
-              type="date"
-              id="enddate"
-              name="enddate"
-              value={formData.enddate}
-              onChange={handleInputChange}
-              required
-            />
+
+          <div className="card-details">
+            <div className="detail-row">
+              <strong>Location:</strong>
+              <span>{event.location || "Not specified"}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Current Start Date:</strong>
+              <span>{formatDate(event.startdate)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Current End Date:</strong>
+              <span>{formatDate(event.enddate)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Time:</strong>
+              <span>{formatTime(event.time)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Duration:</strong>
+              <span>{event.duration || "Not specified"}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Capacity:</strong>
+              <span>{event.capacity || "Not specified"}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Type:</strong>
+              <span>{event.type || "Not specified"}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Status:</strong>
+              <span className={`status-badge status-${event.status?.toLowerCase()}`}>{event.status || "Unknown"}</span>
+            </div>
+            {event.description && (
+              <div className="detail-row description">
+                <strong>Description:</strong>
+                <span>{event.description}</span>
+              </div>
+            )}
           </div>
-          {submitError && <p className="error-message">{submitError}</p>}
-          {submitSuccess && <p className="success-message">{submitSuccess}</p>}
-          <div className="form-actions">
-            <button type="submit" className="submit-btn">Submit Rehost Request</button>
-          </div>
-        </form>
+        </div>
+
+        {/* Rehost Form Card */}
+        <div className="rehost-form-card">
+          <h3 className="form-title">Select New Dates</h3>
+
+          <form onSubmit={handleSubmit} className="rehost-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="startdate">New Start Date:</label>
+                <input
+                  type="date"
+                  id="startdate"
+                  name="startdate"
+                  value={formData.startdate}
+                  onChange={handleInputChange}
+                  required
+                  min={new Date().toISOString().split("T")[0]}
+                  disabled={isSubmitting}
+                  className="date-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="enddate">New End Date:</label>
+                <input
+                  type="date"
+                  id="enddate"
+                  name="enddate"
+                  value={formData.enddate}
+                  onChange={handleInputChange}
+                  required
+                  min={formData.startdate || new Date().toISOString().split("T")[0]}
+                  disabled={isSubmitting}
+                  className="date-input"
+                />
+              </div>
+            </div>
+
+            {submitError && (
+              <div className="message error-message">
+                <span className="message-icon">❌</span>
+                {submitError}
+              </div>
+            )}
+
+            {submitSuccess && (
+              <div className="message success-message">
+                <span className="message-icon">✅</span>
+                {submitSuccess}
+              </div>
+            )}
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className={`submit-btn ${isSubmitting ? "submitting" : ""}`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="spinner"></span>
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Rehost Request"
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default RehostEventDetails;
+export default RehostEventDetails

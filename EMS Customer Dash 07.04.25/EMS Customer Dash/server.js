@@ -50,7 +50,7 @@ const pool = new Pool({
   host: 'localhost',
   database: 'ems2.0',
   password: '123456',
-  port: 5432,
+  port: 5433,
 })
 
 // Test database connection
@@ -789,16 +789,21 @@ app.get('/api/events/:eventId', async (req, res) => {
         event_id as id, 
         name, 
         location, 
-        startdate::text as date, 
-        time::text as time, 
+        startdate::text as start_date, 
+        enddate::text as end_date, 
+        time::text as start_time, 
+        endtime::text as end_time, 
+        duration,
+        deadlinedate::text as registration_deadline_date,
+        deadlinetime::text as registration_deadline_time,
+        type as event_type,
+        capacity,
+        attendees,
         coverimage,
         description,
-        capacity,
-        type as event_type,
-        tabs,
-        packages,
         terms_and_conditions,
-        attendees
+        tabs,
+        packages
       FROM events 
       WHERE event_id = $1
     `, [eventId]);
@@ -813,16 +818,66 @@ app.get('/api/events/:eventId', async (req, res) => {
     if (event.coverimage && event.coverimage.trim() !== '') {
       try {
         const presignedUrl = await generatePresignedUrl(event.coverimage);
-        if (presignedUrl) {
-          event.image = presignedUrl;
-        }
+        event.coverimage = presignedUrl || '/default-event-image.png';
       } catch (err) {
         console.error(`Error generating presigned URL for event ${event.id}:`, err);
-        event.image = '/default-event-image.png';
+        event.coverimage = '/default-event-image.png';
       }
     } else {
-      event.image = '/default-event-image.png';
+      event.coverimage = '/default-event-image.png';
     }
+
+    // Parse tabs
+    event.tabs = event.tabs
+      ? event.tabs.map(tab => {
+          try {
+            return typeof tab === 'string' ? JSON.parse(tab) : tab;
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e);
+            // If tab is a string without a name, create a default object
+            return { name: `Tab ${event.tabs.indexOf(tab) + 1}`, content: tab };
+          }
+        })
+      : [];
+
+    // Parse packages
+    event.packages = event.packages
+      ? event.packages.map(pkg => {
+          try {
+            const parsed = typeof pkg === 'string' ? JSON.parse(pkg) : pkg;
+            return {
+              selectType: parsed.selectType || 'Full Package',
+              packageType: parsed.packageType || 'Standard',
+              location: parsed.location || '',
+              duration: parsed.duration || '',
+              dateChoices: parsed.dateChoices || '',
+              pricing: parsed.pricing || 'N/A',
+              details: parsed.details || '',
+              typeOptions: parsed.typeOptions || ['Full Package', 'Day']
+            };
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e);
+            // If package is a string, treat it as details
+            return {
+              selectType: 'Full Package',
+              packageType: 'Standard',
+              location: '',
+              duration: '',
+              dateChoices: '',
+              pricing: 'N/A',
+              details: pkg,
+              typeOptions: ['Full Package', 'Day']
+            };
+          }
+        })
+      : [];
+
+    // Ensure attendees is an array
+    event.attendees = Array.isArray(event.attendees)
+      ? event.attendees
+      : event.attendees && typeof event.attendees === 'string'
+      ? event.attendees.replace(/^{|}$/g, '').split(',').filter(item => item.trim())
+      : [];
 
     res.json(event);
   } catch (error) {
@@ -2774,7 +2829,7 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
 
 
 
-//Rehost code 
+
 
 // Rehost an event by updating dates and setting status to pending
 app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
@@ -2949,6 +3004,145 @@ app.get('/api/events-past', authenticateToken, async (req, res) => {
   }
 });
 
+app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
+  const client = await pool.connect()
+  try {
+    const { eventId } = req.params
+    const { userId, role } = req.user
+
+    console.log(`Fetching event details for ID: ${eventId}, User: ${userId}`)
+
+    // Allow admin to access any event, regular users only their own events
+    let query = `
+      SELECT 
+        event_id,
+        name,
+        description,
+        terms_and_conditions,
+        location,
+        startdate,
+        enddate,
+        time,
+        endtime,
+        duration,
+        deadlinetime,
+        deadlinedate,
+        type,
+        capacity,
+        attendees,
+        contactnum,
+        email,
+        coverimage,
+        tabs,
+        packages,
+        status,
+        admin_comment,
+        user_id
+      FROM events 
+      WHERE event_id = $1
+    `
+
+    const queryParams = [eventId]
+
+    // If not admin, restrict to user's own events
+    if (role !== "Admin") {
+      query += ` AND user_id = $2`
+      queryParams.push(userId)
+    }
+
+    const result = await client.query(query, queryParams)
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Event not found or access denied" })
+    }
+
+    const event = result.rows[0]
+
+    // Generate presigned URL for cover image
+    let coverImageUrl = "/default-event-image.jpg"
+    if (event.coverimage && event.coverimage.trim() !== "") {
+      try {
+        const coverKey = event.coverimage.includes("amazonaws.com")
+          ? event.coverimage.split("/").slice(3).join("/")
+          : event.coverimage
+        const presignedUrl = await generatePresignedUrl(coverKey)
+        if (presignedUrl) {
+          coverImageUrl = presignedUrl
+        }
+      } catch (err) {
+        console.error(`Error generating presigned URL for event ${event.event_id}:`, err)
+      }
+    }
+
+    // Parse tabs and packages
+    const parsedTabs = event.tabs
+      ? event.tabs.map((tab) => {
+          try {
+            return typeof tab === "string" ? JSON.parse(tab) : tab
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e)
+            return { name: "Tab", content: tab }
+          }
+        })
+      : []
+
+    const parsedPackages = event.packages
+      ? event.packages.map((pkg) => {
+          try {
+            return typeof pkg === "string" ? JSON.parse(pkg) : pkg
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e)
+            return { details: pkg }
+          }
+        })
+      : []
+
+    // Format the response
+    const formattedEvent = {
+      event_id: event.event_id,
+      name: event.name,
+      description: event.description,
+      terms_and_conditions: event.terms_and_conditions,
+      location: event.location,
+      startdate: event.startdate,
+      enddate: event.enddate,
+      time: event.time,
+      endtime: event.endtime,
+      duration: event.duration,
+      deadlinetime: event.deadlinetime,
+      deadlinedate: event.deadlinedate,
+      type: event.type,
+      capacity: event.capacity,
+      attendees: Array.isArray(event.attendees)
+        ? event.attendees
+        : event.attendees
+          ? event.attendees
+              .replace(/^{|}$/g, "")
+              .split(",")
+              .filter((item) => item.trim())
+          : [],
+      contactnum: event.contactnum,
+      email: event.email,
+      coverimage: coverImageUrl,
+      tabs: parsedTabs,
+      packages: parsedPackages,
+      status: event.status,
+      admin_comment: event.admin_comment,
+      user_id: event.user_id,
+    }
+
+    console.log("Returning formatted event:", formattedEvent)
+    res.json(formattedEvent)
+  } catch (error) {
+    console.error("Error fetching event details:", error)
+    res.status(500).json({
+      error: "Failed to fetch event details",
+      details: error.message,
+    })
+  } finally {
+    client.release()
+  }
+})
 
 
 

@@ -120,17 +120,19 @@ const RehostEventForm = () => {
 
         const eventsData = Array.isArray(data) ? data : [];
 
-        const eventsWithStatus = eventsData.map((event) => ({
-          id: event.event_id ? String(event.event_id) : '',
-          eventid: event.event_id ? String(event.event_id) : '',
-          event_name: event.name || 'Unnamed Event',
-          location: event.location || 'Location not specified',
-          date: event.startdate || 'Date not specified',
-          time: event.time || 'Time not specified',
-          price: 'N/A',
-          status: (event.status || 'Pending').toLowerCase(),
-          file_url: event.coverimage || '/default-event-image.jpg',
-        }));
+       const eventsWithStatus = eventsData.map((event) => ({
+  id: event.event_id ? String(event.event_id) : '',
+  eventid: event.event_id ? String(event.event_id) : '',
+  event_name: event.name || 'Unnamed Event',
+  location: event.location || 'Location not specified',
+  date: event.startdate || 'Date not specified',
+  enddate: event.enddate || 'Date not specified', // Add enddate
+  time: event.time || 'Time not specified',
+  type: event.type || 'Type not specified', // Add type
+  price: 'N/A',
+  status: (event.status || 'Pending').toLowerCase(),
+  file_url: event.coverimage || '/default-event-image.jpg',
+}));
 
         if (isMounted) {
           setPastEvents(eventsWithStatus);
