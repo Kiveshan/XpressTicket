@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import './EventRequest.css';
 import { useNavigate } from 'react-router-dom';
@@ -6,8 +5,10 @@ import { useNavigate } from 'react-router-dom';
 const EventRequest = () => {
   const nav = useNavigate();
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     let isMounted = true;
@@ -131,11 +132,12 @@ const EventRequest = () => {
           time: event.start_time || 'Time not specified',
           price: event.paid_amount ? `R ${parseFloat(event.paid_amount).toFixed(2)}` : 'N/A',
           status: (event.status || 'Pending').toLowerCase(),
-          file_url: event.coverimage || '/default-event-image.jpg',
+          file_url: event.eventimage || '/default-event-image.jpg',
         }));
 
         if (isMounted) {
           setEvents(eventsWithStatus);
+          setFilteredEvents(eventsWithStatus);
           setError(null);
         }
       } catch (err) {
@@ -143,6 +145,7 @@ const EventRequest = () => {
         if (isMounted) {
           setError(err.message || 'Failed to load events. Please try again later.');
           setEvents([]);
+          setFilteredEvents([]);
         }
       } finally {
         if (isMounted) {
@@ -159,6 +162,18 @@ const EventRequest = () => {
       clearInterval(interval);
     };
   }, [nav]);
+
+  useEffect(() => {
+    if (statusFilter === 'all') {
+      setFilteredEvents(events);
+    } else {
+      setFilteredEvents(events.filter(event => event.status === statusFilter));
+    }
+  }, [statusFilter, events]);
+
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+  };
 
   if (loading) {
     return (
@@ -251,7 +266,9 @@ const EventRequest = () => {
                 onClick={() => {
                   setError(null);
                   setLoading(true);
-                  fetchEvents();
+                  // Re-trigger fetch
+                  setEvents([]);
+                  setFilteredEvents([]);
                 }}
               >
                 Try Again
@@ -291,9 +308,23 @@ const EventRequest = () => {
         </button>
       </div>
       <h2 className="title">Event Request</h2>
-      {events.length === 0 ? (
+      <div className="filter-container">
+        <label htmlFor="status-filter" className="filter-label">Filter by Status:</label>
+        <select
+          id="status-filter"
+          value={statusFilter}
+          onChange={handleStatusFilterChange}
+          className="filter-select"
+        >
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      {filteredEvents.length === 0 ? (
         <div className="no-events">
-          <p>No events found. Create your first event to get started!</p>
+          <p>No events found{statusFilter !== 'all' ? ` with status "${statusFilter}"` : ''}. Create your first event to get started!</p>
           <button 
             className="create-event-button" 
             onClick={() => nav('/create-event')}
@@ -303,7 +334,7 @@ const EventRequest = () => {
         </div>
       ) : (
         <div className="card-grid">
-          {events.map((event) => (
+          {filteredEvents.map((event) => (
             <div key={event.id} className="card">
               <div className="card-image-container">
                 <img
@@ -317,7 +348,6 @@ const EventRequest = () => {
                       e.target.classList.add('image-error');
                     }
                   }}
-
                 />
                 {!event.file_url && (
                   <div className="image-placeholder">
