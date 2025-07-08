@@ -50,7 +50,7 @@ const pool = new Pool({
   host: 'localhost',
   database: 'ems2.0',
   password: '123456',
-  port: 5433,
+  port: 5432,
 })
 
 // Test database connection
