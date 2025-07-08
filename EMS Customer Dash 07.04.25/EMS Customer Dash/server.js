@@ -2411,7 +2411,7 @@ app.get('/api/payments-with-user-names', async (req, res) => {
   }
 });
 
-//----------------payments org start
+//----------------payments organizer start
 // Get all events with pending ticket request counts
 app.get('/api/organiser/events', authenticateToken, async (req, res) => {
   const client = await pool.connect();
@@ -2969,56 +2969,122 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
 
 
 // Get past events for the logged-in user
-app.get('/api/events-past', authenticateToken, async (req, res) => {
-  console.log('Received request to /api/events-past', {
+app.get("/api/events-past", authenticateToken, async (req, res) => {
+  console.log("Received request to /api/events-past", {
     headers: req.headers,
     user: req.user,
-  });
-  const client = await pool.connect();
+  })
+
+  const client = await pool.connect()
   try {
-    const { userId, role } = req.user;
-    const currentDate = new Date().toISOString().split('T')[0];
-    console.log('Fetching past events for user:', userId, 'Role:', role);
+    const { userId, role } = req.user
+
+    // Get current date and time for more accurate comparison
+    const now = new Date()
+    const currentDate = now.toISOString().split("T")[0] // YYYY-MM-DD format
+    const currentDateTime = now.toISOString() // Full ISO string for timestamp comparison
+
+    console.log("Fetching past events for user:", userId, "Role:", role)
+    console.log("Current date:", currentDate)
+    console.log("Current datetime:", currentDateTime)
+
+    // Updated query with better date handling and more inclusive status filtering
     const query = `
       SELECT 
         event_id, name, description, terms_and_conditions, location,
         startdate, enddate, time, endtime, duration, deadlinetime,
         deadlinedate, type, capacity, attendees, contactnum, email,
-        coverimage, tabs, packages, status
+        coverimage, tabs, packages, status, user_id
       FROM events
-      WHERE user_id = $1 AND enddate < $2 AND status IN ('Approved', 'pending')
-      ORDER BY enddate DESC
-    `;
-    const result = await client.query(query, [userId, currentDate]);
-    const eventsWithUrls = await Promise.all(result.rows.map(async (event) => {
-      let coverImageUrl = '/default-profile-picture.jpg';
-      if (event.coverimage) {
-        const coverKey = event.coverimage.split('/').slice(3).join('/');
-        try {
-          coverImageUrl = await generatePresignedUrl(coverKey);
-        } catch (e) {
-          console.warn('Failed to generate signed URL for cover image:', e);
+      WHERE user_id = $1 
+        AND (
+          -- Check if enddate (as date) is before current date
+          enddate < $2::date
+          OR 
+          -- Or if enddate equals current date but event has already ended based on endtime
+          (enddate = $2::date AND endtime < $3::time)
+        )
+        AND status IN ('Approved', 'pending', 'Request Edit', 'rejected')
+      ORDER BY enddate DESC, endtime DESC
+    `
+
+    // Get current time in HH:MM:SS format for time comparison
+    const currentTime = now.toTimeString().split(" ")[0] // HH:MM:SS format
+
+    console.log("Current time:", currentTime)
+    console.log("Executing query with params:", [userId, currentDate, currentTime])
+
+    const result = await client.query(query, [userId, currentDate, currentTime])
+
+    console.log(`Found ${result.rows.length} past events`)
+
+    // Log each event for debugging
+    result.rows.forEach((event, index) => {
+      console.log(`Event ${index + 1}:`, {
+        id: event.event_id,
+        name: event.name,
+        enddate: event.enddate,
+        endtime: event.endtime,
+        status: event.status,
+      })
+    })
+
+    const eventsWithUrls = await Promise.all(
+      result.rows.map(async (event) => {
+        let coverImageUrl = "/default-profile-picture.jpg"
+        if (event.coverimage) {
+          const coverKey = event.coverimage.split("/").slice(3).join("/")
+          try {
+            coverImageUrl = await generatePresignedUrl(coverKey)
+          } catch (e) {
+            console.warn("Failed to generate signed URL for cover image:", e)
+          }
         }
-      }
-      const parsedTabs = event.tabs ? event.tabs.map(tab => {
-        try { return JSON.parse(tab); } catch (e) { console.warn(`Failed to parse tab: ${tab}`, e); return {}; }
-      }) : [];
-      const parsedPackages = event.packages ? event.packages.map(pkg => {
-        try { return JSON.parse(pkg); } catch (e) { console.warn(`Failed to parse package: ${pkg}`, e); return {}; }
-      }) : [];
-      return { ...event, coverimage: coverImageUrl, tabs: parsedTabs, packages: parsedPackages, attendees: event.attendees || [] };
-    }));
-    res.json(eventsWithUrls);
+
+        const parsedTabs = event.tabs
+          ? event.tabs.map((tab) => {
+              try {
+                return JSON.parse(tab)
+              } catch (e) {
+                console.warn(`Failed to parse tab: ${tab}`, e)
+                return {}
+              }
+            })
+          : []
+
+        const parsedPackages = event.packages
+          ? event.packages.map((pkg) => {
+              try {
+                return JSON.parse(pkg)
+              } catch (e) {
+                console.warn(`Failed to parse package: ${pkg}`, e)
+                return {}
+              }
+            })
+          : []
+
+        return {
+          ...event,
+          coverimage: coverImageUrl,
+          tabs: parsedTabs,
+          packages: parsedPackages,
+          attendees: event.attendees || [],
+        }
+      }),
+    )
+
+    console.log(`Returning ${eventsWithUrls.length} processed past events`)
+    res.json(eventsWithUrls)
   } catch (error) {
-    console.error('Error fetching past events:', error);
+    console.error("Error fetching past events:", error)
     res.status(500).json({
-      error: 'Failed to fetch past events',
+      error: "Failed to fetch past events",
       details: error.message,
-    });
+    })
   } finally {
-    client.release();
+    client.release()
   }
-});
+})
 
 //shows single events for user logged in 
 app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
