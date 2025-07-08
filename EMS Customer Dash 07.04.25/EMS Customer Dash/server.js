@@ -15,7 +15,7 @@ const port = 5000;
 
 // Middleware
 app.use(cors({
-origin: 'http://localhost:5173',
+  origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -280,17 +280,17 @@ const authenticateToken = (req, res, next) => {
 
   if (!token) {
     console.log('No token provided in request');
-    return res.status(401).json({ error: 'No token provided' });
+    return res.status(401).json({ error: 'No token provided', events: [] });
   }
 
   console.log('Verifying token:', token.substring(0, 10) + '...');
-  console.log('JWT_SECRET is set:', !!process.env.JWT_SECRET);
+  console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       console.error('Token verification failed:', err.message);
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      return res.status(403).json({ error: 'Invalid or expired token', events: [] });
     }
-    console.log('Token verified, user:', user);
+    console.log('Token verified, user:', JSON.stringify(user));
     req.user = user;
     next();
   });
@@ -332,27 +332,27 @@ const urlCache = new Map();
 // Helper function to generate presigned URL with caching
 async function generatePresignedUrl(key) {
   if (!key) return null;
-  
+
   // Check if URL is in cache and not expired (cache for 50 minutes to be safe)
   const cachedItem = urlCache.get(key);
   if (cachedItem && (Date.now() - cachedItem.timestamp) < 50 * 60 * 1000) {
     console.log(`Using cached URL for ${key}`);
     return cachedItem.url;
   }
-  
+
   try {
     const command = new GetObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME,
       Key: key
     });
     const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
-    
+
     // Cache the URL with timestamp
     urlCache.set(key, {
       url,
       timestamp: Date.now()
     });
-    
+
     return url;
   } catch (error) {
     console.error('Error generating presigned URL:', error);
@@ -364,7 +364,7 @@ async function generatePresignedUrl(key) {
 app.get('/api/admin/events', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
     console.log('Fetching all events for admin');
-    
+
     const result = await pool.query(`
       SELECT e.*, 
              u.firstname, u.surname, u.email as user_email, u.cellnumber,
@@ -374,17 +374,17 @@ app.get('/api/admin/events', authenticateToken, authenticateAdmin, async (req, r
       LEFT JOIN payments p ON e.event_id = p.event_id
       ORDER BY e.startdate DESC
     `);
-    
+
     // Process the results to format them for the frontend
     const events = await Promise.all(result.rows.map(async event => {
       // Format dates for frontend
       if (event.startdate) event.start_date = event.startdate;
       if (event.enddate) event.end_date = event.enddate;
       if (event.deadlinedate) event.deadline = event.deadlinedate;
-      
+
       // Ensure event_name is set
       event.event_name = event.name;
-      
+
       // Generate presigned URL for the image if it exists
       if (event.coverimage && event.coverimage.trim() !== '') {
         try {
@@ -404,10 +404,10 @@ app.get('/api/admin/events', authenticateToken, authenticateAdmin, async (req, r
       } else {
         console.log(`No coverimage found for event ${event.event_id}`);
       }
-      
+
       return event;
     }));
-    
+
     res.json(events);
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -420,7 +420,7 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
   try {
     const { eventId } = req.params;
     console.log(`Fetching event details for ID: ${eventId}`);
-    
+
     const result = await pool.query(`
       SELECT e.*, 
              u.firstname, u.surname, u.email, u.cellnumber,
@@ -430,31 +430,31 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
       LEFT JOIN payments p ON e.event_id = p.event_id
       WHERE e.event_id = $1
     `, [eventId]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
-    
+
     const event = result.rows[0];
-    
+
     // Format dates for frontend
     if (event.startdate) event.start_date = event.startdate;
     if (event.enddate) event.end_date = event.enddate;
     if (event.deadlinedate) event.deadline = event.deadlinedate;
-    
+
     // Ensure event_name is set
     event.event_name = event.name;
-    
+
     // Format image URL if needed
     if (event.coverimage) {
       event.file_url = event.coverimage;
     }
-    
+
     // Set event_type from type field
     if (event.type) {
       event.event_type = event.type;
     }
-    
+
     // Set client_type from attendees field
     if (event.attendees && Array.isArray(event.attendees)) {
       event.client_type = event.attendees;
@@ -464,32 +464,32 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
         event.client_type = JSON.parse(event.attendees);
       } catch (e) {
         // If parsing fails, split by commas or create a single-item array
-        event.client_type = event.attendees.includes(',') ? 
-          event.attendees.split(',').map(item => item.trim()) : 
+        event.client_type = event.attendees.includes(',') ?
+          event.attendees.split(',').map(item => item.trim()) :
           [event.attendees];
       }
     } else {
       // Default to empty array if attendees is not available
       event.client_type = [];
     }
-    
+
     // Process tabs array to ensure it contains proper objects
     if (event.tabs && Array.isArray(event.tabs)) {
       console.log('Original tabs:', event.tabs);
-      
+
       event.tabs = event.tabs.map((tab, index) => {
         // If tab is a string, process it
         if (typeof tab === 'string') {
           // For the format seen in the database, the tab is just the content
           // We'll use the content as the tab name too, but capitalized
           const content = tab.trim();
-          
+
           // If it's a single word like "exhibits" or "schedule", capitalize it for the name
           if (!content.includes(':') && !content.includes('=') && !content.includes(' ')) {
             const name = content.charAt(0).toUpperCase() + content.slice(1);
             return { name, content };
           }
-          
+
           // If it looks like it might have a name and content separated
           const separators = ['=', ':', '-', '–'];
           for (const separator of separators) {
@@ -497,20 +497,20 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
               const parts = content.split(separator);
               const name = parts[0].trim();
               const tabContent = parts.slice(1).join(separator).trim();
-              
+
               // Only use this if the name part looks like a reasonable tab name
               if (name.length > 0 && name.length < 20) {
-                return { 
-                  name: name.charAt(0).toUpperCase() + name.slice(1), 
+                return {
+                  name: name.charAt(0).toUpperCase() + name.slice(1),
                   content: tabContent || content // Fallback to full content if split resulted in empty content
                 };
               }
             }
           }
-          
+
           // If we couldn't extract a name, use a generic name based on content
           let name = 'Tab';
-          
+
           // Try to generate a meaningful name from the content
           if (content.toLowerCase().includes('exhibit')) name = 'Exhibits';
           else if (content.toLowerCase().includes('schedule')) name = 'Schedule';
@@ -520,10 +520,10 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
           else if (content.toLowerCase().includes('venue')) name = 'Venue';
           else if (content.toLowerCase().includes('contact')) name = 'Contact';
           else name = `Tab ${index + 1}`;
-          
+
           return { name, content };
         }
-        
+
         // If it's already an object, return it with defaults for missing fields
         if (typeof tab === 'object' && tab !== null) {
           return {
@@ -531,26 +531,26 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
             content: tab.content || ''
           };
         }
-        
+
         // Fallback: create a named tab based on index
-        return { 
-          name: `Tab ${index + 1}`, 
-          content: typeof tab === 'string' ? tab : `Tab ${index + 1} Content` 
+        return {
+          name: `Tab ${index + 1}`,
+          content: typeof tab === 'string' ? tab : `Tab ${index + 1} Content`
         };
       });
-      
+
       console.log('Processed tabs:', event.tabs);
     }
-    
+
     // Process packages array to ensure it contains proper objects
     if (event.packages && Array.isArray(event.packages)) {
       console.log('Original packages:', event.packages);
-      
+
       event.packages = event.packages.map((pkg, index) => {
         // If package is a string, try to parse it or extract information
         if (typeof pkg === 'string') {
           console.log(`Processing package string: ${pkg}`);
-          
+
           // First try: Handle PostgreSQL character varying[] format with escaped quotes
           // This format often looks like: {\"selectType\":\"Full Package\",...}
           if (pkg.includes('\\"') || pkg.includes('details') || pkg.includes('pricing')) {
@@ -561,7 +561,7 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
                 .replace(/\\"\}$/, '"}')
                 .replace(/\\"/g, '"')
                 .replace(/\\\\/g, '\\');
-              
+
               // Additional cleaning for other common formats
               if (!cleanedStr.startsWith('{')) {
                 cleanedStr = '{' + cleanedStr;
@@ -569,13 +569,13 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
               if (!cleanedStr.endsWith('}')) {
                 cleanedStr = cleanedStr + '}';
               }
-              
+
               console.log('Cleaned package string:', cleanedStr);
-              
+
               try {
                 const parsed = JSON.parse(cleanedStr);
                 console.log('Parsed package:', parsed);
-                
+
                 return {
                   selectType: parsed.selectType || 'Full Package',
                   packageType: parsed.packageType || 'Standard',
@@ -593,34 +593,34 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
             } catch (e) {
               console.error('Error in initial package cleaning:', e);
             }
-            
+
             // Second try: Extract fields using regex patterns
             try {
               // More flexible regex patterns that can handle various formats
-              const detailsMatch = pkg.match(/["']?details["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                   pkg.match(/details\s*[:\=]\s*([^,}]+)/i);
-              const pricingMatch = pkg.match(/["']?pricing["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                  pkg.match(/pricing\s*[:\=]\s*([^,}]+)/i);
-              const durationMatch = pkg.match(/["']?duration["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                   pkg.match(/duration\s*[:\=]\s*([^,}]+)/i);
-              const locationMatch = pkg.match(/["']?location["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                   pkg.match(/location\s*[:\=]\s*([^,}]+)/i);
-              const packageTypeMatch = pkg.match(/["']?packageType["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                      pkg.match(/packageType\s*[:\=]\s*([^,}]+)/i) || 
-                                      pkg.match(/package[_\s-]?type\s*[:\=]\s*([^,}]+)/i);
-              const selectTypeMatch = pkg.match(/["']?selectType["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                     pkg.match(/selectType\s*[:\=]\s*([^,}]+)/i) || 
-                                     pkg.match(/select[_\s-]?type\s*[:\=]\s*([^,}]+)/i);
-              const dateChoicesMatch = pkg.match(/["']?dateChoices["']?\s*[:\=]\s*["']?([^,}"']+)/i) || 
-                                      pkg.match(/dateChoices\s*[:\=]\s*([^,}]+)/i) || 
-                                      pkg.match(/date[_\s-]?choices\s*[:\=]\s*([^,}]+)/i);
-              
+              const detailsMatch = pkg.match(/["']?details["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
+                pkg.match(/details\s*[:\=]\s*([^,}]+)/i);
+              const pricingMatch = pkg.match(/["']?pricing["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
+                pkg.match(/pricing\s*[:\=]\s*([^,}]+)/i);
+              const durationMatch = pkg.match(/["']?duration["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
+                pkg.match(/duration\s*[:\=]\s*([^,}]+)/i);
+              const locationMatch = pkg.match(/["']?location["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
+                pkg.match(/location\s*[:\=]\s*([^,}]+)/i);
+              const packageTypeMatch = pkg.match(/["']?packageType["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
+                pkg.match(/packageType\s*[:\=]\s*([^,}]+)/i) ||
+                pkg.match(/package[_\s-]?type\s*[:\=]\s*([^,}]+)/i);
+              const selectTypeMatch = pkg.match(/["']?selectType["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
+                pkg.match(/selectType\s*[:\=]\s*([^,}]+)/i) ||
+                pkg.match(/select[_\s-]?type\s*[:\=]\s*([^,}]+)/i);
+              const dateChoicesMatch = pkg.match(/["']?dateChoices["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
+                pkg.match(/dateChoices\s*[:\=]\s*([^,}]+)/i) ||
+                pkg.match(/date[_\s-]?choices\s*[:\=]\s*([^,}]+)/i);
+
               // If we found at least one field using regex, use this approach
-              if (detailsMatch || pricingMatch || durationMatch || locationMatch || 
-                  packageTypeMatch || selectTypeMatch || dateChoicesMatch) {
-                
+              if (detailsMatch || pricingMatch || durationMatch || locationMatch ||
+                packageTypeMatch || selectTypeMatch || dateChoicesMatch) {
+
                 console.log('Extracted package fields using regex');
-                
+
                 return {
                   selectType: selectTypeMatch ? selectTypeMatch[1].trim().replace(/["']/g, '') : 'Full Package',
                   packageType: packageTypeMatch ? packageTypeMatch[1].trim().replace(/["']/g, '') : 'Standard',
@@ -636,12 +636,12 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
               console.error('Error extracting package fields with regex:', regexError);
             }
           }
-          
+
           // Third try: Check if the string is a simple key-value format
           if (pkg.includes(':') || pkg.includes('=')) {
             const lines = pkg.split(/[,;\n]/).filter(line => line.trim());
             const packageData = {};
-            
+
             lines.forEach(line => {
               const separators = [':', '='];
               for (const separator of separators) {
@@ -649,10 +649,10 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
                   const [key, value] = line.split(separator).map(part => part.trim());
                   if (key && value) {
                     const normalizedKey = key.toLowerCase().replace(/[\s-_]/g, '');
-                    if (normalizedKey === 'details' || normalizedKey === 'pricing' || 
-                        normalizedKey === 'duration' || normalizedKey === 'location' || 
-                        normalizedKey === 'packagetype' || normalizedKey === 'selecttype' || 
-                        normalizedKey === 'datechoices') {
+                    if (normalizedKey === 'details' || normalizedKey === 'pricing' ||
+                      normalizedKey === 'duration' || normalizedKey === 'location' ||
+                      normalizedKey === 'packagetype' || normalizedKey === 'selecttype' ||
+                      normalizedKey === 'datechoices') {
                       packageData[normalizedKey] = value.replace(/["']/g, '');
                     }
                   }
@@ -660,10 +660,10 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
                 }
               }
             });
-            
+
             if (Object.keys(packageData).length > 0) {
               console.log('Extracted package from key-value format:', packageData);
-              
+
               return {
                 selectType: packageData.selecttype || 'Full Package',
                 packageType: packageData.packagetype || 'Standard',
@@ -676,7 +676,7 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
               };
             }
           }
-          
+
           // If all parsing methods fail, treat the whole string as details
           return {
             selectType: 'Full Package',
@@ -689,7 +689,7 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
             typeOptions: ['Full Package', 'Day']
           };
         }
-        
+
         // If it's already an object, return it with defaults for missing fields
         if (typeof pkg === 'object' && pkg !== null) {
           return {
@@ -703,7 +703,7 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
             typeOptions: Array.isArray(pkg.typeOptions) ? pkg.typeOptions : ['Full Package', 'Day']
           };
         }
-        
+
         // Fallback: create an empty package
         return {
           selectType: 'Full Package',
@@ -716,10 +716,10 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
           typeOptions: ['Full Package', 'Day']
         };
       });
-      
+
       console.log('Processed packages:', event.packages);
     }
-    
+
     res.json(event);
   } catch (error) {
     console.error('Error fetching event details:', error);
@@ -731,7 +731,7 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
 app.get('/api/events/available', async (req, res) => {
   try {
     console.log('Fetching available events');
-    
+
     const result = await pool.query(`
       SELECT 
         event_id as id, 
@@ -747,7 +747,7 @@ app.get('/api/events/available', async (req, res) => {
       WHERE status = 'Approved'
       ORDER BY startdate ASC
     `);
-    
+
     // Process the results to format them for the frontend
     const events = await Promise.all(result.rows.map(async event => {
       // Generate a presigned URL for the image if it exists
@@ -762,14 +762,14 @@ app.get('/api/events/available', async (req, res) => {
           console.error(`Error generating presigned URL for event ${event.id}:`, err);
         }
       }
-      
+
       return {
         ...event,
         image: imageUrl,
         link: `/customerviewevent/${event.id}`
       };
     }));
-    
+
     console.log(`Found ${events.length} available events`);
     res.json(events);
   } catch (error) {
@@ -783,7 +783,7 @@ app.get('/api/events/:eventId', async (req, res) => {
   try {
     const { eventId } = req.params;
     console.log(`Fetching event details for ID: ${eventId}`);
-    
+
     const result = await pool.query(`
       SELECT 
         event_id as id, 
@@ -802,13 +802,13 @@ app.get('/api/events/:eventId', async (req, res) => {
       FROM events 
       WHERE event_id = $1
     `, [eventId]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
-    
+
     const event = result.rows[0];
-    
+
     // Generate a presigned URL for the image if it exists
     if (event.coverimage && event.coverimage.trim() !== '') {
       try {
@@ -823,7 +823,7 @@ app.get('/api/events/:eventId', async (req, res) => {
     } else {
       event.image = '/default-event-image.png';
     }
-    
+
     res.json(event);
   } catch (error) {
     console.error('Error fetching event details:', error);
@@ -836,22 +836,22 @@ app.put('/api/admin/event/:eventId/status', authenticateToken, authenticateAdmin
   try {
     const { eventId } = req.params;
     const { status, comment } = req.body;
-    
+
     console.log(`Updating status for event ID: ${eventId} to ${status}`);
-    
+
     if (!['Approved', 'Rejected', 'Request Edit', 'pending'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status value' });
     }
-    
+
     const result = await pool.query(
       'UPDATE events SET status = $1, admin_comment = $2 WHERE event_id = $3 RETURNING *',
       [status, comment, eventId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
-    
+
     res.json({ message: 'Event status updated successfully', event: result.rows[0] });
   } catch (error) {
     console.error('Error updating event status:', error);
@@ -863,24 +863,24 @@ app.put('/api/admin/event/:eventId/status', authenticateToken, authenticateAdmin
 app.get('/api/admin/event/:eventId/proof-of-payment', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
     const { eventId } = req.params;
-    
+
     const result = await pool.query(
       'SELECT proof_of_payment FROM payments WHERE event_id = $1',
       [eventId]
     );
-    
+
     if (result.rows.length === 0 || !result.rows[0].proof_of_payment) {
       return res.status(404).json({ error: 'Proof of payment not found' });
     }
-    
+
     // Generate a presigned URL for the proof of payment
     const proofOfPaymentKey = result.rows[0].proof_of_payment;
     const url = await generatePresignedUrl(proofOfPaymentKey);
-    
+
     if (!url) {
       return res.status(500).json({ error: 'Failed to generate URL for proof of payment' });
     }
-    
+
     res.json({ url });
   } catch (error) {
     console.error('Error fetching proof of payment:', error);
@@ -893,7 +893,7 @@ app.get('/api/admin/event/:eventId/proof-of-payment', authenticateToken, authent
 app.get('/api/events/available', async (req, res) => {
   try {
     console.log('Fetching available events...');
-    
+
     // Return mock data without accessing the database
     const mockEvents = [
       {
@@ -921,7 +921,7 @@ app.get('/api/events/available', async (req, res) => {
         event_type: 'Workshop'
       }
     ];
-    
+
     console.log('Sending response with mock events:', mockEvents.length);
     res.json(mockEvents);
   } catch (error) {
@@ -1060,22 +1060,22 @@ app.post('/api/login', async (req, res) => {
     // Generate JWT token
     console.log('Generating JWT token for user:', user.user_id, 'with role:', user.role);
     console.log('JWT_SECRET is set:', !!process.env.JWT_SECRET);
-    
+
     const payload = {
       userId: user.user_id,
       email: user.email,
       role: user.role || 'user',
       name: `${user.firstname || ''} ${user.surname || ''}`.trim() || user.email
     };
-    
+
     console.log('Token payload:', payload);
-    
+
     const token = jwt.sign(
       payload,
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-    
+
     console.log('Generated token (first 10 chars):', token.substring(0, 10) + '...');
 
     // Return user data without sensitive information
@@ -1111,30 +1111,30 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/toggle-user-status', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
     const { userId } = req.body;
-    
+
     if (!userId) {
       return res.status(400).json({ message: 'User ID is required' });
     }
-    
+
     // Get current user status
     const userResult = await pool.query(
       'SELECT is_disabled FROM user_profiles WHERE user_id = $1',
       [userId]
     );
-    
+
     if (userResult.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     const currentStatus = userResult.rows[0].is_disabled || 0;
     const newStatus = currentStatus === 1 ? 0 : 1;
-    
+
     // Update user status
     await pool.query(
       'UPDATE user_profiles SET is_disabled = $1 WHERE user_id = $2',
       [newStatus, userId]
     );
-    
+
     res.json({
       message: `User account ${newStatus === 1 ? 'disabled' : 'enabled'} successfully`,
       status: newStatus
@@ -1156,7 +1156,7 @@ app.get('/api/users-with-events', authenticateToken, authenticateAdmin, async (r
       JOIN events e ON u.user_id = e.user_id
       ORDER BY u.surname, u.firstname
     `);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching users with events:', error);
@@ -1176,7 +1176,7 @@ app.get('/api/users-without-events', authenticateToken, authenticateAdmin, async
       )
       ORDER BY u.surname, u.firstname
     `);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching users without events:', error);
@@ -2784,12 +2784,10 @@ app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
     const { userId, role } = req.user;
     const { startdate, enddate, resetAttendees = true } = req.body;
 
-    // Validate required fields
     if (!startdate || !enddate) {
       return res.status(400).json({ error: 'Start date and end date are required' });
     }
 
-    // Validate date logic
     const currentDate = new Date().toISOString().split('T')[0];
     if (new Date(startdate) < new Date(currentDate)) {
       return res.status(400).json({ error: 'Start date must be today or in the future' });
@@ -2798,23 +2796,32 @@ app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'End date must be on or after the start date' });
     }
 
-    // Check if the event exists and is a past event, and verify user ownership
     const eventCheck = await client.query(
-      `SELECT event_id, user_id, enddate, name
+      `SELECT event_id, user_id, enddate, name, attendees, status
        FROM events 
-       WHERE event_id = $1 AND (user_id = $2 OR $3 = true) AND enddate < $4`,
+       WHERE event_id = $1 AND (user_id = $2 OR $3 = true) AND enddate < $4 AND status IN ('Approved', 'pending')`,
       [eventId, userId, role === 'Admin', currentDate]
     );
 
     if (eventCheck.rows.length === 0) {
       return res.status(404).json({
-        error: 'Event not found, not a past event, or access denied'
+        error: 'Event not found, not a past event, not in a rehostable status, or access denied'
       });
+    }
+
+    const conflictCheck = await client.query(
+      `SELECT event_id FROM events 
+       WHERE user_id = $1 AND startdate <= $2 AND enddate >= $3 AND event_id != $4`,
+      [userId, enddate, startdate, eventId]
+    );
+    if (conflictCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'Date conflicts with another event' });
     }
 
     await client.query('BEGIN');
 
-    // Update event with new dates, status, and optionally reset attendees
+    const validatedAttendees = resetAttendees ? '{}' : (Array.isArray(eventCheck.rows[0].attendees) ? `{${eventCheck.rows[0].attendees.join(',')}}` : '{}');
+
     const updateQuery = `
       UPDATE events
       SET startdate = $1,
@@ -2825,12 +2832,7 @@ app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
       WHERE event_id = $4
       RETURNING *;
     `;
-    const updateValues = [
-      startdate,
-      enddate,
-      resetAttendees ? '{}' : eventCheck.rows[0].attendees,
-      eventId
-    ];
+    const updateValues = [startdate, enddate, validatedAttendees, eventId];
 
     const result = await client.query(updateQuery, updateValues);
 
@@ -2852,26 +2854,25 @@ app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
       }
     }
 
-    // Parse tabs and packages for response
     const parsedTabs = updatedEvent.tabs
       ? updatedEvent.tabs.map(tab => {
-          try {
-            return JSON.parse(tab);
-          } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e);
-            return {};
-          }
-        })
+        try {
+          return JSON.parse(tab);
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e);
+          return {};
+        }
+      })
       : [];
     const parsedPackages = updatedEvent.packages
       ? updatedEvent.packages.map(pkg => {
-          try {
-            return JSON.parse(pkg);
-          } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e);
-            return {};
-          }
-        })
+        try {
+          return JSON.parse(pkg);
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e);
+          return {};
+        }
+      })
       : [];
 
     res.json({
@@ -2898,39 +2899,26 @@ app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
 
 // Get past events for the logged-in user
 app.get('/api/events/past', authenticateToken, async (req, res) => {
+  console.log('Received request to /api/events/past', {
+    headers: req.headers,
+    user: req.user,
+  });
   const client = await pool.connect();
   try {
     const { userId, role } = req.user;
-    const currentDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    console.log('Fetching past events for user:', userId, 'Role:', role);
 
     const query = `
       SELECT 
-        e.event_id,
-        e.name,
-        e.description,
-        e.terms_and_conditions,
-        e.location,
-        e.startdate,
-        e.enddate,
-        e.time,
-        e.endtime,
-        e.duration,
-        e.deadlinetime,
-        e.deadlinedate,
-        e.type,
-        e.capacity,
-        e.attendees,
-        e.contactnum,
-        e.email,
-        e.coverimage,
-        e.tabs,
-        e.packages,
-        e.status,
-        p.amount as paid_amount
-      FROM events e
-      LEFT JOIN payments p ON e.event_id = p.event_id
-      WHERE e.user_id = $1 AND e.enddate < $2
-      ORDER BY e.enddate DESC
+        event_id, name, description, terms_and_conditions, location,
+        startdate, enddate, time, endtime, duration, deadlinetime,
+        deadlinedate, type, capacity, attendees, contactnum, email,
+        coverimage, tabs, packages, status
+      FROM events
+      WHERE user_id = $1 AND enddate < $2 AND status IN ('Approved', 'pending')
+      ORDER BY enddate DESC
     `;
     const result = await client.query(query, [userId, currentDate]);
 
@@ -2945,46 +2933,22 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
         }
       }
 
-      const parsedTabs = event.tabs
-        ? event.tabs.map(tab => {
-            try {
-              return JSON.parse(tab);
-            } catch (e) {
-              console.warn(`Failed to parse tab: ${tab}`, e);
-              return {};
-            }
-          })
-        : [];
-      const parsedPackages = event.packages
-        ? event.packages.map(pkg => {
-            try {
-              return JSON.parse(pkg);
-            } catch (e) {
-              console.warn(`Failed to parse package: ${pkg}`, e);
-              return {};
-            }
-          })
-        : [];
+      const parsedTabs = event.tabs ? event.tabs.map(tab => {
+        try { return JSON.parse(tab); } catch (e) { console.warn(`Failed to parse tab: ${tab}`, e); return {}; }
+      }) : [];
+      const parsedPackages = event.packages ? event.packages.map(pkg => {
+        try { return JSON.parse(pkg); } catch (e) { console.warn(`Failed to parse package: ${pkg}`, e); return {}; }
+      }) : [];
 
-      return {
-        ...event,
-        coverimage: coverImageUrl,
-        tabs: parsedTabs,
-        packages: parsedPackages,
-        attendees: event.attendees || [], // Ensure attendees is an array
-        paid_amount: event.paid_amount ? Number.parseFloat(event.paid_amount).toFixed(2) : null
-      };
+      return { ...event, coverimage: coverImageUrl, tabs: parsedTabs, packages: parsedPackages, attendees: event.attendees || [] };
     }));
 
-    res.json({
-      message: 'Past events retrieved successfully',
-      events: eventsWithUrls
-    });
+    res.json(eventsWithUrls);
   } catch (error) {
     console.error('Error fetching past events:', error);
     res.status(500).json({
       error: 'Failed to fetch past events',
-      details: error.message
+      details: error.message,
     });
   } finally {
     client.release();
