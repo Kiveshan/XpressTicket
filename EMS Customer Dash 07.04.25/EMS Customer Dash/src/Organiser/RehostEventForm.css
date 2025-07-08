@@ -1,9 +1,328 @@
 /* RehostEventForm.css */
+.container12 {
+  background: white;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Styles */
+.dashboard-header1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: #f8f8f8;
+  border-bottom: 1px solid #ddd;
+}
+
+.dashboard-logo1 {
+  height: 50px;
+  object-fit: contain;
+}
+
+.profile-section {
+  display: flex;
+  align-items: center;
+}
+
+.backbutton22 {
+  background: #dc3545;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.backbutton22:hover {
+  background: #c82333;
+}
+
+/* Back Button Container */
+.back-button-container1 {
+  margin: 20px 0;
+  padding-left: 20px;
+}
+
+.backbutton20 {
+  background: #6c757d;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.backbutton20:hover {
+  background: #5a6268;
+}
+
+/* Title */
+.title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 32px;
+  margin-top: 10px;
+}
+
+/* Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+  padding: 0 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Card Styles */
+.card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #fff;
+  margin: 0;
+  min-height: 340px;
+  cursor: pointer;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.card-image-container {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  position: relative;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.3s ease;
+}
+
+.card-image.image-error {
+  opacity: 0.5;
+}
+
+.image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e9ecef;
+  color: #6c757d;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.card-details p {
+  margin: 2px 0;
+  color: #555;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.status {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.status.rejected {
+  background: #fde8e8;
+  color: #cc0000;
+}
+
+.status.approved {
+  background: #e6f7e6;
+  color: #009933;
+}
+
+.status.pending {
+  background: #fff9db;
+  color: #e6b800;
+}
+
+.status.request-edit {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.view-btn {
+  background: #1dd2af;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s;
+}
+
+.view-btn:hover {
+  background: #17b598;
+}
+
+/* No Events Message */
+.no-events {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #6c757d;
+}
+
+.no-events p {
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.create-event-button {
+  background-color: #007bff;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.create-event-button:hover {
+  background-color: #0056b3;
+}
+
+/* Error States */
+.error-container {
+  text-align: center;
+  padding: 2rem;
+  max-width: 500px;
+  margin: 2rem auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-container h3 {
+  color: #dc3545;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.error-message {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.login-button,
+.retry-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.login-button:hover {
+  background-color: #0056b3;
+}
+
+.retry-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.retry-button:hover {
+  background-color: #218838;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 2rem;
+  text-align: center;
+}
+
+.loading {
+  font-size: 1.2rem;
+  color: #666;
+  margin: 2rem 0;
+}
+
+/* Form Styles */
 .rehost-form {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  max-width: 500px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .form-group {
@@ -18,8 +337,7 @@
   color: #333;
 }
 
-.form-group input,
-.form-group select {
+.form-group input {
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -28,8 +346,7 @@
   box-sizing: border-box;
 }
 
-.form-group input:focus,
-.form-group select:focus {
+.form-group input:focus {
   outline: none;
   border-color: #007bff;
 }
@@ -60,8 +377,31 @@
   text-align: center;
 }
 
-.error-message {
-  color: #dc3545; /* Red for errors */
-  font-size: 1rem;
-  text-align: center;
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+    padding: 0 15px;
+    gap: 24px;
+  }
+
+  .card {
+    min-height: 320px;
+  }
+
+  .card-image-container {
+    height: 160px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .dashboard-logo1 {
+    height: 40px;
+  }
+
+  .rehost-form {
+    padding: 1rem;
+  }
 }
