@@ -30,7 +30,12 @@
 }
 
 /* Button Styles */
-.backbutton20, .backbutton22, .login-button, .retry-button, .create-event-button, .view-btn {
+.backbutton20,
+.backbutton22,
+.login-button,
+.retry-button,
+.create-event-button,
+.view-btn {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 4px;
@@ -41,21 +46,25 @@
   text-align: center;
 }
 
-.backbutton20, .backbutton22 {
+.backbutton20,
+.backbutton22 {
   background-color: #f0f0f0;
   color: #333;
 }
 
-.backbutton20:hover, .backbutton22:hover {
+.backbutton20:hover,
+.backbutton22:hover {
   background-color: #e0e0e0;
 }
 
-.login-button, .create-event-button {
+.login-button,
+.create-event-button {
   background-color: #007bff;
   color: white;
 }
 
-.login-button:hover, .create-event-button:hover {
+.login-button:hover,
+.create-event-button:hover {
   background-color: #0056b3;
 }
 
@@ -407,8 +416,12 @@
 
 /* Loading animation for images */
 @keyframes shimmer {
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
 .card-image.loading {
