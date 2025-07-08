@@ -1252,7 +1252,7 @@ async function generatePresignedUrl(key) {
   }
 }
 
-
+//Leya organizer code
 
 app.get('/api/events', authenticateToken, async (req, res) => {
   const client = await pool.connect();
@@ -1285,8 +1285,9 @@ app.get('/api/events', authenticateToken, async (req, res) => {
 
     let queryParams = [];
     if (role !== 'Admin') {
-      query += ` WHERE e.user_id = $1`;
-      queryParams.push(userId);
+      const currentDate = new Date().toISOString().split('T')[0];
+      query += ` WHERE e.user_id = $1 AND e.startdate >= $2`;
+      queryParams.push(userId, currentDate);
     }
 
     query += ` ORDER BY e.startdate DESC, e.time DESC`;
@@ -2832,53 +2833,63 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
 
 
 // Rehost an event by updating dates and setting status to pending
-app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
-  const client = await pool.connect();
+app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
+  const client = await pool.connect()
   try {
-    const { eventId } = req.params;
-    const { userId, role } = req.user;
-    const { startdate, enddate, resetAttendees = true } = req.body;
+    const { eventId } = req.params
+    const { userId, role } = req.user
+    const { startdate, enddate, resetAttendees = true } = req.body
+
+    console.log("Rehost request received:", { eventId, userId, startdate, enddate })
 
     if (!startdate || !enddate) {
-      return res.status(400).json({ error: 'Start date and end date are required' });
+      return res.status(400).json({ error: "Start date and end date are required" })
     }
 
-    const currentDate = new Date().toISOString().split('T')[0];
+    const currentDate = new Date().toISOString().split("T")[0]
     if (new Date(startdate) < new Date(currentDate)) {
-      return res.status(400).json({ error: 'Start date must be today or in the future' });
-    }
-    if (new Date(enddate) < new Date(startdate)) {
-      return res.status(400).json({ error: 'End date must be on or after the start date' });
+      return res.status(400).json({ error: "Start date must be today or in the future" })
     }
 
+    if (new Date(enddate) < new Date(startdate)) {
+      return res.status(400).json({ error: "End date must be on or after the start date" })
+    }
+
+    // Check if event exists and is eligible for rehosting
     const eventCheck = await client.query(
-      `SELECT event_id, user_id, enddate, name, attendees, status
+      `SELECT event_id, user_id, enddate, name, attendees, status 
        FROM events 
        WHERE event_id = $1 AND (user_id = $2 OR $3 = true) AND enddate < $4 AND status IN ('Approved', 'pending')`,
-      [eventId, userId, role === 'Admin', currentDate]
-    );
+      [eventId, userId, role === "Admin", currentDate],
+    )
 
     if (eventCheck.rows.length === 0) {
       return res.status(404).json({
-        error: 'Event not found, not a past event, not in a rehostable status, or access denied'
-      });
+        error: "Event not found, not a past event, not in a rehostable status, or access denied",
+      })
     }
 
+    // Check for date conflicts with other events
     const conflictCheck = await client.query(
       `SELECT event_id FROM events 
-       WHERE user_id = $1 AND startdate <= $2 AND enddate >= $3 AND event_id != $4`,
-      [userId, enddate, startdate, eventId]
-    );
+       WHERE user_id = $1 AND startdate <= $2 AND enddate >= $3 AND event_id != $4 AND status IN ('Approved', 'pending')`,
+      [userId, enddate, startdate, eventId],
+    )
+
     if (conflictCheck.rows.length > 0) {
-      return res.status(400).json({ error: 'Date conflicts with another event' });
+      return res.status(400).json({ error: "Date conflicts with another event" })
     }
 
-    await client.query('BEGIN');
+    await client.query("BEGIN")
 
-    const validatedAttendees = resetAttendees ? '{}' : (Array.isArray(eventCheck.rows[0].attendees) ? `{${eventCheck.rows[0].attendees.join(',')}}` : '{}');
+    const validatedAttendees = resetAttendees
+      ? "{}"
+      : Array.isArray(eventCheck.rows[0].attendees)
+        ? `{${eventCheck.rows[0].attendees.join(",")}}`
+        : "{}"
 
     const updateQuery = `
-      UPDATE events
+      UPDATE events 
       SET startdate = $1,
           enddate = $2,
           status = 'pending',
@@ -2886,70 +2897,75 @@ app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
           admin_comment = NULL
       WHERE event_id = $4
       RETURNING *;
-    `;
-    const updateValues = [startdate, enddate, validatedAttendees, eventId];
+    `
 
-    const result = await client.query(updateQuery, updateValues);
+    const updateValues = [startdate, enddate, validatedAttendees, eventId]
+    const result = await client.query(updateQuery, updateValues)
 
     if (result.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Event not found after verification' });
+      await client.query("ROLLBACK")
+      return res.status(404).json({ error: "Event not found after verification" })
     }
 
-    await client.query('COMMIT');
+    await client.query("COMMIT")
 
-    const updatedEvent = result.rows[0];
-    let coverImageUrl = '/default-profile-picture.jpg';
+    const updatedEvent = result.rows[0]
+
+    // Generate presigned URL for response
+    let coverImageUrl = "/default-event-image.jpg"
     if (updatedEvent.coverimage) {
-      const coverKey = updatedEvent.coverimage.split('/').slice(3).join('/');
+      const coverKey = updatedEvent.coverimage.split("/").slice(3).join("/")
       try {
-        coverImageUrl = await generatePresignedUrl(coverKey);
+        coverImageUrl = await generatePresignedUrl(coverKey)
       } catch (e) {
-        console.warn('Failed to generate signed URL for cover image:', e);
+        console.warn("Failed to generate signed URL for cover image:", e)
       }
     }
 
     const parsedTabs = updatedEvent.tabs
-      ? updatedEvent.tabs.map(tab => {
-        try {
-          return JSON.parse(tab);
-        } catch (e) {
-          console.warn(`Failed to parse tab: ${tab}`, e);
-          return {};
-        }
-      })
-      : [];
+      ? updatedEvent.tabs.map((tab) => {
+          try {
+            return JSON.parse(tab)
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e)
+            return {}
+          }
+        })
+      : []
+
     const parsedPackages = updatedEvent.packages
-      ? updatedEvent.packages.map(pkg => {
-        try {
-          return JSON.parse(pkg);
-        } catch (e) {
-          console.warn(`Failed to parse package: ${pkg}`, e);
-          return {};
-        }
-      })
-      : [];
+      ? updatedEvent.packages.map((pkg) => {
+          try {
+            return JSON.parse(pkg)
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e)
+            return {}
+          }
+        })
+      : []
+
+    console.log("Event rehosted successfully:", updatedEvent.event_id)
 
     res.json({
-      message: 'Event rehost request submitted successfully, pending admin approval',
+      message: "Event rehost request submitted successfully, pending admin approval",
       event: {
         ...updatedEvent,
         coverimage: coverImageUrl,
         tabs: parsedTabs,
-        packages: parsedPackages
-      }
-    });
+        packages: parsedPackages,
+      },
+    })
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error rehosting event:', error);
+    await client.query("ROLLBACK")
+    console.error("Error rehosting event:", error)
     res.status(500).json({
-      error: 'Failed to rehost event',
-      details: error.message
-    });
+      error: "Failed to rehost event",
+      details: error.message,
+    })
   } finally {
-    client.release();
+    client.release()
   }
-});
+})
 
 
 // Get past events for the logged-in user
@@ -3004,53 +3020,41 @@ app.get('/api/events-past', authenticateToken, async (req, res) => {
   }
 });
 
+//shows single events for user logged in 
 app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
   const client = await pool.connect()
   try {
     const { eventId } = req.params
     const { userId, role } = req.user
 
-    console.log(`Fetching event details for ID: ${eventId}, User: ${userId}`)
-
-    // Allow admin to access any event, regular users only their own events
-    let query = `
+    // Allow access if user owns the event or is admin
+    const query = `
       SELECT 
-        event_id,
-        name,
-        description,
-        terms_and_conditions,
-        location,
-        startdate,
-        enddate,
-        time,
-        endtime,
-        duration,
-        deadlinetime,
-        deadlinedate,
-        type,
-        capacity,
-        attendees,
-        contactnum,
-        email,
-        coverimage,
-        tabs,
-        packages,
-        status,
-        admin_comment,
-        user_id
-      FROM events 
-      WHERE event_id = $1
+        e.event_id,
+        e.name,
+        e.description,
+        e.terms_and_conditions,
+        e.location,
+        e.startdate,
+        e.enddate,
+        e.time,
+        e.endtime,
+        e.duration,
+        e.deadlinetime,
+        e.deadlinedate,
+        e.type,
+        e.capacity,
+        e.attendees,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.status,
+        e.user_id
+      FROM events e
+      WHERE e.event_id = $1 AND (e.user_id = $2 OR $3 = true)
     `
 
-    const queryParams = [eventId]
-
-    // If not admin, restrict to user's own events
-    if (role !== "Admin") {
-      query += ` AND user_id = $2`
-      queryParams.push(userId)
-    }
-
-    const result = await client.query(query, queryParams)
+    const result = await client.query(query, [eventId, userId, role === "Admin"])
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Event not found or access denied" })
@@ -3060,17 +3064,12 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
 
     // Generate presigned URL for cover image
     let coverImageUrl = "/default-event-image.jpg"
-    if (event.coverimage && event.coverimage.trim() !== "") {
+    if (event.coverimage) {
+      const coverKey = event.coverimage.split("/").slice(3).join("/")
       try {
-        const coverKey = event.coverimage.includes("amazonaws.com")
-          ? event.coverimage.split("/").slice(3).join("/")
-          : event.coverimage
-        const presignedUrl = await generatePresignedUrl(coverKey)
-        if (presignedUrl) {
-          coverImageUrl = presignedUrl
-        }
-      } catch (err) {
-        console.error(`Error generating presigned URL for event ${event.event_id}:`, err)
+        coverImageUrl = await generatePresignedUrl(coverKey)
+      } catch (e) {
+        console.warn("Failed to generate signed URL for cover image:", e)
       }
     }
 
@@ -3078,10 +3077,10 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
     const parsedTabs = event.tabs
       ? event.tabs.map((tab) => {
           try {
-            return typeof tab === "string" ? JSON.parse(tab) : tab
+            return JSON.parse(tab)
           } catch (e) {
             console.warn(`Failed to parse tab: ${tab}`, e)
-            return { name: "Tab", content: tab }
+            return {}
           }
         })
       : []
@@ -3089,50 +3088,20 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
     const parsedPackages = event.packages
       ? event.packages.map((pkg) => {
           try {
-            return typeof pkg === "string" ? JSON.parse(pkg) : pkg
+            return JSON.parse(pkg)
           } catch (e) {
             console.warn(`Failed to parse package: ${pkg}`, e)
-            return { details: pkg }
+            return {}
           }
         })
       : []
 
-    // Format the response
-    const formattedEvent = {
-      event_id: event.event_id,
-      name: event.name,
-      description: event.description,
-      terms_and_conditions: event.terms_and_conditions,
-      location: event.location,
-      startdate: event.startdate,
-      enddate: event.enddate,
-      time: event.time,
-      endtime: event.endtime,
-      duration: event.duration,
-      deadlinetime: event.deadlinetime,
-      deadlinedate: event.deadlinedate,
-      type: event.type,
-      capacity: event.capacity,
-      attendees: Array.isArray(event.attendees)
-        ? event.attendees
-        : event.attendees
-          ? event.attendees
-              .replace(/^{|}$/g, "")
-              .split(",")
-              .filter((item) => item.trim())
-          : [],
-      contactnum: event.contactnum,
-      email: event.email,
+    res.json({
+      ...event,
       coverimage: coverImageUrl,
       tabs: parsedTabs,
       packages: parsedPackages,
-      status: event.status,
-      admin_comment: event.admin_comment,
-      user_id: event.user_id,
-    }
-
-    console.log("Returning formatted event:", formattedEvent)
-    res.json(formattedEvent)
+    })
   } catch (error) {
     console.error("Error fetching event details:", error)
     res.status(500).json({
@@ -3143,7 +3112,6 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
     client.release()
   }
 })
-
 
 
 

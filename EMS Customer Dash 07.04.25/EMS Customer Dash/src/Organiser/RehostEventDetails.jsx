@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import "./RehostEventDetails.css"
@@ -20,6 +19,38 @@ const RehostEventDetails = () => {
   const [submitSuccess, setSubmitSuccess] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not specified"
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return "Invalid date"
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        timeZone: "UTC",
+      })
+    } catch (err) {
+      console.error("Date formatting error:", err)
+      return "Invalid date"
+    }
+  }
+
+  const formatTime = (timeString) => {
+    if (!timeString) return "Not specified"
+    try {
+      const timeParts = timeString.split(":")
+      const hours = Number.parseInt(timeParts[0], 10)
+      const minutes = timeParts[1] || "00"
+      const ampm = hours >= 12 ? "PM" : "AM"
+      const displayHours = hours % 12 || 12
+      return `${displayHours}:${minutes} ${ampm}`
+    } catch (err) {
+      console.error("Time formatting error:", err)
+      return timeString
+    }
+  }
+
   useEffect(() => {
     const fetchEventDetails = async () => {
       try {
@@ -33,7 +64,7 @@ const RehostEventDetails = () => {
           return
         }
 
-        console.log("Fetching event with ID:", eventid)
+        console.log("Fetching event details for ID:", eventid)
 
         const response = await fetch(`http://localhost:5000/api/events/${eventid}`, {
           method: "GET",
@@ -45,8 +76,12 @@ const RehostEventDetails = () => {
           credentials: "include",
         })
 
+        console.log("Response status:", response.status)
+
         if (!response.ok) {
           const errorData = await response.json()
+          console.error("API Error:", errorData)
+
           if (response.status === 401 || response.status === 403) {
             sessionStorage.removeItem("token")
             sessionStorage.removeItem("userId")
@@ -58,7 +93,7 @@ const RehostEventDetails = () => {
         }
 
         const data = await response.json()
-        console.log("Fetched event data:", data)
+        console.log("Event data received:", data)
 
         setEvent(data)
 
@@ -85,12 +120,10 @@ const RehostEventDetails = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    console.log(`Input changed: ${name} = ${value}`)
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }))
-    // Clear any previous errors when user starts typing
     if (submitError) setSubmitError(null)
   }
 
@@ -100,8 +133,6 @@ const RehostEventDetails = () => {
     setSubmitSuccess(null)
     setIsSubmitting(true)
 
-    console.log("Form submitted with:", formData)
-
     try {
       const token = sessionStorage.getItem("token")
       if (!token) {
@@ -110,7 +141,6 @@ const RehostEventDetails = () => {
         return
       }
 
-      // Validation
       const currentDate = new Date().toISOString().split("T")[0]
 
       if (!formData.startdate || !formData.enddate) {
@@ -128,6 +158,12 @@ const RehostEventDetails = () => {
         return
       }
 
+      console.log("Submitting rehost request:", {
+        eventId: eventid,
+        startdate: formData.startdate,
+        enddate: formData.enddate,
+      })
+
       const response = await fetch(`http://localhost:5000/api/events/${eventid}/rehost`, {
         method: "PUT",
         headers: {
@@ -142,53 +178,28 @@ const RehostEventDetails = () => {
         }),
       })
 
+      console.log("Rehost response status:", response.status)
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.error("Rehost error:", errorData)
         throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`)
       }
 
       const result = await response.json()
-      console.log("Rehost response:", result)
+      console.log("Rehost success:", result)
 
-      setSubmitSuccess("Event successfully submitted for rehosting. Awaiting admin approval.")
+      setSubmitSuccess("Event rehost request submitted successfully. Awaiting admin approval.")
 
-      // Navigate back after a delay
+      // Redirect after success
       setTimeout(() => {
         nav("/rehost-event")
-      }, 2000)
+      }, 3000)
     } catch (err) {
       console.error("Submit error:", err)
       setSubmitError(err.message || "Failed to submit rehost request.")
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "Not specified"
-    try {
-      return new Date(dateString).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    } catch (err) {
-      return "Invalid date"
-    }
-  }
-
-  const formatTime = (timeString) => {
-    if (!timeString) return "Not specified"
-    try {
-      // Handle time format (HH:MM:SS or HH:MM)
-      const timeParts = timeString.split(":")
-      const hours = Number.parseInt(timeParts[0], 10)
-      const minutes = timeParts[1] || "00"
-      const ampm = hours >= 12 ? "PM" : "AM"
-      const displayHours = hours % 12 || 12
-      return `${displayHours}:${minutes} ${ampm}`
-    } catch (err) {
-      return timeString
     }
   }
 
@@ -307,7 +318,6 @@ const RehostEventDetails = () => {
       <h2 className="title">Rehost Event: {event.name || "Unnamed Event"}</h2>
 
       <div className="main-content">
-        {/* Event Details Card */}
         <div className="event-details-card">
           <div className="card-image-container">
             <img
@@ -365,10 +375,8 @@ const RehostEventDetails = () => {
           </div>
         </div>
 
-        {/* Rehost Form Card */}
         <div className="rehost-form-card">
           <h3 className="form-title">Select New Dates</h3>
-
           <form onSubmit={handleSubmit} className="rehost-form">
             <div className="form-row">
               <div className="form-group">
@@ -385,7 +393,6 @@ const RehostEventDetails = () => {
                   className="date-input"
                 />
               </div>
-
               <div className="form-group">
                 <label htmlFor="enddate">New End Date:</label>
                 <input
