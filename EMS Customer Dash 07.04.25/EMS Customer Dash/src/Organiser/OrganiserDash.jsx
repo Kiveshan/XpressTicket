@@ -1,40 +1,38 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+"use client"
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 
 const OrganiserDash = () => {
   const nav = useNavigate()
   const [analyticsData, setAnalyticsData] = useState({
-    eventStatus: [],
     ticketsSold: [],
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const cards = [
-    { label: 'Host', image: '/wedding-wedding-day-marriage-marry-161018.jpeg', path: '/event-form' },
-    { label: 'Requests', image: '/pexels-photo-7163361.jpeg', path: '/requestcard' },
-    { label: 'Analytics', image: '/pexels-photo-185576.jpeg', path: '/analytics' },
-    { label: 'Payments', image: '/Customer2.jpg', path: '/ticketspaymentlist' },
+    { label: "Host", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-form" },
+    { label: "Requests", image: "/pexels-photo-7163361.jpeg", path: "/requestcard" },
+    { label: "Analytics", image: "/pexels-photo-185576.jpeg", path: "/analytics" },
+    { label: "Payments", image: "/Customer2.jpg", path: "/ticketspaymentlist" },
   ]
 
   // Colors for charts
-  const COLORS = ['#FF9800', '#2196F3', '#4CAF50', '#F44336', '#9C27B0', '#FFC107']
+  const COLORS = ["#FF9800", "#2196F3", "#4CAF50", "#F44336", "#9C27B0", "#FFC107"]
 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       try {
-        const token = sessionStorage.getItem('token')
+        const token = sessionStorage.getItem("token")
         if (!token) {
-          setError('No authentication token found. Please log in.')
-          nav('/')
+          setError("No authentication token found. Please log in.")
+          nav("/")
           return
         }
 
         setLoading(true)
-        const response = await fetch('http://localhost:5000/api/organiser/analytics', {
+        const response = await fetch("http://localhost:5000/api/organiser/analytics", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -45,11 +43,11 @@ const OrganiserDash = () => {
         }
 
         const data = await response.json()
-        console.log('Fetched analytics data:', data) // Debug log
+        console.log("Fetched analytics data:", data) // Debug log
         setAnalyticsData(data)
         setLoading(false)
       } catch (err) {
-        console.error('Error fetching analytics data:', err)
+        console.error("Error fetching analytics data:", err)
         setError(err.message)
         setLoading(false)
       }
@@ -75,34 +73,6 @@ const OrganiserDash = () => {
     return null
   }
 
-  const renderEventStatusChart = () => {
-    if (!analyticsData.eventStatus || !analyticsData.eventStatus.length) {
-      return (
-        <div className="chart-container-dash">
-          <h3 className="chart-title-dash">Event Status Analysis</h3>
-          <div>No event status data available</div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="chart-container-dash">
-        <h3 className="chart-title-dash">Event Status Analysis</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={analyticsData.eventStatus} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Bar dataKey="approved" name="Approved" fill="#4CAF50" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="rejected" name="Rejected" fill="#F44336" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="pending" name="Pending" fill="#FFC107" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    )
-  }
-
   const renderTicketsSoldChart = () => {
     if (!analyticsData.ticketsSold || !analyticsData.ticketsSold.length) {
       return (
@@ -116,7 +86,7 @@ const OrganiserDash = () => {
     return (
       <div className="chart-container-dash">
         <h3 className="chart-title-dash">Tickets Sold Analysis</h3>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
               data={analyticsData.ticketsSold}
@@ -124,7 +94,7 @@ const OrganiserDash = () => {
               nameKey="event"
               cx="50%"
               cy="50%"
-              outerRadius={80}
+              outerRadius={100}
               fill="#FF9800"
               label
             >
@@ -145,45 +115,43 @@ const OrganiserDash = () => {
       <header className="dashboard-header1">
         <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
         <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>
+          <button className="backbutton22" onClick={() => nav("/")}>
             LogOut
           </button>
         </div>
       </header>
 
       <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/mainmenu')}>
+        <button className="backbutton20" onClick={() => nav("/mainmenu")}>
           Back
         </button>
       </div>
 
-      <main className="dashboard-main-split">
-        {/* Left side - Analytics Charts */}
-        <div className="analytics-section">
-          <h2 className="analytics-header">Dashboard Analytics</h2>
+      {/* Main Page Title */}
+      <div className="page-title-container">
+        <h1 className="page-title">Organizer Dashboard</h1>
+      </div>
+
+      <main className="dashboard-main-vertical">
+        {/* Tickets Sold Chart Section */}
+        <div className="chart-section-full">
           {loading ? (
             <div className="loading-container">Loading analytics...</div>
           ) : error ? (
             <div className="error-container">Error: {error}</div>
           ) : (
-            <div className="charts-grid">
-              {renderEventStatusChart()}
-              {renderTicketsSoldChart()}
-            </div>
+            renderTicketsSoldChart()
           )}
         </div>
 
-        {/* Right side - Navigation Cards */}
-        <div className="cards-section">
-          <h2 className="cards-header">Quick Actions</h2>
-          <div className="card-container-split">
-            {cards.map((card, index) => (
-              <div className="card1" key={index} onClick={() => nav(card.path)} style={{ cursor: 'pointer' }}>
-                <img src={card.image || '/placeholder.svg'} alt={card.label} />
-                <div className="label">{card.label}</div>
-              </div>
-            ))}
-          </div>
+        {/* Action Cards Section */}
+        <div className="card-container-vertical">
+          {cards.map((card, index) => (
+            <div className="card1" key={index} onClick={() => nav(card.path)} style={{ cursor: "pointer" }}>
+              <img src={card.image || "/placeholder.svg"} alt={card.label} />
+              <div className="label">{card.label}</div>
+            </div>
+          ))}
         </div>
       </main>
     </div>
