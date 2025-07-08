@@ -37,6 +37,7 @@ import TicketsPaymentList from '../Organiser/TicketsPaymentList';
 import Analytics from "../Organiser/Analytics";
 import TicketPayment from "../Organiser/TicketPayment";
 import RehostEventForm from "../Organiser/RehostEventForm";
+import RehostEventDetails from "../Organiser/RehostEventDetails";
 
 // Admin
 import AdminDash from "../Admin/AdminDash";
@@ -97,6 +98,7 @@ function App() {
           <Route path="/ticketspayment/:purchaseId" element={<TicketPayment />} />
           <Route path="/ticketspayment/:purchaseId" element={<TicketPayment />} />
           <Route path="/rehost-event" element={<RehostEventForm />} /> 
+          <Route path="/view-past-event" element={<RehostEventDetails />} /> 
           
 
 

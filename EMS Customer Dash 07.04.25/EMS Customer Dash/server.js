@@ -50,7 +50,7 @@ const pool = new Pool({
   host: 'localhost',
   database: 'ems2.0',
   password: '123456',
-  port: 5433,
+  port: 5432,
 })
 
 // Test database connection
@@ -2898,8 +2898,8 @@ app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
 
 
 // Get past events for the logged-in user
-app.get('/api/events/past', authenticateToken, async (req, res) => {
-  console.log('Received request to /api/events/past', {
+app.get('/api/events-past', authenticateToken, async (req, res) => {
+  console.log('Received request to /api/events-past', {
     headers: req.headers,
     user: req.user,
   });
@@ -2907,9 +2907,7 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
   try {
     const { userId, role } = req.user;
     const currentDate = new Date().toISOString().split('T')[0];
-
     console.log('Fetching past events for user:', userId, 'Role:', role);
-
     const query = `
       SELECT 
         event_id, name, description, terms_and_conditions, location,
@@ -2921,7 +2919,6 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
       ORDER BY enddate DESC
     `;
     const result = await client.query(query, [userId, currentDate]);
-
     const eventsWithUrls = await Promise.all(result.rows.map(async (event) => {
       let coverImageUrl = '/default-profile-picture.jpg';
       if (event.coverimage) {
@@ -2932,17 +2929,14 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
           console.warn('Failed to generate signed URL for cover image:', e);
         }
       }
-
       const parsedTabs = event.tabs ? event.tabs.map(tab => {
         try { return JSON.parse(tab); } catch (e) { console.warn(`Failed to parse tab: ${tab}`, e); return {}; }
       }) : [];
       const parsedPackages = event.packages ? event.packages.map(pkg => {
         try { return JSON.parse(pkg); } catch (e) { console.warn(`Failed to parse package: ${pkg}`, e); return {}; }
       }) : [];
-
       return { ...event, coverimage: coverImageUrl, tabs: parsedTabs, packages: parsedPackages, attendees: event.attendees || [] };
     }));
-
     res.json(eventsWithUrls);
   } catch (error) {
     console.error('Error fetching past events:', error);
