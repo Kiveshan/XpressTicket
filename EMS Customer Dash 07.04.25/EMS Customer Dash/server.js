@@ -1478,8 +1478,6 @@ app.post('/api/events', authenticateToken, upload.fields([
 
 
 //Get all the events for the logged in user 
-// Get all events for the logged-in user
-// Get all
 
 
 
@@ -2772,6 +2770,237 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
     client.release();
   }
 });
+
+
+
+
+//Rehost code 
+
+// Rehost an event by updating dates and setting status to pending
+app.put('/api/events/:eventId/rehost', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const { userId, role } = req.user;
+    const { startdate, enddate, resetAttendees = true } = req.body;
+
+    // Validate required fields
+    if (!startdate || !enddate) {
+      return res.status(400).json({ error: 'Start date and end date are required' });
+    }
+
+    // Validate date logic
+    const currentDate = new Date().toISOString().split('T')[0];
+    if (new Date(startdate) < new Date(currentDate)) {
+      return res.status(400).json({ error: 'Start date must be today or in the future' });
+    }
+    if (new Date(enddate) < new Date(startdate)) {
+      return res.status(400).json({ error: 'End date must be on or after the start date' });
+    }
+
+    // Check if the event exists and is a past event, and verify user ownership
+    const eventCheck = await client.query(
+      `SELECT event_id, user_id, enddate, name
+       FROM events 
+       WHERE event_id = $1 AND (user_id = $2 OR $3 = true) AND enddate < $4`,
+      [eventId, userId, role === 'Admin', currentDate]
+    );
+
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Event not found, not a past event, or access denied'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // Update event with new dates, status, and optionally reset attendees
+    const updateQuery = `
+      UPDATE events
+      SET startdate = $1,
+          enddate = $2,
+          status = 'pending',
+          attendees = $3,
+          admin_comment = NULL
+      WHERE event_id = $4
+      RETURNING *;
+    `;
+    const updateValues = [
+      startdate,
+      enddate,
+      resetAttendees ? '{}' : eventCheck.rows[0].attendees,
+      eventId
+    ];
+
+    const result = await client.query(updateQuery, updateValues);
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Event not found after verification' });
+    }
+
+    await client.query('COMMIT');
+
+    const updatedEvent = result.rows[0];
+    let coverImageUrl = '/default-profile-picture.jpg';
+    if (updatedEvent.coverimage) {
+      const coverKey = updatedEvent.coverimage.split('/').slice(3).join('/');
+      try {
+        coverImageUrl = await generatePresignedUrl(coverKey);
+      } catch (e) {
+        console.warn('Failed to generate signed URL for cover image:', e);
+      }
+    }
+
+    // Parse tabs and packages for response
+    const parsedTabs = updatedEvent.tabs
+      ? updatedEvent.tabs.map(tab => {
+          try {
+            return JSON.parse(tab);
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e);
+            return {};
+          }
+        })
+      : [];
+    const parsedPackages = updatedEvent.packages
+      ? updatedEvent.packages.map(pkg => {
+          try {
+            return JSON.parse(pkg);
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e);
+            return {};
+          }
+        })
+      : [];
+
+    res.json({
+      message: 'Event rehost request submitted successfully, pending admin approval',
+      event: {
+        ...updatedEvent,
+        coverimage: coverImageUrl,
+        tabs: parsedTabs,
+        packages: parsedPackages
+      }
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error rehosting event:', error);
+    res.status(500).json({
+      error: 'Failed to rehost event',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+
+// Get past events for the logged-in user
+app.get('/api/events/past', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { userId, role } = req.user;
+    const currentDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+
+    const query = `
+      SELECT 
+        e.event_id,
+        e.name,
+        e.description,
+        e.terms_and_conditions,
+        e.location,
+        e.startdate,
+        e.enddate,
+        e.time,
+        e.endtime,
+        e.duration,
+        e.deadlinetime,
+        e.deadlinedate,
+        e.type,
+        e.capacity,
+        e.attendees,
+        e.contactnum,
+        e.email,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.status,
+        p.amount as paid_amount
+      FROM events e
+      LEFT JOIN payments p ON e.event_id = p.event_id
+      WHERE e.user_id = $1 AND e.enddate < $2
+      ORDER BY e.enddate DESC
+    `;
+    const result = await client.query(query, [userId, currentDate]);
+
+    const eventsWithUrls = await Promise.all(result.rows.map(async (event) => {
+      let coverImageUrl = '/default-profile-picture.jpg';
+      if (event.coverimage) {
+        const coverKey = event.coverimage.split('/').slice(3).join('/');
+        try {
+          coverImageUrl = await generatePresignedUrl(coverKey);
+        } catch (e) {
+          console.warn('Failed to generate signed URL for cover image:', e);
+        }
+      }
+
+      const parsedTabs = event.tabs
+        ? event.tabs.map(tab => {
+            try {
+              return JSON.parse(tab);
+            } catch (e) {
+              console.warn(`Failed to parse tab: ${tab}`, e);
+              return {};
+            }
+          })
+        : [];
+      const parsedPackages = event.packages
+        ? event.packages.map(pkg => {
+            try {
+              return JSON.parse(pkg);
+            } catch (e) {
+              console.warn(`Failed to parse package: ${pkg}`, e);
+              return {};
+            }
+          })
+        : [];
+
+      return {
+        ...event,
+        coverimage: coverImageUrl,
+        tabs: parsedTabs,
+        packages: parsedPackages,
+        attendees: event.attendees || [], // Ensure attendees is an array
+        paid_amount: event.paid_amount ? Number.parseFloat(event.paid_amount).toFixed(2) : null
+      };
+    }));
+
+    res.json({
+      message: 'Past events retrieved successfully',
+      events: eventsWithUrls
+    });
+  } catch (error) {
+    console.error('Error fetching past events:', error);
+    res.status(500).json({
+      error: 'Failed to fetch past events',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
 
 
 // Start the server

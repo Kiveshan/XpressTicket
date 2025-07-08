@@ -13,6 +13,7 @@ const OrganiserDash = () => {
 
   const cards = [
     { label: "Host", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-form" },
+    { label: "Rehost Event", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/rehost-event" },
     { label: "Requests", image: "/pexels-photo-7163361.jpeg", path: "/requestcard" },
     { label: "Analytics", image: "/pexels-photo-185576.jpeg", path: "/analytics" },
     { label: "Payments", image: "/Customer2.jpg", path: "/ticketspaymentlist" },
