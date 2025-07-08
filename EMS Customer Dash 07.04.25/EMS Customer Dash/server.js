@@ -2671,13 +2671,44 @@ app.put('/api/organiser/ticket-purchases/:purchaseId/status', authenticateToken,
   }
 });
 
+
+
 //Analytics
 app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
     const { userId } = req.user;
 
-    // Query for Tickets Sold
+    // Query for Attendance
+    const attendanceQuery = `
+      SELECT 
+        e.event_id,
+        e.name AS event,
+        COALESCE(SUM(tp.number_of_tickets), 0) AS attendance,
+        e.capacity,
+        TO_CHAR(e.startdate, 'Month') AS month,
+        TO_CHAR(e.startdate, 'YYYY') AS year
+      FROM events e
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.status = 'Approved'
+      WHERE e.user_id = $1
+      GROUP BY e.event_id, e.name, e.capacity, e.startdate
+      ORDER BY e.startdate DESC;
+    `;
+
+    // Query for Event Status
+    const eventStatusQuery = `
+      SELECT 
+        e.event_id,
+        e.name AS event,
+        e.status,
+        TO_CHAR(e.startdate, 'Month') AS month,
+        TO_CHAR(e.startdate, 'YYYY') AS year
+      FROM events e
+      WHERE e.user_id = $1
+      ORDER BY e.startdate DESC;
+    `;
+
+    // Query for Tickets Sold per Event
     const ticketsSoldQuery = `
       SELECT 
         e.event_id,
@@ -2689,42 +2720,44 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
       LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.request_status = 'Approved'
       WHERE e.user_id = $1
       GROUP BY e.event_id, e.name, e.startdate
-      ORDER BY e.startdate DESC
+      ORDER BY e.startdate DESC;
     `;
 
-    // Query for Event Status
-    const eventStatusQuery = `
-      SELECT 
-        TO_CHAR(startdate, 'Month') AS month,
-        TO_CHAR(startdate, 'YYYY') AS year,
-        COUNT(*) FILTER (WHERE status = 'Approved') AS approved,
-        COUNT(*) FILTER (WHERE status = 'Rejected') AS rejected,
-        COUNT(*) FILTER (WHERE status = 'pending') AS pending
-      FROM events
-      WHERE user_id = $1
-      GROUP BY TO_CHAR(startdate, 'Month'), TO_CHAR(startdate, 'YYYY')
-      ORDER BY year DESC, month
-    `;
-
-    const [ticketsSoldResult, eventStatusResult] = await Promise.all([
-      client.query(ticketsSoldQuery, [userId]),
+    const [attendanceResult, eventStatusResult, ticketsSoldResult] = await Promise.all([
+      client.query(attendanceQuery, [userId]),
       client.query(eventStatusQuery, [userId]),
+      client.query(ticketsSoldQuery, [userId]),
     ]);
 
     // Format data for frontend
     const analyticsData = {
+      attendance: attendanceResult.rows.map(row => ({
+        event: row.event,
+        attendance: parseInt(row.attendance, 10) || 0,
+        capacity: parseInt(row.capacity, 10) || 0,
+        month: row.month.trim(),
+        year: row.year,
+      })),
+      eventStatus: eventStatusResult.rows.reduce((acc, row) => {
+        const existing = acc.find(item => item.month === row.month.trim() && item.year === row.year);
+        if (existing) {
+          existing[row.status.toLowerCase()] = (existing[row.status.toLowerCase()] || 0) + 1;
+        } else {
+          acc.push({
+            month: row.month.trim(),
+            year: row.year,
+            approved: row.status === 'Approved' ? 1 : 0,
+            rejected: row.status === 'Rejected' ? 1 : 0,
+            pending: row.status === 'pending' ? 1 : 0,
+          });
+        }
+        return acc;
+      }, []),
       ticketsSold: ticketsSoldResult.rows.map(row => ({
         event: row.event,
         ticketsSold: parseInt(row.tickets_sold, 10) || 0,
         month: row.month.trim(),
         year: row.year,
-      })),
-      eventStatus: eventStatusResult.rows.map(row => ({
-        month: row.month.trim(),
-        year: row.year,
-        approved: parseInt(row.approved, 10) || 0,
-        rejected: parseInt(row.rejected, 10) || 0,
-        pending: parseInt(row.pending, 10) || 0,
       })),
     };
 
@@ -2739,7 +2772,6 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
     client.release();
   }
 });
-//----------------payments org end
 
 
 // Start the server
