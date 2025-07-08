@@ -1,24 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { ClipLoader } from 'react-spinners';
 import './RehostEventForm.css';
 
-function RehostEventForm() {
+const RehostEventForm = () => {
   const navigate = useNavigate();
   const [pastEvents, setPastEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [formData, setFormData] = useState({
-    startdate: '',
-    enddate: '',
-    resetAttendees: true,
-  });
-  const [formErrors, setFormErrors] = useState({ startdate: '', enddate: '' });
-  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -76,15 +66,39 @@ function RehostEventForm() {
           return;
         }
 
-        const response = await fetch('/api/events/past', {
+        const apiUrl = 'http://localhost:5000/api/events-past'; // Fixed typo: changed 'events-past' to 'events/past'
+        console.log('Making request to:', apiUrl);
+        console.log('Request headers:', {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token.substring(0, 10)}...`,
+        });
+        const response = await fetch(apiUrl, {
+          method: 'GET',
           headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
           credentials: 'include',
         });
 
+        console.log('Response status:', response.status, response.statusText);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-          const errorData = await response.json();
+          let errorData = {};
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            console.warn('Failed to parse error response:', e);
+          }
+          console.error('Server responded with error:', {
+            status: response.status,
+            statusText: response.statusText,
+            url: response.url,
+            error: errorData,
+          });
           if (response.status === 401 || response.status === 403) {
             sessionStorage.removeItem('token');
             sessionStorage.removeItem('userId');
@@ -92,27 +106,35 @@ function RehostEventForm() {
             navigate('/login');
             return;
           }
-          throw new Error(errorData.error || `Server error: ${response.status}`);
+          throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`);
         }
 
-        if (!isMounted) return;
+        let data = [];
+        try {
+          data = await response.json();
+        } catch (e) {
+          console.error('Failed to parse response JSON:', e);
+          data = [];
+        }
+        console.log('Fetched past events:', data);
 
-        const data = await response.json();
-        const eventsWithFormattedData = data.map((event) => ({
+        const eventsData = Array.isArray(data) ? data : [];
+
+        const eventsWithStatus = eventsData.map((event) => ({
           id: event.event_id ? String(event.event_id) : '',
+          eventid: event.event_id ? String(event.event_id) : '',
           event_name: event.name || 'Unnamed Event',
           location: event.location || 'Location not specified',
-          start_date: event.startdate || 'Date not specified',
-          end_date: event.enddate || 'Date not specified',
+          date: event.startdate || 'Date not specified',
           time: event.time || 'Time not specified',
+          price: 'N/A',
           status: (event.status || 'Pending').toLowerCase(),
           file_url: event.coverimage || '/default-event-image.jpg',
-          description: event.description || 'No description available',
         }));
 
         if (isMounted) {
-          setPastEvents(eventsWithFormattedData);
-          setFilteredEvents(eventsWithFormattedData);
+          setPastEvents(eventsWithStatus);
+          setFilteredEvents(eventsWithStatus);
           setError(null);
         }
       } catch (err) {
@@ -142,112 +164,12 @@ function RehostEventForm() {
     if (statusFilter === 'all') {
       setFilteredEvents(pastEvents);
     } else {
-      setFilteredEvents(pastEvents.filter(event => event.status === statusFilter));
+      setFilteredEvents(pastEvents.filter((event) => event.status === statusFilter));
     }
   }, [statusFilter, pastEvents]);
 
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
-
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
-  };
-
-  const handleEventSelect = (event) => {
-    setSelectedEvent(event);
-    setFormData({
-      startdate: '',
-      enddate: '',
-      resetAttendees: true,
-    });
-    setFormErrors({ startdate: '', enddate: '' });
-    setError(null);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setFormErrors({ startdate: '', enddate: '' });
-
-    if (!selectedEvent || !selectedEvent.id) {
-      setError('Please select an event to rehost');
-      return;
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-    if (formData.startdate < today) {
-      setFormErrors((prev) => ({ ...prev, startdate: 'Start date must be today or in the future' }));
-      return;
-    }
-    if (formData.enddate < formData.startdate) {
-      setFormErrors((prev) => ({ ...prev, enddate: 'End date must be on or after the start date' }));
-      return;
-    }
-
-    try {
-      const token = sessionStorage.getItem('token');
-      const response = await fetch(`/api/events/${selectedEvent.id}/rehost`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
-      }
-
-      const data = await response.json();
-      setSuccessMessage(data.message || 'Event rehost request submitted successfully');
-      setFormData({ startdate: '', enddate: '', resetAttendees: true });
-      setSelectedEvent(null);
-
-      // Refresh past events
-      const pastEventsResponse = await fetch('/api/events/past', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (pastEventsResponse.ok) {
-        const newData = await pastEventsResponse.json();
-        const updatedEvents = newData.map((event) => ({
-          id: event.event_id ? String(event.event_id) : '',
-          event_name: event.name || 'Unnamed Event',
-          location: event.location || 'Location not specified',
-          start_date: event.startdate || 'Date not specified',
-          end_date: event.enddate || 'Date not specified',
-          time: event.time || 'Time not specified',
-          status: (event.status || 'Pending').toLowerCase(),
-          file_url: event.coverimage || '/default-event-image.jpg',
-          description: event.description || 'No description available',
-        }));
-        setPastEvents(updatedEvents);
-        setFilteredEvents(statusFilter === 'all' ? updatedEvents : updatedEvents.filter(event => event.status === statusFilter));
-      }
-    } catch (err) {
-      console.error('Rehost error:', err);
-      setError(err.message || 'Error rehosting event. Please try again.');
-    }
-  };
-
-  const formatDate = (date) => {
-    try {
-      return format(new Date(date), 'dd/MM/yyyy');
-    } catch {
-      return 'Invalid Date';
-    }
-  };
-
-  const handleImageError = (e) => {
-    if (e.target.src !== '/default-event-image.jpg') {
-      console.warn('Image failed to load:', e.target.src);
-      e.target.src = '/default-event-image.jpg';
-    }
   };
 
   if (loading) {
@@ -279,7 +201,6 @@ function RehostEventForm() {
           </button>
         </div>
         <div className="loading-container">
-          <ClipLoader color="#123abc" loading={loading} size={50} />
           <p className="loading">Loading past events...</p>
         </div>
       </div>
@@ -288,6 +209,7 @@ function RehostEventForm() {
 
   if (error) {
     const isAuthError = error.includes('log in') || error.includes('expired');
+
     return (
       <div className="container12">
         <header className="dashboard-header1">
@@ -315,7 +237,7 @@ function RehostEventForm() {
         <div className="back-button-container1">
           <button
             className="backbutton20"
-            onClick={() => isAuthError ? navigate('/login') : navigate('/requestcard')}
+            onClick={() => (isAuthError ? navigate('/login') : navigate('/requestcard'))}
           >
             {isAuthError ? 'Go to Login' : 'Back'}
           </button>
@@ -381,7 +303,7 @@ function RehostEventForm() {
           Back
         </button>
       </div>
-      <h2 className="title">Rehost Past Events</h2>
+      <h2 className="title">Past Events</h2>
       <div className="filter-container">
         <label htmlFor="status-filter" className="filter-label">Filter by Status:</label>
         <select
@@ -395,14 +317,9 @@ function RehostEventForm() {
           <option value="approved">Approved</option>
         </select>
       </div>
-      {successMessage && (
-        <div className="success-message">
-          <p>{successMessage}</p>
-        </div>
-      )}
       {filteredEvents.length === 0 ? (
         <div className="no-events">
-          <p>No past events found{statusFilter !== 'all' ? ` with status "${statusFilter}"` : ''}.</p>
+          <p>No past events found{statusFilter !== 'all' ? ` with status "${statusFilter}"` : ''}. Create a new event to get started!</p>
           <button
             className="create-event-button"
             onClick={() => navigate('/create-event')}
@@ -411,104 +328,51 @@ function RehostEventForm() {
           </button>
         </div>
       ) : (
-        <>
-          <div className="card-grid">
-            {filteredEvents.map((event) => (
-              <div
-                key={event.id}
-                className={`card ${selectedEvent && selectedEvent.id === event.id ? 'selected' : ''}`}
-                onClick={() => handleEventSelect(event)}
-              >
-                <div className="card-image-container">
-                  <img
-                    src={event.file_url}
-                    alt={event.event_name}
-                    className="card-image"
-                    onError={handleImageError}
-                  />
-                  {!event.file_url && (
-                    <div className="image-placeholder">
-                      <span>No Image</span>
-                    </div>
-                  )}
-                </div>
-                <h3 className="card-title">{event.event_name}</h3>
-                <div className="card-details">
-                  <p>
-                    📍 {event.location} <br />
-                    📅 Start: {formatDate(event.start_date)} <br />
-                    📅 End: {formatDate(event.end_date)} <br />
-                    ⏰ {event.time}
-                  </p>
-                </div>
-                <div className="card-footer">
-                  <span className={`status ${event.status.replace(' ', '-').toLowerCase()}`}>
-                    Status: {event.status}
-                  </span>
-                </div>
+        <div className="card-grid">
+          {filteredEvents.map((event) => (
+            <div key={event.id} className="card">
+              <div className="card-image-container">
+                <img
+                  src={event.file_url}
+                  alt={event.event_name}
+                  className="card-image"
+                  onError={(e) => {
+                    if (e.target.src !== '/default-event-image.jpg') {
+                      console.warn(`Failed to load image for event ${event.id}:`, event.file_url);
+                      e.target.src = '/default-event-image.jpg';
+                      e.target.classList.add('image-error');
+                    }
+                  }}
+                />
+                {!event.file_url && (
+                  <div className="image-placeholder">
+                    <span>No Image</span>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-          {selectedEvent && (
-            <div className="rehost-form">
-              <h2>Rehost Event: {selectedEvent.event_name}</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label>Start Date:</label>
-                  <input
-                    type="date"
-                    value={formData.startdate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, startdate: e.target.value })
-                    }
-                    required
-                    min={new Date().toISOString().split('T')[0]}
-                    className={formErrors.startdate ? 'error-input' : ''}
-                  />
-                  {formErrors.startdate && (
-                    <p className="error-message">{formErrors.startdate}</p>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label>End Date:</label>
-                  <input
-                    type="date"
-                    value={formData.enddate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, enddate: e.target.value })
-                    }
-                    required
-                    min={formData.startdate || new Date().toISOString().split('T')[0]}
-                    className={formErrors.enddate ? 'error-input' : ''}
-                  />
-                  {formErrors.enddate && (
-                    <p className="error-message">{formErrors.enddate}</p>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={formData.resetAttendees}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          resetAttendees: e.target.checked,
-                        })
-                      }
-                      title="Checking this will clear the attendee list for the rehosted event"
-                    />
-                    Reset Attendees
-                  </label>
-                </div>
-                <button type="submit">Submit Rehost Request</button>
-              </form>
+              <h3 className="card-title">{event.event_name}</h3>
+              <div className="card-details">
+                <p>
+                  📍 {event.location} 📅 {event.date} 💰 {event.price} ⏰ {event.time}
+                </p>
+              </div>
+              <div className="card-footer">
+                <span className={`status ${event.status.replace(' ', '-').toLowerCase()}`}>
+                  Status: {event.status}
+                </span>
+                <button
+                  className="view-btn"
+                  onClick={() => navigate('/view-past-event', { state: { eventid: event.id } })}
+                >
+                  View
+                </button>
+              </div>
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
     </div>
   );
-}
+};
 
 export default RehostEventForm;
