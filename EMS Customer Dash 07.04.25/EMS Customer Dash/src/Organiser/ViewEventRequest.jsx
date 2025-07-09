@@ -82,24 +82,24 @@ const ViewEventRequest = () => {
         console.log("Fetched event data:", data)
 
         // Map backend fields to frontend state
-       setEventData({
-  event_name: data.name || "",
-  location: data.location || "",
-  start_date: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
-  end_date: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
-  start_time: data.start_time || "",
-  end_time: data.end_time || "",
-  deadline_date: data.registration_deadline_date
-    ? new Date(data.registration_deadline_date).toISOString().split("T")[0]
-    : "",
-  deadline_time: data.registration_deadline_time || "",
-  event_type: data.event_type || "",
-  capacity: data.capacity || "",
-  event_details: data.description || "",
-  terms_and_conditions: data.terms_and_conditions || "",
-  duration: data.duration || "",
-  file_url: data.coverimage || "/default-profile-picture.jpg",
-});
+        setEventData({
+          event_name: data.name || "",
+          location: data.location || "",
+          start_date: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
+          end_date: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
+          start_time: data.start_time || "",
+          end_time: data.end_time || "",
+          deadline_date: data.registration_deadline_date
+            ? new Date(data.registration_deadline_date).toISOString().split("T")[0]
+            : "",
+          deadline_time: data.registration_deadline_time || "",
+          event_type: data.event_type || "",
+          capacity: data.capacity || "",
+          event_details: data.description || "",
+          terms_and_conditions: data.terms_and_conditions || "",
+          duration: data.duration || "",
+          file_url: data.coverimage || "/default-profile-picture.jpg",
+        })
 
         setClientTypes(data.attendees || [])
         setTabs(data.tabs || [])
@@ -169,7 +169,10 @@ const ViewEventRequest = () => {
             >
               Packages & Tabs
             </button>
-            <button className={`view-nav-button ${currentSection === "terms" ? "active" : ""}`} onClick={showTerms}>
+            <button
+              className={`view-nav-button ${currentSection === "terms" ? "active" : ""}`}
+              onClick={showTerms}
+            >
               Terms & Conditions
             </button>
           </div>
@@ -366,9 +369,22 @@ const ViewEventRequest = () => {
                                 <div className="view-package-item-label">Duration</div>
                                 <div className="view-package-item-value">{pkg.duration}</div>
                               </div>
-                              <div className="view-package-item">
+                              <div className="view-package-item view-package-dates">
                                 <div className="view-package-item-label">Date Choices</div>
-                                <div className="view-package-item-value">{pkg.dateChoices}</div>
+                                <div className="view-package-date-range">
+                                  <div className="view-package-date-item">
+                                    <span className="view-package-date-label">Start Date:</span>
+                                    <span className="view-package-date-value">
+                                      {pkg.startDate ? new Date(pkg.startDate).toISOString().split("T")[0] : "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="view-package-date-item">
+                                    <span className="view-package-date-label">End Date:</span>
+                                    <span className="view-package-date-value">
+                                      {pkg.endDate ? new Date(pkg.endDate).toISOString().split("T")[0] : "N/A"}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                               <div className="view-package-item">
                                 <div className="view-package-item-label">Pricing</div>

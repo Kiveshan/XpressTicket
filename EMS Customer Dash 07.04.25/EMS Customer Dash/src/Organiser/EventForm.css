@@ -599,6 +599,7 @@ body {
   overflow: hidden;
 }
 
+
 .tabs-section,
 .packages-section {
   display: flex;
@@ -897,4 +898,25 @@ body {
 .event-info-section::-webkit-scrollbar-thumb:hover,
 .client-types-list::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Ensure date inputs match form-input styling */
+.package-grid input[type="date"] {
+  padding: 0.375rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  height: 32px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.package-grid input[type="date"]:focus {
+  outline: none;
+  border-color: #17c4a3;
+  box-shadow: 0 0 0 3px rgba(23, 196, 163, 0.1);
+}
+
+.package-grid input[type="date"].error {
+  border-color: #ef4444;
 }

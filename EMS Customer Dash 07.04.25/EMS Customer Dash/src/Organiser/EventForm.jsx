@@ -62,18 +62,19 @@ export default function EventForm() {
   const [selectedClientTypes, setSelectedClientTypes] = useState([])
   const [clientTypeSelection, setClientTypeSelection] = useState("")
   const [customClientType, setCustomClientType] = useState("")
-  const [packages, setPackages] = useState([
-    {
-      selectType: "Full Package",
-      packageType: "",
-      location: "",
-      duration: "",
-      dateChoices: "",
-      pricing: "",
-      details: "",
-      typeOptions: ["Full Package", "Day"],
-    },
-  ])
+ const [packages, setPackages] = useState([
+  {
+    selectType: "Full Package",
+    packageType: "",
+    location: "",
+    duration: "",
+    startDate: getTodayDateString(), // New field
+    endDate: getTodayDateString(),   // New field
+    pricing: "",
+    details: "",
+    typeOptions: ["Full Package", "Day"],
+  },
+]);
   const [tabs, setTabs] = useState([{ name: "", content: "" }])
   const [coverImageFile, setCoverImageFile] = useState(null)
   const [coverImageUrl, setCoverImageUrl] = useState("")
@@ -191,17 +192,27 @@ export default function EventForm() {
     if (packages.length === 0) {
       newErrors.packages = "At least one package is required"
     } else {
-      packages.forEach((pkg, idx) => {
-        if (!pkg.selectType.trim())
-          newErrors[`package_selectType_${idx}`] = `Package ${idx + 1} select type is required`
-        if (!pkg.packageType.trim()) newErrors[`package_type_${idx}`] = `Package ${idx + 1} type is required`
-        if (!pkg.location.trim()) newErrors[`package_location_${idx}`] = `Package ${idx + 1} location is required`
-        if (!pkg.duration.trim()) newErrors[`package_duration_${idx}`] = `Package ${idx + 1} duration is required`
-        if (!pkg.dateChoices.trim())
-          newErrors[`package_dateChoices_${idx}`] = `Package ${idx + 1} date choices are required`
-        if (!pkg.pricing.trim()) newErrors[`package_pricing_${idx}`] = `Package ${idx + 1} pricing is required`
-        if (!pkg.details.trim()) newErrors[`package_details_${idx}`] = `Package ${idx + 1} details are required`
-      })
+     // In the validateForm function, replace the dateChoices validation
+packages.forEach((pkg, idx) => {
+  if (!pkg.selectType.trim())
+    newErrors[`package_selectType_${idx}`] = `Package ${idx + 1} select type is required`;
+  if (!pkg.packageType.trim()) newErrors[`package_type_${idx}`] = `Package ${idx + 1} type is required`;
+  if (!pkg.location.trim()) newErrors[`package_location_${idx}`] = `Package ${idx + 1} location is required`;
+  if (!pkg.duration.trim()) newErrors[`package_duration_${idx}`] = `Package ${idx + 1} duration is required`;
+  if (!pkg.startDate) newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} start date is required`;
+  if (!pkg.endDate) newErrors[`package_endDate_${idx}`] = `Package ${idx + 1} end date is required`;
+  if (pkg.startDate && pkg.endDate) {
+    const start = new Date(pkg.startDate);
+    const end = new Date(pkg.endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} invalid date format`;
+    } else if (end < start) {
+      newErrors[`package_endDate_${idx}`] = `Package ${idx + 1} end date cannot be before start date`;
+    }
+  }
+  if (!pkg.pricing.trim()) newErrors[`package_pricing_${idx}`] = `Package ${idx + 1} pricing is required`;
+  if (!pkg.details.trim()) newErrors[`package_details_${idx}`] = `Package ${idx + 1} details are required`;
+})
     }
 
     if (
@@ -291,10 +302,10 @@ export default function EventForm() {
   }
 
   const handlePackageChange = (index, field, value) => {
-    const updated = [...packages]
-    updated[index][field] = value
-    setPackages(updated)
-  }
+  const updated = [...packages];
+  updated[index][field] = value;
+  setPackages(updated);
+}
 
   const addTab = () => {
     setTabs([...tabs, { name: "", content: "" }])
@@ -876,108 +887,121 @@ export default function EventForm() {
                   </button>
                 </div>
                 <div className="packages-container">
-                  {packages.map((pkg, idx) => (
-                    <div key={idx} className="package-item">
-                      <h4>Package {idx + 1}</h4>
-                      <div className="package-grid">
-                        <div className="form-group">
-                          <label>Select Type *</label>
-                          <div className="select-with-add">
-                            <select
-                              value={pkg.selectType}
-                              onChange={(e) => handlePackageChange(idx, "selectType", e.target.value)}
-                              required
-                            >
-                              <option value="">Select</option>
-                              {pkg.typeOptions.map((opt, i) => (
-                                <option key={i} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
-                            </select>
-                            <button type="button" onClick={() => addDropdownOption(idx)} className="plus-button">
-                              +
-                            </button>
-                          </div>
-                          {errors[`package_selectType_${idx}`] && (
-                            <div className="error-message">{errors[`package_selectType_${idx}`]}</div>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label>Package Type *</label>
-                          <input
-                            type="text"
-                            value={pkg.packageType}
-                            onChange={(e) => handlePackageChange(idx, "packageType", e.target.value)}
-                            required
-                          />
-                          {errors[`package_type_${idx}`] && (
-                            <div className="error-message">{errors[`package_type_${idx}`]}</div>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label>Location *</label>
-                          <input
-                            type="text"
-                            value={pkg.location}
-                            onChange={(e) => handlePackageChange(idx, "location", e.target.value)}
-                            required
-                          />
-                          {errors[`package_location_${idx}`] && (
-                            <div className="error-message">{errors[`package_location_${idx}`]}</div>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label>Duration *</label>
-                          <input
-                            type="text"
-                            value={pkg.duration}
-                            onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
-                            required
-                          />
-                          {errors[`package_duration_${idx}`] && (
-                            <div className="error-message">{errors[`package_duration_${idx}`]}</div>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label>Date Choices *</label>
-                          <input
-                            type="text"
-                            value={pkg.dateChoices}
-                            onChange={(e) => handlePackageChange(idx, "dateChoices", e.target.value)}
-                            required
-                          />
-                          {errors[`package_dateChoices_${idx}`] && (
-                            <div className="error-message">{errors[`package_dateChoices_${idx}`]}</div>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label>Pricing *</label>
-                          <input
-                            type="text"
-                            value={pkg.pricing}
-                            onChange={(e) => handlePackageChange(idx, "pricing", e.target.value)}
-                            required
-                          />
-                          {errors[`package_pricing_${idx}`] && (
-                            <div className="error-message">{errors[`package_pricing_${idx}`]}</div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="form-group full-width">
-                        <label>Package Details *</label>
-                        <textarea
-                          value={pkg.details}
-                          onChange={(e) => handlePackageChange(idx, "details", e.target.value)}
-                          className="package-textarea"
-                          required
-                        ></textarea>
-                        {errors[`package_details_${idx}`] && (
-                          <div className="error-message">{errors[`package_details_${idx}`]}</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                {packages.map((pkg, idx) => (
+  <div key={idx} className="package-item">
+    <h4>Package {idx + 1}</h4>
+    <div className="package-grid">
+      <div className="form-group">
+        <label>Select Type *</label>
+        <div className="select-with-add">
+          <select
+            value={pkg.selectType}
+            onChange={(e) => handlePackageChange(idx, "selectType", e.target.value)}
+            required
+          >
+            <option value="">Select</option>
+            {pkg.typeOptions.map((opt, i) => (
+              <option key={i} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          <button type="button" onClick={() => addDropdownOption(idx)} className="plus-button">
+            +
+          </button>
+        </div>
+        {errors[`package_selectType_${idx}`] && (
+          <div className="error-message">{errors[`package_selectType_${idx}`]}</div>
+        )}
+      </div>
+      <div className="form-group">
+        <label>Package Type *</label>
+        <input
+          type="text"
+          value={pkg.packageType}
+          onChange={(e) => handlePackageChange(idx, "packageType", e.target.value)}
+          required
+        />
+        {errors[`package_type_${idx}`] && (
+          <div className="error-message">{errors[`package_type_${idx}`]}</div>
+        )}
+      </div>
+      <div className="form-group">
+        <label>Location *</label>
+        <input
+          type="text"
+          value={pkg.location}
+          onChange={(e) => handlePackageChange(idx, "location", e.target.value)}
+          required
+        />
+        {errors[`package_location_${idx}`] && (
+          <div className="error-message">{errors[`package_location_${idx}`]}</div>
+        )}
+      </div>
+      <div className="form-group">
+        <label>Duration *</label>
+        <input
+          type="text"
+          value={pkg.duration}
+          onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
+          required
+        />
+        {errors[`package_duration_${idx}`] && (
+          <div className="error-message">{errors[`package_duration_${idx}`]}</div>
+        )}
+      </div>
+      <div className="form-group">
+        <label>Start Date *</label>
+        <input
+          type="date"
+          value={pkg.startDate}
+          onChange={(e) => handlePackageChange(idx, "startDate", e.target.value)}
+          required
+        />
+        {errors[`package_startDate_${idx}`] && (
+          <div className="error-message">{errors[`package_startDate_${idx}`]}</div>
+        )}
+      </div>
+      <div className="form-group">
+        <label>End Date *</label>
+        <input
+          type="date"
+          value={pkg.endDate}
+          onChange={(e) => handlePackageChange(idx, "endDate", e.target.value)}
+          min={pkg.startDate} // Ensure end date is not before start date
+          required
+        />
+        {errors[`package_endDate_${idx}`] && (
+          <div className="error-message">{errors[`package_endDate_${idx}`]}</div>
+        )}
+      </div>
+      <div className="form-group">
+        <label>Pricing *</label>
+        <input
+          type="text"
+          value={pkg.pricing}
+          onChange={(e) => handlePackageChange(idx, "pricing", e.target.value)}
+          required
+        />
+        {errors[`package_pricing_${idx}`] && (
+          <div className="error-message">{errors[`package_pricing_${idx}`]}</div>
+        )}
+      </div>
+    </div>
+    <div className="form-group full-width">
+      <label>Package Details *</label>
+      <textarea
+        value={pkg.details}
+        onChange={(e) => handlePackageChange(idx, "details", e.target.value)}
+        className="package-textarea"
+        required
+      ></textarea>
+      {errors[`package_details_${idx}`] && (
+        <div className="error-message">{errors[`package_details_${idx}`]}</div>
+      )}
+    </div>
+  </div>
+))}
                 </div>
                 {errors.packages && <div className="error-message">{errors.packages}</div>}
               </div>

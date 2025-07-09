@@ -19,35 +19,57 @@ const RehostEventDetails = () => {
   const [submitSuccess, setSubmitSuccess] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Helper function to format date without timezone issues (from EventRequest.jsx)
   const formatDate = (dateString) => {
-    if (!dateString) return "Not specified"
+    if (!dateString) {
+      console.warn("Date string is empty or null")
+      return "Date not specified"
+    }
+
     try {
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) return "Invalid date"
-      return date.toLocaleDateString("en-US", {
+      console.log("Received dateString:", dateString) // Debug log
+      // Split and validate YYYY-MM-DD format
+      const [year, month, day] = dateString.split('-')
+      if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
+        throw new Error("Invalid date format")
+      }
+
+      // Create date without timezone offset
+      const date = new Date(`${year}-${month}-${day}`)
+      if (isNaN(date.getTime())) {
+        throw new Error("Invalid date")
+      }
+
+      // Format without timezone adjustment
+      const options = {
         year: "numeric",
-        month: "long",
+        month: "short",
         day: "numeric",
-        timeZone: "UTC",
-      })
-    } catch (err) {
-      console.error("Date formatting error:", err)
-      return "Invalid date"
+      }
+      return date.toLocaleDateString("en-US", options)
+    } catch (error) {
+      console.error("Date formatting error:", error, "Date string:", dateString)
+      return "Date not specified"
     }
   }
 
+  // Helper function to format time (aligned with EventRequest.jsx)
   const formatTime = (timeString) => {
-    if (!timeString) return "Not specified"
+    if (!timeString) {
+      console.warn("Time string is empty or null")
+      return "Time not specified"
+    }
+
     try {
+      // Validate HH:MM format
       const timeParts = timeString.split(":")
-      const hours = Number.parseInt(timeParts[0], 10)
-      const minutes = timeParts[1] || "00"
-      const ampm = hours >= 12 ? "PM" : "AM"
-      const displayHours = hours % 12 || 12
-      return `${displayHours}:${minutes} ${ampm}`
-    } catch (err) {
-      console.error("Time formatting error:", err)
-      return timeString
+      if (timeParts.length < 2 || isNaN(Number.parseInt(timeParts[0], 10)) || isNaN(Number.parseInt(timeParts[1], 10))) {
+        throw new Error("Invalid time format")
+      }
+      return timeString // Return as is, matching EventRequest.jsx
+    } catch (error) {
+      console.error("Time formatting error:", error, "Time string:", timeString)
+      return "Time not specified"
     }
   }
 
@@ -99,8 +121,8 @@ const RehostEventDetails = () => {
 
         // Set form data with current dates
         setFormData({
-          startdate: data.startdate ? new Date(data.startdate).toISOString().split("T")[0] : "",
-          enddate: data.enddate ? new Date(data.enddate).toISOString().split("T")[0] : "",
+          startdate: data.startdate ? data.startdate : "",
+          enddate: data.enddate ? data.enddate : "",
         })
       } catch (err) {
         console.error("Fetch error:", err)
@@ -134,7 +156,7 @@ const RehostEventDetails = () => {
     setIsSubmitting(true)
 
     try {
-      const token = sessionStorage.getItem("token")
+      const token = sessionStorage.getAmbient("token")
       if (!token) {
         setSubmitError("No authentication token found. Please log in.")
         nav("/login")
@@ -347,16 +369,17 @@ const RehostEventDetails = () => {
               <span>{formatDate(event.enddate)}</span>
             </div>
             <div className="detail-row">
-              <strong>Time:</strong>
+              <strong>Start Time:</strong>
               <span>{formatTime(event.time)}</span>
             </div>
-           
+            <div className="detail-row">
+              <strong>End Time:</strong>
+              <span>{formatTime(event.endtime)}</span>
+            </div>
             <div className="detail-row">
               <strong>Capacity:</strong>
               <span>{event.capacity || "Not specified"}</span>
             </div>
-          
-            
             {event.description && (
               <div className="detail-row description">
                 <strong>Description:</strong>

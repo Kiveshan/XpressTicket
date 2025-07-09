@@ -1386,6 +1386,7 @@ app.post('/api/events', authenticateToken, upload.fields([
     if (!startdate || startdate.trim() === '') missingFields.push('startdate');
     if (!enddate || enddate.trim() === '') missingFields.push('enddate');
     if (!start_time || start_time.trim() === '') missingFields.push('time');
+    if (!end_time || end_time.trim() === '') missingFields.push('endtime');
     if (!duration || duration.trim() === '') missingFields.push('duration');
     if (!deadlinedate || deadlinedate.trim() === '') missingFields.push('deadlinedate');
     if (!deadlinetime || deadlinetime.trim() === '') missingFields.push('deadlinetime');
@@ -1407,12 +1408,6 @@ app.post('/api/events', authenticateToken, upload.fields([
       return res.status(400).json({ error: 'Cover image is required' });
     }
     const coverImageFile = req.files['cover_image'][0];
-    console.log('Cover image file:', {
-      originalname: coverImageFile.originalname,
-      mimetype: coverImageFile.mimetype,
-      size: coverImageFile.size,
-      bufferLength: coverImageFile.buffer ? coverImageFile.buffer.length : 'undefined',
-    });
     if (!['image/jpeg', 'image/png'].includes(coverImageFile.mimetype)) {
       console.error('Invalid cover image type:', coverImageFile.mimetype);
       return res.status(400).json({ error: 'Cover image must be JPEG or PNG' });
@@ -1424,10 +1419,23 @@ app.post('/api/events', authenticateToken, upload.fields([
     try {
       parsedAttendees = attendees.startsWith('{') ? attendees.slice(1, -1).split(',').filter(item => item.trim()) : JSON.parse(attendees || '[]');
       parsedTabs = JSON.parse(tabs || '[]').map(tab => JSON.stringify(tab));
-      parsedPackages = JSON.parse(packages || '[]').map(pkg => JSON.stringify(pkg));
+      parsedPackages = JSON.parse(packages || '[]').map(pkg => {
+        const parsedPkg = JSON.parse(JSON.stringify(pkg)); // Deep copy
+        if (!parsedPkg.startDate || !parsedPkg.endDate) {
+          throw new Error(`Package ${JSON.stringify(pkg)} is missing startDate or endDate`);
+        }
+        // Validate date format
+        if (isNaN(new Date(parsedPkg.startDate).getTime()) || isNaN(new Date(parsedPkg.endDate).getTime())) {
+          throw new Error(`Invalid date format in package: ${JSON.stringify(pkg)}`);
+        }
+        if (new Date(parsedPkg.endDate) < new Date(parsedPkg.startDate)) {
+          throw new Error(`End date before start date in package: ${JSON.stringify(pkg)}`);
+        }
+        return JSON.stringify(parsedPkg);
+      });
     } catch (e) {
-      console.error('JSON parsing error:', e.message);
-      return res.status(400).json({ error: 'Invalid JSON format for attendees, tabs, or packages', details: e.message });
+      console.error('JSON parsing or validation error:', e.message);
+      return res.status(400).json({ error: 'Invalid JSON format or validation error for attendees, tabs, or packages', details: e.message });
     }
 
     await client.query('BEGIN');
@@ -1440,13 +1448,6 @@ app.post('/api/events', authenticateToken, upload.fields([
       const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
       coverImageKey = `cover_images/${Date.now()}_${sanitizedFileName}`;
 
-      console.log('Uploading cover image to S3:', {
-        bucket: process.env.S3_BUCKET_NAME,
-        key: coverImageKey,
-        contentType: file.mimetype,
-        bufferLength: file.buffer ? file.buffer.length : 'undefined',
-      });
-
       const coverImageCommand = new PutObjectCommand({
         Bucket: process.env.S3_BUCKET_NAME,
         Key: coverImageKey,
@@ -1458,7 +1459,6 @@ app.post('/api/events', authenticateToken, upload.fields([
       coverImageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${coverImageKey}`;
       console.log('Cover image uploaded successfully:', coverImageUrl);
 
-      // Verify coverImageUrl
       if (!coverImageUrl || typeof coverImageUrl !== 'string' || !coverImageUrl.startsWith('https://')) {
         throw new Error('Invalid cover image URL after upload');
       }
@@ -1467,7 +1467,7 @@ app.post('/api/events', authenticateToken, upload.fields([
       throw new Error(`Cover image upload failed: ${error.message}`);
     }
 
-    // Insert event without payment-related fields
+    // Insert event
     const queryParams = [
       name,
       location,
@@ -1492,12 +1492,6 @@ app.post('/api/events', authenticateToken, upload.fields([
       'pending',
     ];
 
-    console.log('Insert query parameters:', queryParams.map((param, idx) => ({
-      index: idx + 1,
-      value: param,
-      type: typeof param,
-    })));
-
     const eventResult = await client.query(
       `INSERT INTO events (
          name, location, startdate, enddate, time, duration, deadlinedate, deadlinetime,
@@ -1520,7 +1514,6 @@ app.post('/api/events', authenticateToken, upload.fields([
       [event_id]
     );
 
-    // Generate presigned URL for response
     const finalCoverImageUrl = coverImageKey ? await generatePresignedUrl(coverImageKey) : coverImageUrl;
 
     console.log('Event created:', finalEvent.rows[0]);
@@ -1572,10 +1565,8 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
       tabs,
       packages,
       terms_and_conditions,
-      // Remove payment_amount and payment_type from destructuring
     } = req.body;
 
-    // Verify the user owns the event and the event is in 'Request Edit' or 'pending' status
     const ownershipCheck = await client.query(
       `SELECT event_id, status FROM events 
        WHERE event_id = $1 AND user_id = $2 
@@ -1591,7 +1582,6 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
 
     await client.query('BEGIN');
 
-    // Parse attendees, tabs, and packages
     let parsedAttendees = attendees;
     let parsedTabs = tabs;
     let parsedPackages = packages;
@@ -1599,15 +1589,26 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
     try {
       parsedAttendees = attendees ? `{${JSON.parse(attendees || '[]').join(',')}}` : null;
       parsedTabs = tabs ? JSON.parse(tabs).map(tab => JSON.stringify(tab)) : null;
-      parsedPackages = packages ? JSON.parse(packages).map(pkg => JSON.stringify(pkg)) : null;
+      parsedPackages = packages ? JSON.parse(packages).map(pkg => {
+        const parsedPkg = JSON.parse(JSON.stringify(pkg));
+        if (!parsedPkg.startDate || !parsedPkg.endDate) {
+          throw new Error(`Package ${JSON.stringify(pkg)} is missing startDate or endDate`);
+        }
+        if (isNaN(new Date(parsedPkg.startDate).getTime()) || isNaN(new Date(parsedPkg.endDate).getTime())) {
+          throw new Error(`Invalid date format in package: ${JSON.stringify(pkg)}`);
+        }
+        if (new Date(parsedPkg.endDate) < new Date(parsedPkg.startDate)) {
+          throw new Error(`End date before start date in package: ${JSON.stringify(pkg)}`);
+        }
+        return JSON.stringify(parsedPkg);
+      }) : null;
     } catch (e) {
       return res.status(400).json({
-        error: 'Invalid JSON format for attendees, tabs, or packages',
+        error: 'Invalid JSON format or validation error for attendees, tabs, or packages',
         details: e.message
       });
     }
 
-    // Update event details
     const updateEventQuery = `
       UPDATE events
       SET name = COALESCE($1, name),
@@ -1638,7 +1639,7 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
       start_time, end_time, duration, deadlinetime, deadlinedate,
       event_type, parseInt(capacity, 10), parsedAttendees, contactnum, email,
       parsedTabs, parsedPackages, terms_and_conditions,
-      'pending', // Set status to pending after edit
+      'pending',
       eventId
     ];
 
@@ -1648,7 +1649,6 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Handle cover image upload if provided
     let coverImageUrl = null;
     let coverImageKey = null;
     if (req.files && req.files['cover_image']) {
@@ -1675,7 +1675,6 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
 
     await client.query('COMMIT');
 
-    // Fetch the updated event
     const { rows: [updatedEvent] } = await client.query(
       `SELECT e.*, 
               up.firstname, up.surname, up.email, up.cellnumber
@@ -1685,7 +1684,6 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
       [eventId]
     );
 
-    // Generate presigned URL for response
     const finalCoverImageUrl = updatedEvent.coverimage
       ? await generatePresignedUrl(updatedEvent.coverimage.split('/').slice(3).join('/'))
       : '/default-profile-picture.jpg';
