@@ -2734,26 +2734,34 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params
     const { userId, role } = req.user
-    const { startdate, enddate, resetAttendees = true } = req.body
+    const { startdate, enddate, packageStartDate, packageEndDate, resetAttendees = true } = req.body
 
-    console.log("Rehost request received:", { eventId, userId, startdate, enddate })
+    console.log("Rehost request received:", { eventId, userId, startdate, enddate, packageStartDate, packageEndDate })
 
-    if (!startdate || !enddate) {
-      return res.status(400).json({ error: "Start date and end date are required" })
+    if (!startdate || !enddate || !packageStartDate || !packageEndDate) {
+      return res.status(400).json({ error: "All start and end dates are required" })
     }
 
     const currentDate = new Date().toISOString().split("T")[0]
     if (new Date(startdate) < new Date(currentDate)) {
-      return res.status(400).json({ error: "Start date must be today or in the future" })
+      return res.status(400).json({ error: "Event start date must be today or in the future" })
     }
 
     if (new Date(enddate) < new Date(startdate)) {
-      return res.status(400).json({ error: "End date must be on or after the start date" })
+      return res.status(400).json({ error: "Event end date must be on or after the event start date" })
+    }
+
+    if (new Date(packageStartDate) < new Date(currentDate)) {
+      return res.status(400).json({ error: "Package start date must be today or in the future" })
+    }
+
+    if (new Date(packageEndDate) < new Date(packageStartDate)) {
+      return res.status(400).json({ error: "Package end date must be on or after the package start date" })
     }
 
     // Check if event exists and is eligible for rehosting
     const eventCheck = await client.query(
-      `SELECT event_id, user_id, enddate, name, attendees, status 
+      `SELECT event_id, user_id, enddate, name, attendees, status, packages 
        FROM events 
        WHERE event_id = $1 AND (user_id = $2 OR $3 = true) AND enddate < $4 AND status IN ('Approved', 'pending')`,
       [eventId, userId, role === "Admin", currentDate],
@@ -2767,14 +2775,39 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
 
     // Check for date conflicts with other events
     const conflictCheck = await client.query(
-      `SELECT event_id FROM events 
+      `SELECT event_id, name, startdate, enddate 
+       FROM events 
        WHERE user_id = $1 AND startdate <= $2 AND enddate >= $3 AND event_id != $4 AND status IN ('Approved', 'pending')`,
       [userId, enddate, startdate, eventId],
     )
 
     if (conflictCheck.rows.length > 0) {
-      return res.status(400).json({ error: "Date conflicts with another event" })
+      return res.status(400).json({
+        error: "Date conflicts with another event",
+        conflicts: conflictCheck.rows.map(row => ({
+          eventId: row.event_id,
+          eventName: row.name,
+          startDate: row.startdate,
+          endDate: row.enddate,
+        })),
+      })
     }
+
+    // Update packages by modifying startDate and endDate
+    const existingPackages = eventCheck.rows[0].packages || []
+    const updatedPackages = existingPackages.map((pkg) => {
+      try {
+        const parsedPkg = JSON.parse(pkg)
+        return JSON.stringify({
+          ...parsedPkg,
+          startDate: packageStartDate,
+          endDate: packageEndDate,
+        })
+      } catch (e) {
+        console.warn(`Failed to parse package: ${pkg}`, e)
+        return pkg // Return original package if parsing fails
+      }
+    })
 
     await client.query("BEGIN")
 
@@ -2788,14 +2821,15 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
       UPDATE events 
       SET startdate = $1,
           enddate = $2,
+          packages = $3,
           status = 'pending',
-          attendees = $3,
+          attendees = $4,
           admin_comment = NULL
-      WHERE event_id = $4
+      WHERE event_id = $5
       RETURNING *;
     `
 
-    const updateValues = [startdate, enddate, validatedAttendees, eventId]
+    const updateValues = [startdate, enddate, updatedPackages, validatedAttendees, eventId]
     const result = await client.query(updateQuery, updateValues)
 
     if (result.rows.length === 0) {
@@ -2820,24 +2854,24 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
 
     const parsedTabs = updatedEvent.tabs
       ? updatedEvent.tabs.map((tab) => {
-          try {
-            return JSON.parse(tab)
-          } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e)
-            return {}
-          }
-        })
+        try {
+          return JSON.parse(tab)
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e)
+          return {}
+        }
+      })
       : []
 
     const parsedPackages = updatedEvent.packages
       ? updatedEvent.packages.map((pkg) => {
-          try {
-            return JSON.parse(pkg)
-          } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e)
-            return {}
-          }
-        })
+        try {
+          return JSON.parse(pkg)
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e)
+          return {}
+        }
+      })
       : []
 
     console.log("Event rehosted successfully:", updatedEvent.event_id)
@@ -2924,24 +2958,24 @@ app.get('/api/events-past', authenticateToken, async (req, res) => {
 
         const parsedTabs = event.tabs
           ? event.tabs.map((tab) => {
-              try {
-                return JSON.parse(tab);
-              } catch (e) {
-                console.warn(`Failed to parse tab: ${tab}`, e);
-                return {};
-              }
-            })
+            try {
+              return JSON.parse(tab);
+            } catch (e) {
+              console.warn(`Failed to parse tab: ${tab}`, e);
+              return {};
+            }
+          })
           : [];
 
         const parsedPackages = event.packages
           ? event.packages.map((pkg) => {
-              try {
-                return JSON.parse(pkg);
-              } catch (e) {
-                console.warn(`Failed to parse package: ${pkg}`, e);
-                return {};
-              }
-            })
+            try {
+              return JSON.parse(pkg);
+            } catch (e) {
+              console.warn(`Failed to parse package: ${pkg}`, e);
+              return {};
+            }
+          })
           : [];
 
         return {
@@ -3026,31 +3060,31 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
     // Parse tabs
     const parsedTabs = event.tabs
       ? event.tabs.map((tab, index) => {
-          try {
-            return JSON.parse(tab);
-          } catch (e) {
-            console.warn(`Failed to parse tab at index ${index}: ${tab}`, e);
-            return {};
-          }
-        })
+        try {
+          return JSON.parse(tab);
+        } catch (e) {
+          console.warn(`Failed to parse tab at index ${index}: ${tab}`, e);
+          return {};
+        }
+      })
       : [];
 
     // Parse packages
     const parsedPackages = event.packages
       ? event.packages.map((pkg, index) => {
-          try {
-            const parsedPkg = JSON.parse(pkg);
-            // Validate required fields
-            if (!parsedPkg.startDate || !parsedPkg.endDate) {
-              console.warn(`Package at index ${index} missing startDate or endDate:`, parsedPkg);
-              return { ...parsedPkg, startDate: null, endDate: null };
-            }
-            return parsedPkg;
-          } catch (e) {
-            console.warn(`Failed to parse package at index ${index}: ${pkg}`, e);
-            return {};
+        try {
+          const parsedPkg = JSON.parse(pkg);
+          // Validate required fields
+          if (!parsedPkg.startDate || !parsedPkg.endDate) {
+            console.warn(`Package at index ${index} missing startDate or endDate:`, parsedPkg);
+            return { ...parsedPkg, startDate: null, endDate: null };
           }
-        })
+          return parsedPkg;
+        } catch (e) {
+          console.warn(`Failed to parse package at index ${index}: ${pkg}`, e);
+          return {};
+        }
+      })
       : [];
 
     console.log("Parsed packages:", parsedPackages);

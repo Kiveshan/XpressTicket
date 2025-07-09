@@ -14,12 +14,14 @@ const RehostEventDetails = () => {
   const [formData, setFormData] = useState({
     startdate: "",
     enddate: "",
+    packageStartDate: "",
+    packageEndDate: "",
   })
   const [submitError, setSubmitError] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Helper function to format date without timezone issues (from EventRequest.jsx)
+  // Helper function to format date without timezone issues
   const formatDate = (dateString) => {
     if (!dateString) {
       console.warn("Date string is empty or null")
@@ -27,20 +29,19 @@ const RehostEventDetails = () => {
     }
 
     try {
-      console.log("Received dateString:", dateString) // Debug log
-      // Split and validate YYYY-MM-DD format
-      const [year, month, day] = dateString.split('-')
+      console.log("Received dateString:", dateString)
+      // Handle ISO format (e.g., 2025-07-02T22:00:00.000Z) or YYYY-MM-DD
+      const normalizedDate = dateString.includes("T") ? dateString.split("T")[0] : dateString
+      const [year, month, day] = normalizedDate.split('-')
       if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
         throw new Error("Invalid date format")
       }
 
-      // Create date without timezone offset
       const date = new Date(`${year}-${month}-${day}`)
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date")
       }
 
-      // Format without timezone adjustment
       const options = {
         year: "numeric",
         month: "short",
@@ -53,7 +54,7 @@ const RehostEventDetails = () => {
     }
   }
 
-  // Helper function to format time (aligned with EventRequest.jsx)
+  // Helper function to format time
   const formatTime = (timeString) => {
     if (!timeString) {
       console.warn("Time string is empty or null")
@@ -61,12 +62,11 @@ const RehostEventDetails = () => {
     }
 
     try {
-      // Validate HH:MM format
       const timeParts = timeString.split(":")
       if (timeParts.length < 2 || isNaN(Number.parseInt(timeParts[0], 10)) || isNaN(Number.parseInt(timeParts[1], 10))) {
         throw new Error("Invalid time format")
       }
-      return timeString // Return as is, matching EventRequest.jsx
+      return timeString
     } catch (error) {
       console.error("Time formatting error:", error, "Time string:", timeString)
       return "Time not specified"
@@ -119,10 +119,12 @@ const RehostEventDetails = () => {
 
         setEvent(data)
 
-        // Set form data with aliased names from API
+        // Set form data with aliased names from API and first package dates
         setFormData({
-          startdate: data.start_date ? data.start_date.split("T")[0] : "", // Extract YYYY-MM-DD
-          enddate: data.end_date ? data.end_date.split("T")[0] : "", // Extract YYYY-MM-DD
+          startdate: data.start_date ? data.start_date.split("T")[0] : "",
+          enddate: data.end_date ? data.end_date.split("T")[0] : "",
+          packageStartDate: data.packages && data.packages[0] && data.packages[0].startDate ? data.packages[0].startDate.split("T")[0] : "",
+          packageEndDate: data.packages && data.packages[0] && data.packages[0].endDate ? data.packages[0].endDate.split("T")[0] : "",
         })
       } catch (err) {
         console.error("Fetch error:", err)
@@ -156,7 +158,7 @@ const RehostEventDetails = () => {
     setIsSubmitting(true)
 
     try {
-      const token = sessionStorage.getItem("token") // Fixed typo: getAmbient -> getItem
+      const token = sessionStorage.getItem("token")
       if (!token) {
         setSubmitError("No authentication token found. Please log in.")
         nav("/login")
@@ -165,18 +167,28 @@ const RehostEventDetails = () => {
 
       const currentDate = new Date().toISOString().split("T")[0]
 
-      if (!formData.startdate || !formData.enddate) {
-        setSubmitError("Please select both start and end dates.")
+      if (!formData.startdate || !formData.enddate || !formData.packageStartDate || !formData.packageEndDate) {
+        setSubmitError("Please select all start and end dates.")
         return
       }
 
       if (new Date(formData.startdate) < new Date(currentDate)) {
-        setSubmitError("Start date must be today or in the future.")
+        setSubmitError("Event start date must be today or in the future.")
         return
       }
 
       if (new Date(formData.enddate) < new Date(formData.startdate)) {
-        setSubmitError("End date must be on or after the start date.")
+        setSubmitError("Event end date must be on or after the event start date.")
+        return
+      }
+
+      if (new Date(formData.packageStartDate) < new Date(currentDate)) {
+        setSubmitError("Package start date must be today or in the future.")
+        return
+      }
+
+      if (new Date(formData.packageEndDate) < new Date(formData.packageStartDate)) {
+        setSubmitError("Package end date must be on or after the package start date.")
         return
       }
 
@@ -184,6 +196,8 @@ const RehostEventDetails = () => {
         eventId: eventid,
         startdate: formData.startdate,
         enddate: formData.enddate,
+        packageStartDate: formData.packageStartDate,
+        packageEndDate: formData.packageEndDate,
       })
 
       const response = await fetch(`http://localhost:5000/api/events/${eventid}/rehost`, {
@@ -196,6 +210,8 @@ const RehostEventDetails = () => {
         body: JSON.stringify({
           startdate: formData.startdate,
           enddate: formData.enddate,
+          packageStartDate: formData.packageStartDate,
+          packageEndDate: formData.packageEndDate,
           resetAttendees: true,
         }),
       })
@@ -205,6 +221,12 @@ const RehostEventDetails = () => {
       if (!response.ok) {
         const errorData = await response.json()
         console.error("Rehost error:", errorData)
+        if (errorData.error === "Date conflicts with another event" && errorData.conflicts) {
+          const conflictMessage = errorData.conflicts.map(conflict =>
+            `Event "${conflict.eventName}" from ${formatDate(conflict.startDate)} to ${formatDate(conflict.endDate)}`
+          ).join("; ")
+          throw new Error(`Date conflicts with another event: ${conflictMessage}`)
+        }
         throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`)
       }
 
@@ -385,6 +407,18 @@ const RehostEventDetails = () => {
                 <span>{event.description}</span>
               </div>
             )}
+            {event.packages && event.packages[0] && (
+              <>
+                <div className="detail-row">
+                  <strong>Package Start Date:</strong>
+                  <span>{formatDate(event.packages[0].startDate)}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>Package End Date:</strong>
+                  <span>{formatDate(event.packages[0].endDate)}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -393,7 +427,7 @@ const RehostEventDetails = () => {
           <form onSubmit={handleSubmit} className="rehost-form">
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="startdate">New Start Date:</label>
+                <label htmlFor="startdate">New Event Start Date:</label>
                 <input
                   type="date"
                   id="startdate"
@@ -407,7 +441,7 @@ const RehostEventDetails = () => {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="enddate">New End Date:</label>
+                <label htmlFor="enddate">New Event End Date:</label>
                 <input
                   type="date"
                   id="enddate"
@@ -416,6 +450,36 @@ const RehostEventDetails = () => {
                   onChange={handleInputChange}
                   required
                   min={formData.startdate || new Date().toISOString().split("T")[0]}
+                  disabled={isSubmitting}
+                  className="date-input"
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="packageStartDate">New Package Start Date:</label>
+                <input
+                  type="date"
+                  id="packageStartDate"
+                  name="packageStartDate"
+                  value={formData.packageStartDate}
+                  onChange={handleInputChange}
+                  required
+                  min={new Date().toISOString().split("T")[0]}
+                  disabled={isSubmitting}
+                  className="date-input"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="packageEndDate">New Package End Date:</label>
+                <input
+                  type="date"
+                  id="packageEndDate"
+                  name="packageEndDate"
+                  value={formData.packageEndDate}
+                  onChange={handleInputChange}
+                  required
+                  min={formData.packageStartDate || new Date().toISOString().split("T")[0]}
                   disabled={isSubmitting}
                   className="date-input"
                 />
