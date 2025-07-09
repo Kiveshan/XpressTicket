@@ -350,22 +350,13 @@ const RehostEventDetails = () => {
               <strong>Time:</strong>
               <span>{formatTime(event.time)}</span>
             </div>
-            <div className="detail-row">
-              <strong>Duration:</strong>
-              <span>{event.duration || "Not specified"}</span>
-            </div>
+           
             <div className="detail-row">
               <strong>Capacity:</strong>
               <span>{event.capacity || "Not specified"}</span>
             </div>
-            <div className="detail-row">
-              <strong>Type:</strong>
-              <span>{event.type || "Not specified"}</span>
-            </div>
-            <div className="detail-row">
-              <strong>Status:</strong>
-              <span className={`status-badge status-${event.status?.toLowerCase()}`}>{event.status || "Unknown"}</span>
-            </div>
+          
+            
             {event.description && (
               <div className="detail-row description">
                 <strong>Description:</strong>

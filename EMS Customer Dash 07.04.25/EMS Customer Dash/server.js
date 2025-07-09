@@ -2992,7 +2992,7 @@ app.get('/api/events-past', authenticateToken, async (req, res) => {
       FROM events
       WHERE user_id = $1 
         AND enddate < $2::date
-        AND status IN ('Approved', 'pending')
+        AND status = 'Approved'
       ORDER BY enddate DESC, endtime DESC
     `;
 
