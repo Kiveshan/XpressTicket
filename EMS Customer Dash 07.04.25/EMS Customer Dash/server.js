@@ -1259,6 +1259,8 @@ app.get('/api/events', authenticateToken, async (req, res) => {
   try {
     const { userId, role } = req.user;
 
+    const currentDate = new Date().toISOString().split('T')[0];
+
     let query = `
       SELECT 
         e.event_id as id,
@@ -1284,9 +1286,13 @@ app.get('/api/events', authenticateToken, async (req, res) => {
     `;
 
     let queryParams = [];
-    if (role !== 'Admin') {
-      const currentDate = new Date().toISOString().split('T')[0];
-      query += ` WHERE e.user_id = $1 AND e.startdate >= $2`;
+    if (role === 'Admin') {
+      // Admin sees all events with enddate in the future
+      query += ` WHERE e.enddate > $1`;
+      queryParams.push(currentDate);
+    } else {
+      // Organizer sees their own events with enddate in the future
+      query += ` WHERE e.user_id = $1 AND e.enddate > $2`;
       queryParams.push(userId, currentDate);
     }
 
@@ -1342,6 +1348,8 @@ app.get('/api/events', authenticateToken, async (req, res) => {
     client.release();
   }
 });
+
+
 
 app.post('/api/events', authenticateToken, upload.fields([
   { name: 'cover_image', maxCount: 1 },
