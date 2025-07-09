@@ -119,10 +119,10 @@ const RehostEventDetails = () => {
 
         setEvent(data)
 
-        // Set form data with current dates
+        // Set form data with aliased names from API
         setFormData({
-          startdate: data.startdate ? data.startdate : "",
-          enddate: data.enddate ? data.enddate : "",
+          startdate: data.start_date ? data.start_date.split("T")[0] : "", // Extract YYYY-MM-DD
+          enddate: data.end_date ? data.end_date.split("T")[0] : "", // Extract YYYY-MM-DD
         })
       } catch (err) {
         console.error("Fetch error:", err)
@@ -156,7 +156,7 @@ const RehostEventDetails = () => {
     setIsSubmitting(true)
 
     try {
-      const token = sessionStorage.getAmbient("token")
+      const token = sessionStorage.getItem("token") // Fixed typo: getAmbient -> getItem
       if (!token) {
         setSubmitError("No authentication token found. Please log in.")
         nav("/login")
@@ -213,7 +213,6 @@ const RehostEventDetails = () => {
 
       setSubmitSuccess("Event rehost request submitted successfully. Awaiting admin approval.")
 
-      // Redirect after success
       setTimeout(() => {
         nav("/rehost-event")
       }, 3000)
@@ -362,19 +361,19 @@ const RehostEventDetails = () => {
             </div>
             <div className="detail-row">
               <strong>Current Start Date:</strong>
-              <span>{formatDate(event.startdate)}</span>
+              <span>{formatDate(event.start_date)}</span>
             </div>
             <div className="detail-row">
               <strong>Current End Date:</strong>
-              <span>{formatDate(event.enddate)}</span>
+              <span>{formatDate(event.end_date)}</span>
             </div>
             <div className="detail-row">
               <strong>Start Time:</strong>
-              <span>{formatTime(event.time)}</span>
+              <span>{formatTime(event.start_time)}</span>
             </div>
             <div className="detail-row">
               <strong>End Time:</strong>
-              <span>{formatTime(event.endtime)}</span>
+              <span>{formatTime(event.end_time)}</span>
             </div>
             <div className="detail-row">
               <strong>Capacity:</strong>
