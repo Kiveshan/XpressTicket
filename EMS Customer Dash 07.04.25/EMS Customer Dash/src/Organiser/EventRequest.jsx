@@ -15,24 +15,35 @@ const EventRequest = () => {
   const [statusFilter, setStatusFilter] = useState("all")
 
   // Helper function to format date without timezone issues
-  const formatDate = (dateString) => {
-    if (!dateString) return "Date not specified"
+ const formatDate = (dateString) => {
+  if (!dateString) return "Date not specified";
 
-    try {
-      const date = new Date(dateString)
-      const options = {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC",
-      }
-      return date.toLocaleDateString("en-US", options)
-    } catch (error) {
-      console.error("Date formatting error:", error)
-      return "Date not specified"
+  try {
+    console.log("Received dateString:", dateString); // Debug log
+    // Split and validate YYYY-MM-DD format
+    const [year, month, day] = dateString.split('-');
+    if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
+      throw new Error("Invalid date format");
     }
-  }
 
+    // Create date without timezone offset
+    const date = new Date(`${year}-${month}-${day}`);
+    if (isNaN(date.getTime())) {
+      throw new Error("Invalid date");
+    }
+
+    // Format without timezone adjustment
+    const options = {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    };
+    return date.toLocaleDateString("en-US", options);
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "Date not specified";
+  }
+};
   // Helper function to extract lowest price from packages array
   const extractLowestPrice = (packages) => {
     if (!packages || !Array.isArray(packages) || packages.length === 0) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ClipLoader } from "react-spinners";
 import './RehostEventForm.css';
 
 const RehostEventForm = () => {
@@ -9,6 +10,76 @@ const RehostEventForm = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // Helper function to format date without timezone issues
+  const formatDate = (dateString) => {
+    if (!dateString) {
+      console.warn("Date string is empty or null");
+      return "Date not specified";
+    }
+
+    try {
+      console.log("Received dateString:", dateString); // Debug log
+      // Split and validate YYYY-MM-DD format
+      const [year, month, day] = dateString.split('-');
+      if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
+        throw new Error("Invalid date format");
+      }
+
+      // Create date without timezone offset
+      const date = new Date(`${year}-${month}-${day}`);
+      if (isNaN(date.getTime())) {
+        throw new Error("Invalid date");
+      }
+
+      // Format without timezone adjustment
+      const options = {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      };
+      return date.toLocaleDateString("en-US", options);
+    } catch (error) {
+      console.error("Date formatting error:", error, "Date string:", dateString);
+      return "Date not specified";
+    }
+  };
+
+  // Helper function to extract lowest price from packages array
+  const extractLowestPrice = (packages) => {
+    if (!packages || !Array.isArray(packages) || packages.length === 0) {
+      console.warn("No valid packages found");
+      return "N/A";
+    }
+
+    try {
+      // Parse packages if they are JSON strings and extract pricing
+      const prices = packages
+        .map(pkg => {
+          try {
+            // Handle both JSON string and object cases
+            const parsedPkg = typeof pkg === 'string' ? JSON.parse(pkg) : pkg;
+            return parsedPkg.pricing ? parseFloat(parsedPkg.pricing.replace(/[^0-9.]/g, '')) : null;
+          } catch (e) {
+            console.warn(`Failed to parse package: ${JSON.stringify(pkg)}`, e);
+            return null;
+          }
+        })
+        .filter(price => price !== null && !isNaN(price));
+
+      if (prices.length === 0) {
+        console.warn("No valid prices found in packages");
+        return "N/A";
+      }
+
+      // Find the lowest price
+      const lowestPrice = Math.min(...prices);
+      return `R ${lowestPrice.toFixed(2)}`;
+    } catch (error) {
+      console.error("Price extraction error:", error);
+      return "N/A";
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -66,7 +137,7 @@ const RehostEventForm = () => {
           return;
         }
 
-        const apiUrl = 'http://localhost:5000/api/events-past'; // Fixed typo: changed 'events-past' to 'events/past'
+        const apiUrl = 'http://localhost:5000/api/events-past';
         console.log('Making request to:', apiUrl);
         console.log('Request headers:', {
           Accept: 'application/json',
@@ -112,31 +183,33 @@ const RehostEventForm = () => {
         let data = [];
         try {
           data = await response.json();
+          console.log('Raw API response:', data); // Log raw response for debugging
         } catch (e) {
           console.error('Failed to parse response JSON:', e);
           data = [];
         }
-        console.log('Fetched past events:', data);
 
         const eventsData = Array.isArray(data) ? data : [];
 
-       const eventsWithStatus = eventsData.map((event) => ({
-  id: event.event_id ? String(event.event_id) : '',
-  eventid: event.event_id ? String(event.event_id) : '',
-  event_name: event.name || 'Unnamed Event',
-  location: event.location || 'Location not specified',
-  date: event.startdate || 'Date not specified',
-  enddate: event.enddate || 'Date not specified', // Add enddate
-  time: event.time || 'Time not specified',
-  type: event.type || 'Type not specified', // Add type
-  price: 'N/A',
-  status: (event.status || 'Pending').toLowerCase(),
-  file_url: event.coverimage || '/default-event-image.jpg',
-}));
+        const eventsWithFormattedData = eventsData.map((event) => {
+          console.log('Processing event:', event); // Log each event for debugging
+          return {
+            id: event.id || event.event_id || '',
+            eventid: event.id || event.event_id || '',
+            event_name: event.name || 'Unnamed Event',
+            location: event.location || 'Location not specified',
+            date: event.startdate || 'Date not specified', // Match original field name
+            time: event.time || 'Time not specified', // Match original field name
+            price: extractLowestPrice(event.packages),
+            status: (event.status || 'Pending').toLowerCase(),
+            file_url: event.coverimage || '/default-event-image.jpg',
+            description: event.description || 'No description available',
+          };
+        });
 
         if (isMounted) {
-          setPastEvents(eventsWithStatus);
-          setFilteredEvents(eventsWithStatus);
+          setPastEvents(eventsWithFormattedData);
+          setFilteredEvents(eventsWithFormattedData);
           setError(null);
         }
       } catch (err) {
@@ -174,6 +247,14 @@ const RehostEventForm = () => {
     setStatusFilter(e.target.value);
   };
 
+  const handleImageError = (e) => {
+    if (e.target.src !== '/default-event-image.jpg') {
+      console.warn(`Failed to load image: ${e.target.src}`);
+      e.target.src = '/default-event-image.jpg';
+      e.target.classList.add('image-error');
+    }
+  };
+
   if (loading) {
     return (
       <div className="container12">
@@ -183,19 +264,6 @@ const RehostEventForm = () => {
             alt="EventXpress Logo"
             className="dashboard-logo1"
           />
-          <div className="profile-section">
-            <button
-              className="backbutton22"
-              onClick={() => {
-                sessionStorage.removeItem('token');
-                sessionStorage.removeItem('userId');
-                sessionStorage.removeItem('user');
-                navigate('/login');
-              }}
-            >
-              LogOut
-            </button>
-          </div>
         </header>
         <div className="back-button-container1">
           <button className="backbutton20" onClick={() => navigate('/requestcard')}>
@@ -203,6 +271,7 @@ const RehostEventForm = () => {
           </button>
         </div>
         <div className="loading-container">
+          <ClipLoader color="#123abc" loading={loading} size={50} />
           <p className="loading">Loading past events...</p>
         </div>
       </div>
@@ -338,13 +407,7 @@ const RehostEventForm = () => {
                   src={event.file_url}
                   alt={event.event_name}
                   className="card-image"
-                  onError={(e) => {
-                    if (e.target.src !== '/default-event-image.jpg') {
-                      console.warn(`Failed to load image for event ${event.id}:`, event.file_url);
-                      e.target.src = '/default-event-image.jpg';
-                      e.target.classList.add('image-error');
-                    }
-                  }}
+                  onError={handleImageError}
                 />
                 {!event.file_url && (
                   <div className="image-placeholder">
@@ -355,7 +418,10 @@ const RehostEventForm = () => {
               <h3 className="card-title">{event.event_name}</h3>
               <div className="card-details">
                 <p>
-                  📍 {event.location} 📅 {event.date} 💰 {event.price} ⏰ {event.time}
+                  📍 {event.location} <br />
+                  📅 {formatDate(event.date)} <br />
+                  💰 {event.price} <br />
+                  ⏰ {event.time}
                 </p>
               </div>
               <div className="card-footer">
