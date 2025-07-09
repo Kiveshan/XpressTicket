@@ -778,114 +778,6 @@ app.get('/api/events/available', async (req, res) => {
   }
 });
 
-// Endpoint to fetch a single event by ID
-app.get('/api/events/:eventId', async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    console.log(`Fetching event details for ID: ${eventId}`);
-
-    const result = await pool.query(`
-      SELECT 
-        event_id as id, 
-        name, 
-        location, 
-        startdate::text as start_date, 
-        enddate::text as end_date, 
-        time::text as start_time, 
-        endtime::text as end_time, 
-        duration,
-        deadlinedate::text as registration_deadline_date,
-        deadlinetime::text as registration_deadline_time,
-        type as event_type,
-        capacity,
-        attendees,
-        coverimage,
-        description,
-        terms_and_conditions,
-        tabs,
-        packages
-      FROM events 
-      WHERE event_id = $1
-    `, [eventId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-
-    const event = result.rows[0];
-
-    // Generate a presigned URL for the image if it exists
-    if (event.coverimage && event.coverimage.trim() !== '') {
-      try {
-        const presignedUrl = await generatePresignedUrl(event.coverimage);
-        event.coverimage = presignedUrl || '/default-event-image.png';
-      } catch (err) {
-        console.error(`Error generating presigned URL for event ${event.id}:`, err);
-        event.coverimage = '/default-event-image.png';
-      }
-    } else {
-      event.coverimage = '/default-event-image.png';
-    }
-
-    // Parse tabs
-    event.tabs = event.tabs
-      ? event.tabs.map(tab => {
-          try {
-            return typeof tab === 'string' ? JSON.parse(tab) : tab;
-          } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e);
-            // If tab is a string without a name, create a default object
-            return { name: `Tab ${event.tabs.indexOf(tab) + 1}`, content: tab };
-          }
-        })
-      : [];
-
-    // Parse packages
-    event.packages = event.packages
-      ? event.packages.map(pkg => {
-          try {
-            const parsed = typeof pkg === 'string' ? JSON.parse(pkg) : pkg;
-            return {
-              selectType: parsed.selectType || 'Full Package',
-              packageType: parsed.packageType || 'Standard',
-              location: parsed.location || '',
-              duration: parsed.duration || '',
-              dateChoices: parsed.dateChoices || '',
-              pricing: parsed.pricing || 'N/A',
-              details: parsed.details || '',
-              typeOptions: parsed.typeOptions || ['Full Package', 'Day']
-            };
-          } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e);
-            // If package is a string, treat it as details
-            return {
-              selectType: 'Full Package',
-              packageType: 'Standard',
-              location: '',
-              duration: '',
-              dateChoices: '',
-              pricing: 'N/A',
-              details: pkg,
-              typeOptions: ['Full Package', 'Day']
-            };
-          }
-        })
-      : [];
-
-    // Ensure attendees is an array
-    event.attendees = Array.isArray(event.attendees)
-      ? event.attendees
-      : event.attendees && typeof event.attendees === 'string'
-      ? event.attendees.replace(/^{|}$/g, '').split(',').filter(item => item.trim())
-      : [];
-
-    res.json(event);
-  } catch (error) {
-    console.error('Error fetching event details:', error);
-    res.status(500).json({ error: 'Failed to fetch event details' });
-  }
-});
-
 // Admin endpoint to update event status
 app.put('/api/admin/event/:eventId/status', authenticateToken, authenticateAdmin, async (req, res) => {
   try {
@@ -1351,12 +1243,11 @@ app.get('/api/events', authenticateToken, async (req, res) => {
 
 
 
-app.post('/api/events', authenticateToken, upload.fields([
-  { name: 'cover_image', maxCount: 1 },
-]), async (req, res) => {
+app.post('/api/events', authenticateToken, upload.fields([{ name: 'cover_image', maxCount: 1 }]), async (req, res) => {
   console.log('Received /api/events request');
   console.log('Files received:', req.files);
   console.log('Body:', req.body);
+  console.log('Raw packages:', req.body.packages);
 
   const client = await pool.connect();
   try {
@@ -1420,19 +1311,19 @@ app.post('/api/events', authenticateToken, upload.fields([
       parsedAttendees = attendees.startsWith('{') ? attendees.slice(1, -1).split(',').filter(item => item.trim()) : JSON.parse(attendees || '[]');
       parsedTabs = JSON.parse(tabs || '[]').map(tab => JSON.stringify(tab));
       parsedPackages = JSON.parse(packages || '[]').map(pkg => {
-        const parsedPkg = JSON.parse(JSON.stringify(pkg)); // Deep copy
-        if (!parsedPkg.startDate || !parsedPkg.endDate) {
+        console.log('Processing package:', pkg); // Log each package
+        if (!pkg.startDate || !pkg.endDate) {
           throw new Error(`Package ${JSON.stringify(pkg)} is missing startDate or endDate`);
         }
-        // Validate date format
-        if (isNaN(new Date(parsedPkg.startDate).getTime()) || isNaN(new Date(parsedPkg.endDate).getTime())) {
+        if (isNaN(new Date(pkg.startDate).getTime()) || isNaN(new Date(pkg.endDate).getTime())) {
           throw new Error(`Invalid date format in package: ${JSON.stringify(pkg)}`);
         }
-        if (new Date(parsedPkg.endDate) < new Date(parsedPkg.startDate)) {
+        if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
           throw new Error(`End date before start date in package: ${JSON.stringify(pkg)}`);
         }
-        return JSON.stringify(parsedPkg);
+        return JSON.stringify(pkg);
       });
+      console.log('Parsed packages:', parsedPackages);
     } catch (e) {
       console.error('JSON parsing or validation error:', e.message);
       return res.status(400).json({ error: 'Invalid JSON format or validation error for attendees, tabs, or packages', details: e.message });
@@ -1532,16 +1423,13 @@ app.post('/api/events', authenticateToken, upload.fields([
 });
 
 
-
 //Get all the events for the logged in user 
 
 
 
 
 // Get single event by ID
-app.put('/api/events/:eventId', authenticateToken, upload.fields([
-  { name: 'cover_image', maxCount: 1 },
-]), async (req, res) => {
+app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover_image', maxCount: 1 }]), async (req, res) => {
   const client = await pool.connect();
   try {
     const { eventId } = req.params;
@@ -1567,6 +1455,8 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
       terms_and_conditions,
     } = req.body;
 
+    console.log('Received packages:', req.body.packages);
+
     const ownershipCheck = await client.query(
       `SELECT event_id, status FROM events 
        WHERE event_id = $1 AND user_id = $2 
@@ -1589,19 +1479,20 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([
     try {
       parsedAttendees = attendees ? `{${JSON.parse(attendees || '[]').join(',')}}` : null;
       parsedTabs = tabs ? JSON.parse(tabs).map(tab => JSON.stringify(tab)) : null;
-      parsedPackages = packages ? JSON.parse(packages).map(pkg => {
-        const parsedPkg = JSON.parse(JSON.stringify(pkg));
-        if (!parsedPkg.startDate || !parsedPkg.endDate) {
+      parsedPackages = packages ? JSON.parse(packages).map((pkg, index) => {
+        console.log(`Processing package ${index}:`, pkg);
+        if (!pkg.startDate || !pkg.endDate) {
           throw new Error(`Package ${JSON.stringify(pkg)} is missing startDate or endDate`);
         }
-        if (isNaN(new Date(parsedPkg.startDate).getTime()) || isNaN(new Date(parsedPkg.endDate).getTime())) {
+        if (isNaN(new Date(pkg.startDate).getTime()) || isNaN(new Date(pkg.endDate).getTime())) {
           throw new Error(`Invalid date format in package: ${JSON.stringify(pkg)}`);
         }
-        if (new Date(parsedPkg.endDate) < new Date(parsedPkg.startDate)) {
+        if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
           throw new Error(`End date before start date in package: ${JSON.stringify(pkg)}`);
         }
-        return JSON.stringify(parsedPkg);
+        return JSON.stringify(pkg);
       }) : null;
+      console.log('Parsed packages:', parsedPackages);
     } catch (e) {
       return res.status(400).json({
         error: 'Invalid JSON format or validation error for attendees, tabs, or packages',
@@ -3082,12 +2973,11 @@ app.get('/api/events-past', authenticateToken, async (req, res) => {
 
 //shows single events for user logged in 
 app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
-  const client = await pool.connect()
+  const client = await pool.connect();
   try {
-    const { eventId } = req.params
-    const { userId, role } = req.user
+    const { eventId } = req.params;
+    const { userId, role } = req.user;
 
-    // Allow access if user owns the event or is admin
     const query = `
       SELECT 
         e.event_id,
@@ -3095,14 +2985,14 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
         e.description,
         e.terms_and_conditions,
         e.location,
-        e.startdate,
-        e.enddate,
-        e.time,
-        e.endtime,
+        e.startdate as start_date,
+        e.enddate as end_date,
+        e.time as start_time,
+        e.endtime as end_time,
         e.duration,
-        e.deadlinetime,
-        e.deadlinedate,
-        e.type,
+        e.deadlinetime as registration_deadline_time,
+        e.deadlinedate as registration_deadline_date,
+        e.type as event_type,
         e.capacity,
         e.attendees,
         e.coverimage,
@@ -3112,67 +3002,75 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
         e.user_id
       FROM events e
       WHERE e.event_id = $1 AND (e.user_id = $2 OR $3 = true)
-    `
+    `;
 
-    const result = await client.query(query, [eventId, userId, role === "Admin"])
+    const result = await client.query(query, [eventId, userId, role === "Admin"]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Event not found or access denied" })
+      return res.status(404).json({ error: "Event not found or access denied" });
     }
 
-    const event = result.rows[0]
+    const event = result.rows[0];
 
     // Generate presigned URL for cover image
-    let coverImageUrl = "/default-event-image.jpg"
+    let coverImageUrl = "/default-event-image.jpg";
     if (event.coverimage) {
-      const coverKey = event.coverimage.split("/").slice(3).join("/")
+      const coverKey = event.coverimage.split("/").slice(3).join("/");
       try {
-        coverImageUrl = await generatePresignedUrl(coverKey)
+        coverImageUrl = await generatePresignedUrl(coverKey);
       } catch (e) {
-        console.warn("Failed to generate signed URL for cover image:", e)
+        console.warn("Failed to generate signed URL for cover image:", e);
       }
     }
 
-    // Parse tabs and packages
+    // Parse tabs
     const parsedTabs = event.tabs
-      ? event.tabs.map((tab) => {
+      ? event.tabs.map((tab, index) => {
           try {
-            return JSON.parse(tab)
+            return JSON.parse(tab);
           } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e)
-            return {}
+            console.warn(`Failed to parse tab at index ${index}: ${tab}`, e);
+            return {};
           }
         })
-      : []
+      : [];
 
+    // Parse packages
     const parsedPackages = event.packages
-      ? event.packages.map((pkg) => {
+      ? event.packages.map((pkg, index) => {
           try {
-            return JSON.parse(pkg)
+            const parsedPkg = JSON.parse(pkg);
+            // Validate required fields
+            if (!parsedPkg.startDate || !parsedPkg.endDate) {
+              console.warn(`Package at index ${index} missing startDate or endDate:`, parsedPkg);
+              return { ...parsedPkg, startDate: null, endDate: null };
+            }
+            return parsedPkg;
           } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e)
-            return {}
+            console.warn(`Failed to parse package at index ${index}: ${pkg}`, e);
+            return {};
           }
         })
-      : []
+      : [];
+
+    console.log("Parsed packages:", parsedPackages);
 
     res.json({
       ...event,
       coverimage: coverImageUrl,
       tabs: parsedTabs,
       packages: parsedPackages,
-    })
+    });
   } catch (error) {
-    console.error("Error fetching event details:", error)
+    console.error("Error fetching event details:", error);
     res.status(500).json({
       error: "Failed to fetch event details",
       details: error.message,
-    })
+    });
   } finally {
-    client.release()
+    client.release();
   }
-})
-
+});
 
 
 
