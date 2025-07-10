@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './TicketsRequest.css';
-
+ 
 const TicketPayment = () => {
   const nav = useNavigate();
   const { purchaseId } = useParams();
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+ 
   useEffect(() => {
     const fetchPaymentDetails = async () => {
       try {
@@ -20,17 +20,17 @@ const TicketPayment = () => {
           nav('/');
           return;
         }
-
+ 
         const response = await fetch(`http://localhost:5000/api/organiser/ticket-purchases/${purchaseId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-
+ 
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
+ 
         const data = await response.json();
         console.log('Payment data:', data);
         setPayment(data);
@@ -43,7 +43,7 @@ const TicketPayment = () => {
     };
     fetchPaymentDetails();
   }, [purchaseId, nav]);
-
+ 
   const handleStatusUpdate = async (status) => {
     try {
       const token = sessionStorage.getItem('token');
@@ -75,13 +75,13 @@ const TicketPayment = () => {
       alert('Failed to update payment status');
     }
   };
-
+ 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!payment) return <div>No payment data found</div>;
-
+ 
   const delegateDetails = Array.isArray(payment.delegate_details) ? payment.delegate_details : [];
-
+ 
   return (
     <div className="container">
       <header className="dashboard-header1">
@@ -96,15 +96,15 @@ const TicketPayment = () => {
           </button>
         </div>
       </header>
-
+ 
       <div className="back-button-container1">
         <button className="backbutton20" onClick={() => nav('/ticketspaymentlist')}>
           Back
         </button>
       </div>
-
+ 
       <h2 className="section-title">Purchaser</h2>
-
+ 
       <div className="form-card12">
         <div className="form-grid">
           <div>
@@ -150,9 +150,9 @@ const TicketPayment = () => {
           </div>
         </div>
       </div>
-
+ 
       <h2 className="section-title">Delegates</h2>
-
+ 
       <div className="table-container12">
         <table>
           <thead>
@@ -193,7 +193,7 @@ const TicketPayment = () => {
           </tbody>
         </table>
       </div>
-
+ 
       <div className="buttons">
         {payment.proof_of_payment_url && (
           <a
@@ -225,5 +225,6 @@ const TicketPayment = () => {
     </div>
   );
 };
-
+ 
 export default TicketPayment;
+ 

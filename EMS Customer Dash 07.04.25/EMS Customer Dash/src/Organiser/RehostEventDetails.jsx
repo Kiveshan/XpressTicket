@@ -1,0 +1,555 @@
+"use client"
+import { useState, useEffect } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import { format } from 'date-fns'
+import "./RehostEventDetails.css"
+
+const RehostEventDetails = () => {
+  const nav = useNavigate()
+  const location = useLocation()
+  const { eventid } = location.state || {}
+
+  const [event, setEvent] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [formData, setFormData] = useState({
+    startdate: "",
+    enddate: "",
+    packages: [], // Array to store { startDate, endDate } for each package
+  })
+  const [submitError, setSubmitError] = useState(null)
+  const [submitSuccess, setSubmitSuccess] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Helper function to format date using date-fns
+  const formatDate = (dateString) => {
+    if (!dateString) {
+      console.warn("Date string is empty or null")
+      return "Date not specified"
+    }
+
+    try {
+      console.log("Received dateString:", dateString)
+      const date = new Date(dateString + "T00:00:00Z")
+      if (isNaN(date.getTime())) {
+        throw new Error("Invalid date")
+      }
+      return format(date, "MMM dd, yyyy")
+    } catch (error) {
+      console.error("Date formatting error:", error, "Date string:", dateString)
+      return "Date not specified"
+    }
+  }
+
+  // Helper function to format time
+  const formatTime = (timeString) => {
+    if (!timeString) {
+      console.warn("Time string is empty or null")
+      return "Time not specified"
+    }
+
+    try {
+      const timeParts = timeString.split(":")
+      if (timeParts.length < 2 || isNaN(Number.parseInt(timeParts[0], 10)) || isNaN(Number.parseInt(timeParts[1], 10))) {
+        throw new Error("Invalid time format")
+      }
+      return timeString
+    } catch (error) {
+      console.error("Time formatting error:", error, "Time string:", timeString)
+      return "Time not specified"
+    }
+  }
+
+  // Calculate max package date (one week before event start date)
+  const getMaxPackageDate = () => {
+    if (!formData.startdate) return null;
+    const startDate = new Date(formData.startdate + "T00:00:00Z");
+    const maxDate = new Date(startDate);
+    maxDate.setDate(startDate.getDate() - 7);
+    return maxDate.toISOString().split("T")[0];
+  }
+
+  useEffect(() => {
+    const fetchEventDetails = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const token = sessionStorage.getItem("token")
+        if (!token) {
+          setError("No authentication token found. Please log in.")
+          nav("/login")
+          return
+        }
+
+        console.log("Fetching event details for ID:", eventid)
+
+        const response = await fetch(`http://localhost:5000/api/events/${eventid}`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: "include",
+        })
+
+        console.log("Response status:", response.status)
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error("API Error:", errorData)
+
+          if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem("token")
+            sessionStorage.removeItem("userId")
+            sessionStorage.removeItem("user")
+            nav("/login")
+            return
+          }
+          throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        console.log("Event data received:", data)
+
+        setEvent(data)
+
+        // Initialize form data with event and package dates
+        setFormData({
+          startdate: data.start_date ? data.start_date.split("T")[0] : "",
+          enddate: data.end_date ? data.end_date.split("T")[0] : "",
+          packages: data.packages && Array.isArray(data.packages) ? 
+            data.packages.map(pkg => ({
+              startDate: pkg.startDate ? pkg.startDate.split("T")[0] : "",
+              endDate: pkg.endDate ? pkg.endDate.split("T")[0] : "",
+            })) : [],
+        })
+      } catch (err) {
+        console.error("Fetch error:", err)
+        setError(err.message || "Failed to load event details.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (eventid) {
+      fetchEventDetails()
+    } else {
+      setError("No event ID provided.")
+      setLoading(false)
+    }
+  }, [eventid, nav])
+
+  const handleInputChange = (e, index = null) => {
+    const { name, value } = e.target
+    if (index !== null) {
+      // Handle package date inputs
+      setFormData(prev => {
+        const updatedPackages = [...prev.packages]
+        updatedPackages[index] = {
+          ...updatedPackages[index],
+          [name]: value,
+        }
+        return { ...prev, packages: updatedPackages }
+      })
+    } else {
+      // Handle event date inputs
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }))
+    }
+    if (submitError) setSubmitError(null)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitError(null)
+    setSubmitSuccess(null)
+    setIsSubmitting(true)
+
+    try {
+      const token = sessionStorage.getItem("token")
+      if (!token) {
+        setSubmitError("No authentication token found. Please log in.")
+        nav("/login")
+        return
+      }
+
+      const currentDate = new Date().toISOString().split("T")[0]
+
+      // Validate event dates
+      if (!formData.startdate || !formData.enddate) {
+        setSubmitError("Please select event start and end dates.")
+        return
+      }
+
+      if (new Date(formData.startdate) < new Date(currentDate)) {
+        setSubmitError("Event start date must be today or in the future.")
+        return
+      }
+
+      if (new Date(formData.enddate) < new Date(formData.startdate)) {
+        setSubmitError("Event end date must be on or after the event start date.")
+        return
+      }
+
+      // Validate package dates
+      const maxPackageDate = getMaxPackageDate();
+      for (let i = 0; i < formData.packages.length; i++) {
+        const pkg = formData.packages[i]
+        if (!pkg.startDate || !pkg.endDate) {
+          setSubmitError(`Please select start and end dates for package ${i + 1}.`)
+          return
+        }
+        if (new Date(pkg.startDate) < new Date(currentDate)) {
+          setSubmitError(`Package ${i + 1} start date must be today or in the future.`)
+          return
+        }
+        if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
+          setSubmitError(`Package ${i + 1} end date must be on or after the package start date.`)
+          return
+        }
+        if (maxPackageDate && (new Date(pkg.startDate) > new Date(maxPackageDate) || new Date(pkg.endDate) > new Date(maxPackageDate))) {
+          setSubmitError(`Package ${i + 1} start and end dates must be at least one week before the event start date (${formData.startdate}).`)
+          return
+        }
+      }
+
+      console.log("Submitting rehost request:", {
+        eventId: eventid,
+        startdate: formData.startdate,
+        enddate: formData.enddate,
+        packages: formData.packages,
+        resetAttendees: false, // Log the value being sent
+      })
+
+      const response = await fetch(`http://localhost:5000/api/events/${eventid}/rehost`, {
+        method: "PUT",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          startdate: formData.startdate,
+          enddate: formData.enddate,
+          packages: formData.packages,
+          resetAttendees: false, // Changed to false to preserve attendees
+        }),
+      })
+
+      console.log("Rehost response status:", response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("Rehost error:", errorData)
+        let errorMessage = errorData.error || `Server error: ${response.status} ${response.statusText}`;
+        if (errorData.conflicts) {
+          errorMessage += ": " + errorData.conflicts
+            .map(c => `${c.eventName} (ID: ${c.eventId}) from ${c.startDate} to ${c.endDate}, overlapping ${c.conflictingPeriod.start} to ${c.conflictingPeriod.end}`)
+            .join("; ");
+        }
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+      console.log("Rehost success:", result)
+
+      setSubmitSuccess("Event rehost request submitted successfully. Awaiting admin approval.")
+
+      setTimeout(() => {
+        nav("/rehost-event")
+      }, 3000)
+    } catch (err) {
+      console.error("Submit error:", err)
+      setSubmitError(err.message || "Failed to submit rehost request.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container12">
+        <header className="dashboard-header1">
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+          <div className="profile-section">
+            <button
+              className="backbutton22"
+              onClick={() => {
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
+              }}
+            >
+              LogOut
+            </button>
+          </div>
+        </header>
+        <div className="back-button-container1">
+          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+            Back
+          </button>
+        </div>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p className="loading">Loading event details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container12">
+        <header className="dashboard-header1">
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+          <div className="profile-section">
+            <button
+              className="backbutton22"
+              onClick={() => {
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
+              }}
+            >
+              LogOut
+            </button>
+          </div>
+        </header>
+        <div className="back-button-container1">
+          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+            Back
+          </button>
+        </div>
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h3>Error Loading Event Details</h3>
+          <p className="error-message">{error}</p>
+          <div className="action-buttons">
+            <button
+              className="retry-button"
+              onClick={() => {
+                setError(null)
+                setLoading(true)
+                window.location.reload()
+              }}
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!event) {
+    return (
+      <div className="container12">
+        <div className="error-container">
+          <p>No event data available.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container12">
+      <header className="dashboard-header1">
+        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+        <div className="profile-section">
+          <button
+            className="backbutton22"
+            onClick={() => {
+              sessionStorage.removeItem("token")
+              sessionStorage.removeItem("userId")
+              sessionStorage.removeItem("user")
+              nav("/login")
+            }}
+          >
+            LogOut
+          </button>
+        </div>
+      </header>
+
+      <div className="back-button-container1">
+        <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+          Back
+        </button>
+      </div>
+
+      <h2 className="title">Rehost Event: {event.name || "Unnamed Event"}</h2>
+
+      <div className="main-content">
+        <div className="event-details-card">
+          <div className="card-image-container">
+            <img
+              src={event.coverimage || "/default-event-image.jpg"}
+              alt={event.name || "Event"}
+              className="card-image"
+              onError={(e) => {
+                if (e.target.src !== "/default-event-image.jpg") {
+                  e.target.src = "/default-event-image.jpg"
+                  e.target.classList.add("image-error")
+                }
+              }}
+            />
+          </div>
+
+          <div className="card-details">
+            <div className="detail-row">
+              <strong>Location:</strong>
+              <span>{event.location || "Not specified"}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Current Start Date:</strong>
+              <span>{formatDate(event.start_date)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Current End Date:</strong>
+              <span>{formatDate(event.end_date)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Start Time:</strong>
+              <span>{formatTime(event.start_time)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>End Time:</strong>
+              <span>{formatTime(event.end_time)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Capacity:</strong>
+              <span>{event.capacity || "Not specified"}</span>
+            </div>
+            {event.description && (
+              <div className="detail-row description">
+                <strong>Description:</strong>
+                <span>{event.description}</span>
+              </div>
+            )}
+            {event.packages && Array.isArray(event.packages) && event.packages.map((pkg, index) => (
+              <div key={index}>
+                <div className="detail-row">
+                  <strong>Package {index + 1} Start Date:</strong>
+                  <span>{formatDate(pkg.startDate)}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>Package {index + 1} End Date:</strong>
+                  <span>{formatDate(pkg.endDate)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rehost-form-card">
+          <h3 className="form-title">Select New Dates</h3>
+          <form onSubmit={handleSubmit} className="rehost-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="startdate">New Event Start Date:</label>
+                <input
+                  type="date"
+                  id="startdate"
+                  name="startdate"
+                  value={formData.startdate}
+                  onChange={handleInputChange}
+                  required
+                  min={new Date().toISOString().split("T")[0]}
+                  disabled={isSubmitting}
+                  className="date-input"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="enddate">New Event End Date:</label>
+                <input
+                  type="date"
+                  id="enddate"
+                  name="enddate"
+                  value={formData.enddate}
+                  onChange={handleInputChange}
+                  required
+                  min={formData.startdate || new Date().toISOString().split("T")[0]}
+                  disabled={isSubmitting}
+                  className="date-input"
+                />
+              </div>
+            </div>
+
+            {formData.packages.map((pkg, index) => (
+              <div key={index} className="form-row">
+                <div className="form-group">
+                  <label htmlFor={`packageStartDate-${index}`}>New Package {index + 1} Start Date:</label>
+                  <input
+                    type="date"
+                    id={`packageStartDate-${index}`}
+                    name="startDate"
+                    value={pkg.startDate}
+                    onChange={(e) => handleInputChange(e, index)}
+                    required
+                    min={new Date().toISOString().split("T")[0]}
+                    max={getMaxPackageDate()}
+                    disabled={isSubmitting || !formData.startdate}
+                    className="date-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor={`packageEndDate-${index}`}>New Package {index + 1} End Date:</label>
+                  <input
+                    type="date"
+                    id={`packageEndDate-${index}`}
+                    name="endDate"
+                    value={pkg.endDate}
+                    onChange={(e) => handleInputChange(e, index)}
+                    required
+                    min={pkg.startDate || new Date().toISOString().split("T")[0]}
+                    max={getMaxPackageDate()}
+                    disabled={isSubmitting || !formData.startdate}
+                    className="date-input"
+                  />
+                </div>
+              </div>
+            ))}
+
+            {submitError && (
+              <div className="message error-message">
+                <span className="message-icon">❌</span>
+                {submitError}
+              </div>
+            )}
+
+            {submitSuccess && (
+              <div className="message success-message">
+                <span className="message-icon">✅</span>
+                {submitSuccess}
+              </div>
+            )}
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className={`submit-btn ${isSubmitting ? "submitting" : ""}`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="spinner"></span>
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Rehost Request"
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default RehostEventDetails

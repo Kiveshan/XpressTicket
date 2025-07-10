@@ -10,7 +10,6 @@ import {
   FaEye,
   FaDownload,
 } from "react-icons/fa";
-
 // Enhanced sample data with more fields and entries
 const paymentData = [
   {
@@ -44,12 +43,10 @@ const paymentData = [
     status: "Verified",
   },
 ];
-
 const TickectPaymentList = () => {
   const nav = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-
   // Filter payments based on search query and status filter
   const filteredPayments = paymentData.filter((payment) => {
     const matchesSearch =
@@ -79,7 +76,6 @@ const TickectPaymentList = () => {
           </button>
         </div>
       </header>
-
       {/* Back Button */}
       <div className="modern-back-button">
         <button
@@ -105,7 +101,6 @@ const TickectPaymentList = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-
           <div className="modern-filter-dropdown">
             <select
               className="modern-filter-btn"
@@ -118,7 +113,6 @@ const TickectPaymentList = () => {
             </select>
           </div>
         </div>
-
         {/* Table Container */}
         <div className="modern-table-container">
           <table className="modern-table">
@@ -158,7 +152,6 @@ const TickectPaymentList = () => {
                       {payment.status}
                     </span>
                   </td>
-
                   <td>
                     <button
                       className="modern-action-btn"

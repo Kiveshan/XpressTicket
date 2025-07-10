@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import './TicketsRequest.css';
-
+ 
 function TicketsRequest() {
   const nav = useNavigate();
   const { eventId } = useParams();
@@ -10,7 +10,7 @@ function TicketsRequest() {
   const [eventName, setEventName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+ 
   useEffect(() => {
     const fetchRequests = async () => {
       try {
@@ -42,7 +42,7 @@ function TicketsRequest() {
     };
     fetchRequests();
   }, [eventId, nav]);
-
+ 
   const handleStatusUpdate = async (purchaseId, request_status) => {
     try {
       const token = sessionStorage.getItem('token');
@@ -73,7 +73,7 @@ function TicketsRequest() {
       alert('Failed to update request status');
     }
   };
-
+ 
   const handleViewProof = (proofUrl) => {
     if (proofUrl) {
       window.open(proofUrl, '_blank');
@@ -81,7 +81,7 @@ function TicketsRequest() {
       alert('No proof of payment available');
     }
   };
-
+ 
   const handleDownloadCustomers = async () => {
     try {
       const token = sessionStorage.getItem('token');
@@ -99,12 +99,12 @@ function TicketsRequest() {
         throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
-
+ 
       if (data.length === 0) {
         alert('No customer data available for download.');
         return;
       }
-
+ 
       // Prepare data for Excel
       const excelData = data.map((request) => ({
         'Purchaser Name': request.purchaser_name,
@@ -112,11 +112,11 @@ function TicketsRequest() {
         'Number of Tickets': request.number_of_tickets,
         'Amount': `R ${Number(request.amount).toFixed(2)}`,
       }));
-
+ 
       // Calculate totals
       const totalTickets = data.reduce((sum, request) => sum + request.number_of_tickets, 0);
       const totalAmount = data.reduce((sum, request) => sum + Number(request.amount), 0);
-
+ 
       // Add totals row
       excelData.push({
         'Purchaser Name': 'Total',
@@ -124,12 +124,12 @@ function TicketsRequest() {
         'Number of Tickets': totalTickets,
         'Amount': `R ${totalAmount.toFixed(2)}`,
       });
-
+ 
       // Create worksheet
       const ws = XLSX.utils.json_to_sheet(excelData, {
         header: ['Purchaser Name', 'Package', 'Number of Tickets', 'Amount'],
       });
-
+ 
       // Set column widths
       ws['!cols'] = [
         { wch: 20 }, // Purchaser Name
@@ -137,11 +137,11 @@ function TicketsRequest() {
         { wch: 15 }, // Number of Tickets
         { wch: 15 }, // Amount
       ];
-
+ 
       // Create workbook and add the worksheet
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, data[0]?.event_name || 'Customers');
-
+ 
       // Generate and download the Excel file
       XLSX.writeFile(wb, `${data[0]?.event_name || 'event'}_customers.xlsx`);
     } catch (error) {
@@ -149,10 +149,10 @@ function TicketsRequest() {
       alert('Failed to download customer list: ' + error.message);
     }
   };
-
+ 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
-
+ 
   return (
     <div className="tickets-request-container">
       <header className="dashboard-header1">
@@ -167,21 +167,21 @@ function TicketsRequest() {
           </button>
         </div>
       </header>
-
+ 
       <div className="back-button-container1">
         <button className="backbutton20" onClick={() => nav('/tickets-event-list')}>
           Back
         </button>
       </div>
-
+ 
       <h2 className="tickets-request-title">Ticket Requests for {eventName}</h2>
-
+ 
       <div className="button-container">
         <button className="download-button" onClick={handleDownloadCustomers}>
           Download all customers
         </button>
       </div>
-
+ 
       <div className="tickets-request-table">
         <table>
           <thead>
@@ -234,5 +234,6 @@ function TicketsRequest() {
     </div>
   );
 }
-
+ 
 export default TicketsRequest;
+ 

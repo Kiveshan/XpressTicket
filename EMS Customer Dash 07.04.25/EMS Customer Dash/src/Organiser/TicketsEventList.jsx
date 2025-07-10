@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './TicketsEventList.css';
 import { useNavigate } from 'react-router-dom';
-
+ 
 function TicketsEventList() {
   const nav = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+ 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -42,10 +42,10 @@ function TicketsEventList() {
     };
     fetchEvents();
   }, [nav]);
-
+ 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
-
+ 
   return (
     <div className="tickets-event-list-container">
       <header className="dashboard-header1">
@@ -60,7 +60,7 @@ function TicketsEventList() {
           </button>
         </div>
       </header>
-
+ 
       <div className="back-button-container1">
         <button className="backbutton20" onClick={() => nav('/requestcard')}>
           Back
@@ -105,5 +105,6 @@ function TicketsEventList() {
     </div>
   );
 }
-
+ 
 export default TicketsEventList;
+ 
