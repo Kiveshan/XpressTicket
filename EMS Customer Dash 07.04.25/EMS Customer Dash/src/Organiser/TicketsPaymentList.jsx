@@ -10,7 +10,6 @@ import {
   FaEye,
   FaDownload,
 } from "react-icons/fa";
- 
 // Enhanced sample data with more fields and entries
 const paymentData = [
   {
@@ -44,26 +43,24 @@ const paymentData = [
     status: "Verified",
   },
 ];
- 
 const TickectPaymentList = () => {
   const nav = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
- 
   // Filter payments based on search query and status filter
   const filteredPayments = paymentData.filter((payment) => {
     const matchesSearch =
       payment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       payment.event.toLowerCase().includes(searchQuery.toLowerCase()) ||
       payment.id.toLowerCase().includes(searchQuery.toLowerCase());
- 
+
     const matchesStatus =
       filterStatus === "all" ||
       payment.status.toLowerCase() === filterStatus.toLowerCase();
- 
+
     return matchesSearch && matchesStatus;
   });
- 
+
   return (
     <div className="modern-dashboard-container">
       {/* Modern Header */}
@@ -79,7 +76,6 @@ const TickectPaymentList = () => {
           </button>
         </div>
       </header>
- 
       {/* Back Button */}
       <div className="modern-back-button">
         <button
@@ -89,11 +85,11 @@ const TickectPaymentList = () => {
           <FaArrowLeft /> Back to Dashboard
         </button>
       </div>
- 
+
       {/* Main Content */}
       <main className="modern-main-content">
         <h1 className="modern-page-title">Payment Management</h1>
- 
+
         {/* Search and Filter Section */}
         <div className="modern-search-filter">
           <div className="modern-search-input">
@@ -105,7 +101,6 @@ const TickectPaymentList = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
- 
           <div className="modern-filter-dropdown">
             <select
               className="modern-filter-btn"
@@ -118,7 +113,6 @@ const TickectPaymentList = () => {
             </select>
           </div>
         </div>
- 
         {/* Table Container */}
         <div className="modern-table-container">
           <table className="modern-table">
@@ -158,7 +152,6 @@ const TickectPaymentList = () => {
                       {payment.status}
                     </span>
                   </td>
- 
                   <td>
                     <button
                       className="modern-action-btn"
@@ -177,6 +170,5 @@ const TickectPaymentList = () => {
     </div>
   );
 };
- 
+
 export default TickectPaymentList;
- 
