@@ -1473,13 +1473,35 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
 
     await client.query('BEGIN');
 
-    let parsedAttendees = attendees;
+    let parsedAttendees = [];
     let parsedTabs = tabs;
     let parsedPackages = packages;
 
     try {
-      parsedAttendees = attendees ? `{${JSON.parse(attendees || '[]').join(',')}}` : null;
+      // Parse attendees
+      if (typeof attendees === 'string') {
+        if (attendees.startsWith('{') && attendees.endsWith('}')) {
+          parsedAttendees = attendees.slice(1, -1).split(',').map(item => item.trim()).filter(item => item);
+        } else if (attendees.startsWith('[') && attendees.endsWith(']')) {
+          parsedAttendees = JSON.parse(attendees).map(item => item.trim()).filter(item => item);
+        } else {
+          parsedAttendees = attendees.split(',').map(item => item.trim()).filter(item => item);
+        }
+      } else if (Array.isArray(attendees)) {
+        parsedAttendees = attendees.map(item => item.trim()).filter(item => item);
+      }
+
+      // Validate attendee types
+      const validAttendeeTypes = ['Student', 'Professional', 'Guest', 'Sponsor', 'Exhibitor'];
+      parsedAttendees = parsedAttendees.filter(type => validAttendeeTypes.includes(type));
+      if (parsedAttendees.length === 0) {
+        return res.status(400).json({ error: 'At least one valid attendee type is required' });
+      }
+
+      // Parse tabs
       parsedTabs = tabs ? JSON.parse(tabs).map(tab => JSON.stringify(tab)) : null;
+
+      // Parse packages
       parsedPackages = packages ? JSON.parse(packages).map((pkg, index) => {
         console.log(`Processing package ${index}:`, pkg);
         if (!pkg.startDate || !pkg.endDate) {
@@ -1529,7 +1551,7 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
     const eventValues = [
       name, description, location, start_date, end_date,
       start_time, end_time, duration, deadlinetime, deadlinedate,
-      event_type, parseInt(capacity, 10), parsedAttendees, contactnum, email,
+      event_type, parseInt(capacity, 10), `{${parsedAttendees.join(',')}}`, contactnum, email,
       parsedTabs, parsedPackages, terms_and_conditions,
       'pending',
       eventId
@@ -2736,9 +2758,9 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
     const { userId, role } = req.user;
-    const { startdate, enddate, packages, resetAttendees = true } = req.body;
+    const { startdate, enddate, packages, resetAttendees = false } = req.body; // Changed default to false
 
-    console.log("Rehost request received:", { eventId, userId, startdate, enddate, packages });
+    console.log("Rehost request received:", { eventId, userId, startdate, enddate, packages, resetAttendees });
 
     // Validate required fields
     if (!startdate || !enddate || !packages || !Array.isArray(packages)) {
@@ -2874,11 +2896,21 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
 
     await client.query("BEGIN");
 
-    const validatedAttendees = resetAttendees
-      ? "{}"
-      : Array.isArray(eventCheck.rows[0].attendees)
-        ? `{${eventCheck.rows[0].attendees.join(",")}}`
-        : "{}";
+    // Handle attendees: preserve existing unless resetAttendees is true
+    let validatedAttendees = null; // Use null to avoid updating attendees unless explicitly needed
+    if (resetAttendees) {
+      validatedAttendees = "{}"; // Reset to empty array
+    } else {
+      // Preserve existing attendees
+      const existingAttendees = eventCheck.rows[0].attendees;
+      if (Array.isArray(existingAttendees) && existingAttendees.length > 0) {
+        const validAttendeeTypes = ['Student', 'Professional', 'Guest', 'Sponsor', 'Exhibitor'];
+        const filteredAttendees = existingAttendees.filter(type => validAttendeeTypes.includes(type));
+        validatedAttendees = filteredAttendees.length > 0 ? `{${filteredAttendees.join(",")}}` : "{}";
+      } else {
+        validatedAttendees = "{}"; // Fallback to empty if no valid attendees
+      }
+    }
 
     const updateQuery = `
       UPDATE events 
@@ -2886,7 +2918,7 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
           enddate = $2,
           packages = $3,
           status = 'pending',
-          attendees = $4,
+          attendees = COALESCE($4, attendees),
           admin_comment = NULL
       WHERE event_id = $5
       RETURNING *;
@@ -3046,12 +3078,21 @@ app.get('/api/events-past', authenticateToken, async (req, res) => {
           })
           : [];
 
+        // Ensure attendees is an array
+        const attendees = Array.isArray(event.attendees)
+          ? event.attendees
+          : typeof event.attendees === 'string' && event.attendees.includes(',')
+            ? event.attendees.split(',').map(item => item.trim())
+            : typeof event.attendees === 'string'
+              ? [event.attendees]
+              : [];
+
         return {
           ...event,
           coverimage: coverImageUrl,
           tabs: parsedTabs,
           packages: parsedPackages,
-          attendees: event.attendees || [],
+          attendees: attendees,
         };
       }),
     );
@@ -3118,6 +3159,16 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
     event.start_date = event.start_date ? event.start_date.toISOString().split('T')[0] : null;
     event.end_date = event.end_date ? event.end_date.toISOString().split('T')[0] : null;
 
+    // Ensure attendees is an array
+    event.attendees = Array.isArray(event.attendees)
+      ? event.attendees
+      : typeof event.attendees === 'string' && event.attendees.includes(',')
+        ? event.attendees.split(',').map(item => item.trim())
+        : typeof event.attendees === 'string'
+          ? [event.attendees]
+          : [];
+    console.log('Raw attendees from DB:', event.attendees);
+
     // Generate presigned URL for cover image
     let coverImageUrl = '/default-event-image.jpg';
     if (event.coverimage) {
@@ -3158,6 +3209,7 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
       coverimage: coverImageUrl,
       tabs: parsedTabs,
       packages: parsedPackages,
+      attendees: event.attendees,
     });
   } catch (error) {
     console.error("Error fetching event details:", error);

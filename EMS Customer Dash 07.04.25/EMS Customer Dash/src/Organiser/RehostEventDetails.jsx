@@ -222,6 +222,7 @@ const RehostEventDetails = () => {
         startdate: formData.startdate,
         enddate: formData.enddate,
         packages: formData.packages,
+        resetAttendees: false, // Log the value being sent
       })
 
       const response = await fetch(`http://localhost:5000/api/events/${eventid}/rehost`, {
@@ -235,7 +236,7 @@ const RehostEventDetails = () => {
           startdate: formData.startdate,
           enddate: formData.enddate,
           packages: formData.packages,
-          resetAttendees: true,
+          resetAttendees: false, // Changed to false to preserve attendees
         }),
       })
 
