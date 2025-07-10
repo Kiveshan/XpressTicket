@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
+import { format } from 'date-fns'
 import "./RehostEventDetails.css"
 
 const RehostEventDetails = () => {
@@ -14,14 +15,13 @@ const RehostEventDetails = () => {
   const [formData, setFormData] = useState({
     startdate: "",
     enddate: "",
-    packageStartDate: "",
-    packageEndDate: "",
+    packages: [], // Array to store { startDate, endDate } for each package
   })
   const [submitError, setSubmitError] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Helper function to format date without timezone issues
+  // Helper function to format date using date-fns
   const formatDate = (dateString) => {
     if (!dateString) {
       console.warn("Date string is empty or null")
@@ -30,24 +30,11 @@ const RehostEventDetails = () => {
 
     try {
       console.log("Received dateString:", dateString)
-      // Handle ISO format (e.g., 2025-07-02T22:00:00.000Z) or YYYY-MM-DD
-      const normalizedDate = dateString.includes("T") ? dateString.split("T")[0] : dateString
-      const [year, month, day] = normalizedDate.split('-')
-      if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
-        throw new Error("Invalid date format")
-      }
-
-      const date = new Date(`${year}-${month}-${day}`)
+      const date = new Date(dateString + "T00:00:00Z")
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date")
       }
-
-      const options = {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      }
-      return date.toLocaleDateString("en-US", options)
+      return format(date, "MMM dd, yyyy")
     } catch (error) {
       console.error("Date formatting error:", error, "Date string:", dateString)
       return "Date not specified"
@@ -71,6 +58,15 @@ const RehostEventDetails = () => {
       console.error("Time formatting error:", error, "Time string:", timeString)
       return "Time not specified"
     }
+  }
+
+  // Calculate max package date (one week before event start date)
+  const getMaxPackageDate = () => {
+    if (!formData.startdate) return null;
+    const startDate = new Date(formData.startdate + "T00:00:00Z");
+    const maxDate = new Date(startDate);
+    maxDate.setDate(startDate.getDate() - 7);
+    return maxDate.toISOString().split("T")[0];
   }
 
   useEffect(() => {
@@ -119,12 +115,15 @@ const RehostEventDetails = () => {
 
         setEvent(data)
 
-        // Set form data with aliased names from API and first package dates
+        // Initialize form data with event and package dates
         setFormData({
           startdate: data.start_date ? data.start_date.split("T")[0] : "",
           enddate: data.end_date ? data.end_date.split("T")[0] : "",
-          packageStartDate: data.packages && data.packages[0] && data.packages[0].startDate ? data.packages[0].startDate.split("T")[0] : "",
-          packageEndDate: data.packages && data.packages[0] && data.packages[0].endDate ? data.packages[0].endDate.split("T")[0] : "",
+          packages: data.packages && Array.isArray(data.packages) ? 
+            data.packages.map(pkg => ({
+              startDate: pkg.startDate ? pkg.startDate.split("T")[0] : "",
+              endDate: pkg.endDate ? pkg.endDate.split("T")[0] : "",
+            })) : [],
         })
       } catch (err) {
         console.error("Fetch error:", err)
@@ -142,12 +141,25 @@ const RehostEventDetails = () => {
     }
   }, [eventid, nav])
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e, index = null) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+    if (index !== null) {
+      // Handle package date inputs
+      setFormData(prev => {
+        const updatedPackages = [...prev.packages]
+        updatedPackages[index] = {
+          ...updatedPackages[index],
+          [name]: value,
+        }
+        return { ...prev, packages: updatedPackages }
+      })
+    } else {
+      // Handle event date inputs
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }))
+    }
     if (submitError) setSubmitError(null)
   }
 
@@ -167,8 +179,9 @@ const RehostEventDetails = () => {
 
       const currentDate = new Date().toISOString().split("T")[0]
 
-      if (!formData.startdate || !formData.enddate || !formData.packageStartDate || !formData.packageEndDate) {
-        setSubmitError("Please select all start and end dates.")
+      // Validate event dates
+      if (!formData.startdate || !formData.enddate) {
+        setSubmitError("Please select event start and end dates.")
         return
       }
 
@@ -182,22 +195,33 @@ const RehostEventDetails = () => {
         return
       }
 
-      if (new Date(formData.packageStartDate) < new Date(currentDate)) {
-        setSubmitError("Package start date must be today or in the future.")
-        return
-      }
-
-      if (new Date(formData.packageEndDate) < new Date(formData.packageStartDate)) {
-        setSubmitError("Package end date must be on or after the package start date.")
-        return
+      // Validate package dates
+      const maxPackageDate = getMaxPackageDate();
+      for (let i = 0; i < formData.packages.length; i++) {
+        const pkg = formData.packages[i]
+        if (!pkg.startDate || !pkg.endDate) {
+          setSubmitError(`Please select start and end dates for package ${i + 1}.`)
+          return
+        }
+        if (new Date(pkg.startDate) < new Date(currentDate)) {
+          setSubmitError(`Package ${i + 1} start date must be today or in the future.`)
+          return
+        }
+        if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
+          setSubmitError(`Package ${i + 1} end date must be on or after the package start date.`)
+          return
+        }
+        if (maxPackageDate && (new Date(pkg.startDate) > new Date(maxPackageDate) || new Date(pkg.endDate) > new Date(maxPackageDate))) {
+          setSubmitError(`Package ${i + 1} start and end dates must be at least one week before the event start date (${formData.startdate}).`)
+          return
+        }
       }
 
       console.log("Submitting rehost request:", {
         eventId: eventid,
         startdate: formData.startdate,
         enddate: formData.enddate,
-        packageStartDate: formData.packageStartDate,
-        packageEndDate: formData.packageEndDate,
+        packages: formData.packages,
       })
 
       const response = await fetch(`http://localhost:5000/api/events/${eventid}/rehost`, {
@@ -210,8 +234,7 @@ const RehostEventDetails = () => {
         body: JSON.stringify({
           startdate: formData.startdate,
           enddate: formData.enddate,
-          packageStartDate: formData.packageStartDate,
-          packageEndDate: formData.packageEndDate,
+          packages: formData.packages,
           resetAttendees: true,
         }),
       })
@@ -221,13 +244,13 @@ const RehostEventDetails = () => {
       if (!response.ok) {
         const errorData = await response.json()
         console.error("Rehost error:", errorData)
-        if (errorData.error === "Date conflicts with another event" && errorData.conflicts) {
-          const conflictMessage = errorData.conflicts.map(conflict =>
-            `Event "${conflict.eventName}" from ${formatDate(conflict.startDate)} to ${formatDate(conflict.endDate)}`
-          ).join("; ")
-          throw new Error(`Date conflicts with another event: ${conflictMessage}`)
+        let errorMessage = errorData.error || `Server error: ${response.status} ${response.statusText}`;
+        if (errorData.conflicts) {
+          errorMessage += ": " + errorData.conflicts
+            .map(c => `${c.eventName} (ID: ${c.eventId}) from ${c.startDate} to ${c.endDate}, overlapping ${c.conflictingPeriod.start} to ${c.conflictingPeriod.end}`)
+            .join("; ");
         }
-        throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`)
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()
@@ -407,18 +430,18 @@ const RehostEventDetails = () => {
                 <span>{event.description}</span>
               </div>
             )}
-            {event.packages && event.packages[0] && (
-              <>
+            {event.packages && Array.isArray(event.packages) && event.packages.map((pkg, index) => (
+              <div key={index}>
                 <div className="detail-row">
-                  <strong>Package Start Date:</strong>
-                  <span>{formatDate(event.packages[0].startDate)}</span>
+                  <strong>Package {index + 1} Start Date:</strong>
+                  <span>{formatDate(pkg.startDate)}</span>
                 </div>
                 <div className="detail-row">
-                  <strong>Package End Date:</strong>
-                  <span>{formatDate(event.packages[0].endDate)}</span>
+                  <strong>Package {index + 1} End Date:</strong>
+                  <span>{formatDate(pkg.endDate)}</span>
                 </div>
-              </>
-            )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -455,36 +478,41 @@ const RehostEventDetails = () => {
                 />
               </div>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="packageStartDate">New Package Start Date:</label>
-                <input
-                  type="date"
-                  id="packageStartDate"
-                  name="packageStartDate"
-                  value={formData.packageStartDate}
-                  onChange={handleInputChange}
-                  required
-                  min={new Date().toISOString().split("T")[0]}
-                  disabled={isSubmitting}
-                  className="date-input"
-                />
+
+            {formData.packages.map((pkg, index) => (
+              <div key={index} className="form-row">
+                <div className="form-group">
+                  <label htmlFor={`packageStartDate-${index}`}>New Package {index + 1} Start Date:</label>
+                  <input
+                    type="date"
+                    id={`packageStartDate-${index}`}
+                    name="startDate"
+                    value={pkg.startDate}
+                    onChange={(e) => handleInputChange(e, index)}
+                    required
+                    min={new Date().toISOString().split("T")[0]}
+                    max={getMaxPackageDate()}
+                    disabled={isSubmitting || !formData.startdate}
+                    className="date-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor={`packageEndDate-${index}`}>New Package {index + 1} End Date:</label>
+                  <input
+                    type="date"
+                    id={`packageEndDate-${index}`}
+                    name="endDate"
+                    value={pkg.endDate}
+                    onChange={(e) => handleInputChange(e, index)}
+                    required
+                    min={pkg.startDate || new Date().toISOString().split("T")[0]}
+                    max={getMaxPackageDate()}
+                    disabled={isSubmitting || !formData.startdate}
+                    className="date-input"
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label htmlFor="packageEndDate">New Package End Date:</label>
-                <input
-                  type="date"
-                  id="packageEndDate"
-                  name="packageEndDate"
-                  value={formData.packageEndDate}
-                  onChange={handleInputChange}
-                  required
-                  min={formData.packageStartDate || new Date().toISOString().split("T")[0]}
-                  disabled={isSubmitting}
-                  className="date-input"
-                />
-              </div>
-            </div>
+            ))}
 
             {submitError && (
               <div className="message error-message">

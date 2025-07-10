@@ -51,7 +51,8 @@ const pool = new Pool({
   database: 'ems2.0',
   password: '123456',
   port: 5433,
-})
+  timezone: 'UTC', // Ensure PostgreSQL uses UTC
+});
 
 // Test database connection
 pool.connect((err, client, release) => {
@@ -130,18 +131,18 @@ async function initializeLookupTables() {
     `);
 
     // Create events table with user_id and status
-    await client.query(`
+  await client.query(`
       CREATE TABLE IF NOT EXISTS public.events (
         event_id SERIAL NOT NULL,
         name character varying NOT NULL,
         location character varying NOT NULL,
-        startdate date NOT NULL,
-        enddate date NOT NULL,
+        startdate timestamptz NOT NULL,
+        enddate timestamptz NOT NULL,
         time time without time zone NOT NULL,
         endtime time without time zone,
         duration character varying NOT NULL,
         deadlinetime time without time zone NOT NULL,
-        deadlinedate date NOT NULL,
+        deadlinedate timestamptz NOT NULL,
         type character varying NOT NULL,
         capacity integer NOT NULL,
         attendees character varying[] NOT NULL,
@@ -2728,94 +2729,156 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
 
 
 
+
 // Rehost an event by updating dates and setting status to pending
 app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
-  const client = await pool.connect()
+  const client = await pool.connect();
   try {
-    const { eventId } = req.params
-    const { userId, role } = req.user
-    const { startdate, enddate, packageStartDate, packageEndDate, resetAttendees = true } = req.body
+    const { eventId } = req.params;
+    const { userId, role } = req.user;
+    const { startdate, enddate, packages, resetAttendees = true } = req.body;
 
-    console.log("Rehost request received:", { eventId, userId, startdate, enddate, packageStartDate, packageEndDate })
+    console.log("Rehost request received:", { eventId, userId, startdate, enddate, packages });
 
-    if (!startdate || !enddate || !packageStartDate || !packageEndDate) {
-      return res.status(400).json({ error: "All start and end dates are required" })
+    // Validate required fields
+    if (!startdate || !enddate || !packages || !Array.isArray(packages)) {
+      return res.status(400).json({ error: "Event start date, end date, and packages array are required" });
     }
 
-    const currentDate = new Date().toISOString().split("T")[0]
-    if (new Date(startdate) < new Date(currentDate)) {
-      return res.status(400).json({ error: "Event start date must be today or in the future" })
+    // Validate each package
+    if (packages.length === 0) {
+      return res.status(400).json({ error: "At least one package is required" });
     }
 
-    if (new Date(enddate) < new Date(startdate)) {
-      return res.status(400).json({ error: "Event end date must be on or after the event start date" })
+    for (let i = 0; i < packages.length; i++) {
+      const pkg = packages[i];
+      if (!pkg.startDate || !pkg.endDate) {
+        return res.status(400).json({ error: `Package ${i + 1} is missing startDate or endDate` });
+      }
     }
 
-    if (new Date(packageStartDate) < new Date(currentDate)) {
-      return res.status(400).json({ error: "Package start date must be today or in the future" })
+    // Convert input strings to Date objects for validation, assuming UTC
+    const currentDate = new Date();
+    const startDateObj = new Date(startdate + "T00:00:00Z");
+    const endDateObj = new Date(enddate + "T00:00:00Z");
+
+    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+      return res.status(400).json({ error: "Invalid event date format" });
     }
 
-    if (new Date(packageEndDate) < new Date(packageStartDate)) {
-      return res.status(400).json({ error: "Package end date must be on or after the package start date" })
+    if (startDateObj < currentDate) {
+      return res.status(400).json({ error: "Event start date must be today or in the future" });
+    }
+
+    if (endDateObj < startDateObj) {
+      return res.status(400).json({ error: "Event end date must be on or after the event start date" });
+    }
+
+    // Validate package dates
+    const oneWeekBeforeStart = new Date(startDateObj);
+    oneWeekBeforeStart.setDate(startDateObj.getDate() - 7);
+
+    for (let i = 0; i < packages.length; i++) {
+      const pkg = packages[i];
+      const pkgStartDateObj = new Date(pkg.startDate + "T00:00:00Z");
+      const pkgEndDateObj = new Date(pkg.endDate + "T00:00:00Z");
+
+      if (isNaN(pkgStartDateObj.getTime()) || isNaN(pkgEndDateObj.getTime())) {
+        return res.status(400).json({ error: `Invalid date format for package ${i + 1}` });
+      }
+
+      if (pkgStartDateObj < currentDate) {
+        return res.status(400).json({ error: `Package ${i + 1} start date must be today or in the future` });
+      }
+
+      if (pkgEndDateObj < pkgStartDateObj) {
+        return res.status(400).json({ error: `Package ${i + 1} end date must be on or after the package start date` });
+      }
+
+      // Ensure package start and end dates are at least one week before event start date
+      if (pkgStartDateObj > oneWeekBeforeStart || pkgEndDateObj > oneWeekBeforeStart) {
+        return res.status(400).json({
+          error: `Package ${i + 1} start and end dates must be at least one week before the event start date (${startdate})`,
+        });
+      }
     }
 
     // Check if event exists and is eligible for rehosting
     const eventCheck = await client.query(
-      `SELECT event_id, user_id, enddate, name, attendees, status, packages 
+      `SELECT event_id, user_id, enddate AT TIME ZONE 'UTC' as enddate, name, attendees, status, packages 
        FROM events 
        WHERE event_id = $1 AND (user_id = $2 OR $3 = true) AND enddate < $4 AND status IN ('Approved', 'pending')`,
-      [eventId, userId, role === "Admin", currentDate],
-    )
+      [eventId, userId, role === "Admin", currentDate.toISOString()],
+    );
 
     if (eventCheck.rows.length === 0) {
       return res.status(404).json({
         error: "Event not found, not a past event, not in a rehostable status, or access denied",
-      })
+      });
     }
 
     // Check for date conflicts with other events
     const conflictCheck = await client.query(
-      `SELECT event_id, name, startdate, enddate 
+      `SELECT event_id, name, startdate AT TIME ZONE 'UTC' as startdate, enddate AT TIME ZONE 'UTC' as enddate 
        FROM events 
-       WHERE user_id = $1 AND startdate <= $2 AND enddate >= $3 AND event_id != $4 AND status IN ('Approved', 'pending')`,
-      [userId, enddate, startdate, eventId],
-    )
+       WHERE user_id = $1 
+       AND (
+         (startdate <= $2 AND enddate >= $3) OR
+         (startdate >= $3 AND startdate <= $2) OR
+         (enddate >= $3 AND enddate <= $2)
+       )
+       AND event_id != $4 
+       AND status IN ('Approved', 'pending')`,
+      [userId, endDateObj.toISOString(), startDateObj.toISOString(), eventId],
+    );
 
     if (conflictCheck.rows.length > 0) {
+      const conflictDetails = conflictCheck.rows.map(row => ({
+        eventId: row.event_id,
+        eventName: row.name,
+        startDate: row.startdate.toISOString().split('T')[0],
+        endDate: row.enddate.toISOString().split('T')[0],
+        conflictingPeriod: {
+          start: new Date(Math.max(new Date(row.startdate), startDateObj)).toISOString().split('T')[0],
+          end: new Date(Math.min(new Date(row.enddate), endDateObj)).toISOString().split('T')[0],
+        },
+      }));
+
       return res.status(400).json({
-        error: "Date conflicts with another event",
-        conflicts: conflictCheck.rows.map(row => ({
-          eventId: row.event_id,
-          eventName: row.name,
-          startDate: row.startdate,
-          endDate: row.enddate,
-        })),
-      })
+        error: "The requested event dates conflict with one or more existing events",
+        conflicts: conflictDetails,
+      });
     }
 
-    // Update packages by modifying startDate and endDate
-    const existingPackages = eventCheck.rows[0].packages || []
-    const updatedPackages = existingPackages.map((pkg) => {
+    // Update packages by merging new dates with existing package data
+    const existingPackages = eventCheck.rows[0].packages || [];
+    if (existingPackages.length !== packages.length) {
+      return res.status(400).json({
+        error: `Number of packages provided (${packages.length}) does not match existing packages (${existingPackages.length})`,
+      });
+    }
+
+    const updatedPackages = existingPackages.map((pkg, index) => {
       try {
-        const parsedPkg = JSON.parse(pkg)
+        const parsedPkg = JSON.parse(pkg);
         return JSON.stringify({
           ...parsedPkg,
-          startDate: packageStartDate,
-          endDate: packageEndDate,
-        })
+          startDate: packages[index].startDate + "T00:00:00Z",
+          endDate: packages[index].endDate + "T00:00:00Z",
+        });
       } catch (e) {
-        console.warn(`Failed to parse package: ${pkg}`, e)
-        return pkg // Return original package if parsing fails
+        console.warn(`Failed to parse package: ${pkg}`, e);
+        return pkg; // Return original package if parsing fails
       }
-    })
+    });
 
-    await client.query("BEGIN")
+    await client.query("BEGIN");
 
     const validatedAttendees = resetAttendees
       ? "{}"
       : Array.isArray(eventCheck.rows[0].attendees)
         ? `{${eventCheck.rows[0].attendees.join(",")}}`
-        : "{}"
+        : "{}";
 
     const updateQuery = `
       UPDATE events 
@@ -2827,54 +2890,60 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
           admin_comment = NULL
       WHERE event_id = $5
       RETURNING *;
-    `
+    `;
 
-    const updateValues = [startdate, enddate, updatedPackages, validatedAttendees, eventId]
-    const result = await client.query(updateQuery, updateValues)
+    const updateValues = [
+      startDateObj.toISOString(),
+      endDateObj.toISOString(),
+      updatedPackages,
+      validatedAttendees,
+      eventId,
+    ];
+    const result = await client.query(updateQuery, updateValues);
 
     if (result.rows.length === 0) {
-      await client.query("ROLLBACK")
-      return res.status(404).json({ error: "Event not found after verification" })
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Event not found after verification" });
     }
 
-    await client.query("COMMIT")
+    await client.query("COMMIT");
 
-    const updatedEvent = result.rows[0]
+    const updatedEvent = result.rows[0];
 
     // Generate presigned URL for response
-    let coverImageUrl = "/default-event-image.jpg"
+    let coverImageUrl = "/default-event-image.jpg";
     if (updatedEvent.coverimage) {
-      const coverKey = updatedEvent.coverimage.split("/").slice(3).join("/")
+      const coverKey = updatedEvent.coverimage.split("/").slice(3).join("/");
       try {
-        coverImageUrl = await generatePresignedUrl(coverKey)
+        coverImageUrl = await generatePresignedUrl(coverKey);
       } catch (e) {
-        console.warn("Failed to generate signed URL for cover image:", e)
+        console.warn("Failed to generate signed URL for cover image:", e);
       }
     }
 
     const parsedTabs = updatedEvent.tabs
       ? updatedEvent.tabs.map((tab) => {
-        try {
-          return JSON.parse(tab)
-        } catch (e) {
-          console.warn(`Failed to parse tab: ${tab}`, e)
-          return {}
-        }
-      })
-      : []
+          try {
+            return JSON.parse(tab);
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e);
+            return {};
+          }
+        })
+      : [];
 
     const parsedPackages = updatedEvent.packages
       ? updatedEvent.packages.map((pkg) => {
-        try {
-          return JSON.parse(pkg)
-        } catch (e) {
-          console.warn(`Failed to parse package: ${pkg}`, e)
-          return {}
-        }
-      })
-      : []
+          try {
+            return JSON.parse(pkg);
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e);
+            return {};
+          }
+        })
+      : [];
 
-    console.log("Event rehosted successfully:", updatedEvent.event_id)
+    console.log("Event rehosted successfully:", updatedEvent.event_id);
 
     res.json({
       message: "Event rehost request submitted successfully, pending admin approval",
@@ -2884,19 +2953,18 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
         tabs: parsedTabs,
         packages: parsedPackages,
       },
-    })
+    });
   } catch (error) {
-    await client.query("ROLLBACK")
-    console.error("Error rehosting event:", error)
+    await client.query("ROLLBACK");
+    console.error("Error rehosting event:", error);
     res.status(500).json({
       error: "Failed to rehost event",
       details: error.message,
-    })
+    });
   } finally {
-    client.release()
+    client.release();
   }
-})
-
+});
 
 // Get past events for the logged-in user
 app.get('/api/events-past', authenticateToken, async (req, res) => {
@@ -3019,8 +3087,8 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
         e.description,
         e.terms_and_conditions,
         e.location,
-        e.startdate as start_date,
-        e.enddate as end_date,
+        e.startdate AT TIME ZONE 'UTC' as start_date,
+        e.enddate AT TIME ZONE 'UTC' as end_date,
         e.time as start_time,
         e.endtime as end_time,
         e.duration,
@@ -3046,48 +3114,44 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
 
     const event = result.rows[0];
 
+    // Format dates as YYYY-MM-DD in UTC
+    event.start_date = event.start_date ? event.start_date.toISOString().split('T')[0] : null;
+    event.end_date = event.end_date ? event.end_date.toISOString().split('T')[0] : null;
+
     // Generate presigned URL for cover image
-    let coverImageUrl = "/default-event-image.jpg";
+    let coverImageUrl = '/default-event-image.jpg';
     if (event.coverimage) {
-      const coverKey = event.coverimage.split("/").slice(3).join("/");
+      const coverKey = event.coverimage.split('/').slice(3).join('/');
       try {
         coverImageUrl = await generatePresignedUrl(coverKey);
       } catch (e) {
-        console.warn("Failed to generate signed URL for cover image:", e);
+        console.warn('Failed to generate signed URL for cover image:', e);
       }
     }
 
     // Parse tabs
     const parsedTabs = event.tabs
-      ? event.tabs.map((tab, index) => {
-        try {
-          return JSON.parse(tab);
-        } catch (e) {
-          console.warn(`Failed to parse tab at index ${index}: ${tab}`, e);
-          return {};
-        }
-      })
+      ? event.tabs.map((tab) => {
+          try {
+            return JSON.parse(tab);
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e);
+            return {};
+          }
+        })
       : [];
 
     // Parse packages
     const parsedPackages = event.packages
-      ? event.packages.map((pkg, index) => {
-        try {
-          const parsedPkg = JSON.parse(pkg);
-          // Validate required fields
-          if (!parsedPkg.startDate || !parsedPkg.endDate) {
-            console.warn(`Package at index ${index} missing startDate or endDate:`, parsedPkg);
-            return { ...parsedPkg, startDate: null, endDate: null };
+      ? event.packages.map((pkg) => {
+          try {
+            return JSON.parse(pkg);
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e);
+            return {};
           }
-          return parsedPkg;
-        } catch (e) {
-          console.warn(`Failed to parse package at index ${index}: ${pkg}`, e);
-          return {};
-        }
-      })
+        })
       : [];
-
-    console.log("Parsed packages:", parsedPackages);
 
     res.json({
       ...event,
@@ -3105,13 +3169,6 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
     client.release();
   }
 });
-
-
-
-
-
-
-
 
 
 

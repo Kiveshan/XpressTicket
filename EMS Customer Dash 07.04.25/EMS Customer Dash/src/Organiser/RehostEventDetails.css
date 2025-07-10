@@ -313,12 +313,19 @@
   background-color: #f8f9fa;
   color: #6c757d;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
-.form-actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
+/* Custom calendar styles */
+.date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 0.5rem;
+  filter: invert(50%) sepia(20%) saturate(500%) hue-rotate(180deg);
+}
+
+.date-input:disabled::-webkit-calendar-picker-indicator {
+  cursor: not-allowed;
+  filter: invert(70%) sepia(0%) saturate(0%);
 }
 
 /* Messages */
