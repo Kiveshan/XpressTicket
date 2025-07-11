@@ -1145,6 +1145,7 @@ async function generatePresignedUrl(key) {
   }
 }
 
+
 //Leya organizer code
 
 app.get('/api/events', authenticateToken, async (req, res) => {
@@ -1621,8 +1622,6 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
     client.release();
   }
 });
-
-
 
 
 
@@ -2330,6 +2329,10 @@ app.get('/api/payments-with-user-names', async (req, res) => {
   }
 });
 
+
+
+
+//Leya Code
 //----------------payments organizer start
 // Get all events with pending ticket request counts
 app.get('/api/organiser/events', authenticateToken, async (req, res) => {
@@ -2745,11 +2748,6 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
     client.release();
   }
 });
-
-
-
-
-
 
 
 // Rehost an event by updating dates and setting status to pending
