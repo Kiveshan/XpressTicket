@@ -119,13 +119,13 @@ const RehostEventDetails = () => {
 
         // Initialize form data with event and package dates, ensuring date-only format
         setFormData({
-          startdate: data.start_date ? data.start_date.split("T")[0] : "",
-          enddate: data.end_date ? data.end_date.split("T")[0] : "",
-          deadline_date: data.registration_deadline_date ? data.registration_deadline_date.split("T")[0] : "",
+          startdate: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
+          enddate: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
+          deadline_date: data.registration_deadline_date ? new Date(data.registration_deadline_date).toISOString().split("T")[0] : "",
           packages: data.packages && Array.isArray(data.packages) ? 
             data.packages.map(pkg => ({
-              startDate: pkg.startDate ? pkg.startDate.split("T")[0] : "",
-              endDate: pkg.endDate ? pkg.endDate.split("T")[0] : "",
+              startDate: pkg.startDate ? new Date(pkg.startDate).toISOString().split("T")[0] : "",
+              endDate: pkg.endDate ? new Date(pkg.endDate).toISOString().split("T")[0] : "",
             })) : [],
         })
       } catch (err) {

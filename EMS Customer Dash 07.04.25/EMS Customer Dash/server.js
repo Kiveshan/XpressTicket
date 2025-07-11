@@ -2819,13 +2819,13 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
     const { userId, role } = req.user;
-    const { startdate, enddate, packages, resetAttendees = false } = req.body; // Changed default to false
+    const { startdate, enddate, deadline_date, packages, resetAttendees = false } = req.body; // Added deadline_date
 
-    console.log("Rehost request received:", { eventId, userId, startdate, enddate, packages, resetAttendees });
+    console.log("Rehost request received:", { eventId, userId, startdate, enddate, deadline_date, packages, resetAttendees });
 
     // Validate required fields
-    if (!startdate || !enddate || !packages || !Array.isArray(packages)) {
-      return res.status(400).json({ error: "Event start date, end date, and packages array are required" });
+    if (!startdate || !enddate || !deadline_date || !packages || !Array.isArray(packages)) {
+      return res.status(400).json({ error: "Event start date, end date, registration deadline date, and packages array are required" });
     }
 
     // Validate each package
@@ -2844,9 +2844,10 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
     const currentDate = new Date();
     const startDateObj = new Date(startdate + "T00:00:00Z");
     const endDateObj = new Date(enddate + "T00:00:00Z");
+    const deadlineDateObj = new Date(deadline_date + "T00:00:00Z");
 
-    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
-      return res.status(400).json({ error: "Invalid event date format" });
+    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime()) || isNaN(deadlineDateObj.getTime())) {
+      return res.status(400).json({ error: "Invalid event or deadline date format" });
     }
 
     if (startDateObj < currentDate) {
@@ -2855,6 +2856,10 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
 
     if (endDateObj < startDateObj) {
       return res.status(400).json({ error: "Event end date must be on or after the event start date" });
+    }
+
+    if (deadlineDateObj >= startDateObj) {
+      return res.status(400).json({ error: "Registration deadline must be before the event start date" });
     }
 
     // Validate package dates
@@ -2878,7 +2883,6 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
         return res.status(400).json({ error: `Package ${i + 1} end date must be on or after the package start date` });
       }
 
-      // Ensure package start and end dates are at least one week before event start date
       if (pkgStartDateObj > oneWeekBeforeStart || pkgEndDateObj > oneWeekBeforeStart) {
         return res.status(400).json({
           error: `Package ${i + 1} start and end dates must be at least one week before the event start date (${startdate})`,
@@ -2962,32 +2966,27 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
     if (resetAttendees) {
       validatedAttendees = "{}"; // Reset to empty array
     } else {
-      // Preserve existing attendees
-      const existingAttendees = eventCheck.rows[0].attendees;
-      if (Array.isArray(existingAttendees) && existingAttendees.length > 0) {
-        const validAttendeeTypes = ['Student', 'Professional', 'Guest', 'Sponsor', 'Exhibitor'];
-        const filteredAttendees = existingAttendees.filter(type => validAttendeeTypes.includes(type));
-        validatedAttendees = filteredAttendees.length > 0 ? `{${filteredAttendees.join(",")}}` : "{}";
-      } else {
-        validatedAttendees = "{}"; // Fallback to empty if no valid attendees
-      }
+      // Preserve existing attendees without filtering
+      validatedAttendees = eventCheck.rows[0].attendees || "{}"; // Keep original attendees as-is
     }
 
     const updateQuery = `
       UPDATE events 
       SET startdate = $1,
           enddate = $2,
-          packages = $3,
+          deadlinedate = $3, -- Added deadlinedate
+          packages = $4,
           status = 'pending',
-          attendees = COALESCE($4, attendees),
+          attendees = COALESCE($5, attendees), -- Only update if validatedAttendees is not null
           admin_comment = NULL
-      WHERE event_id = $5
+      WHERE event_id = $6
       RETURNING *;
     `;
 
     const updateValues = [
       startDateObj.toISOString(),
       endDateObj.toISOString(),
+      deadlineDateObj.toISOString().split('T')[0], // Store as date-only
       updatedPackages,
       validatedAttendees,
       eventId,
