@@ -247,13 +247,6 @@ const ViewEventRequest = () => {
                     <div className="view-info-label">Max Capacity</div>
                     <div className="view-info-value">{eventData.capacity}</div>
                   </div>
-
-                  {eventData.duration && (
-                    <div className="view-info-card">
-                      <div className="view-info-label">Duration</div>
-                      <div className="view-info-value">{eventData.duration}</div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -388,7 +381,7 @@ const ViewEventRequest = () => {
                               </div>
                               <div className="view-package-item">
                                 <div className="view-package-item-label">Pricing</div>
-                                <div className="view-package-item-value">{pkg.pricing}</div>
+                                <div className="view-package-item-value">R {pkg.pricing}</div>
                               </div>
                             </div>
                             <div className="view-package-description">
