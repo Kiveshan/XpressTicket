@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react"
 import "./EventRequest.css"
-import "./ModernOrganizerStyles.css"
 import { useNavigate } from "react-router-dom"
 import { ClipLoader } from "react-spinners"
 
@@ -226,33 +225,31 @@ const EventRequest = () => {
 
   if (loading) {
     return (
-      <div className="modern-container">
-        <header className="modern-header">
-          <div className="header-left">
-            <button className="modern-button" onClick={() => nav("/requestcard")}>
-              <i className="fas fa-arrow-left"></i> Back
+      <div className="container12">
+        <header className="dashboard-header1">
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+          <div className="profile-section">
+            <button
+              className="backbutton22"
+              onClick={() => {
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
+              }}
+            >
+              LogOut
             </button>
-            <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
           </div>
-          <h1 className="header-title">Event Request</h1>
-          <button 
-            className="modern-button" 
-            onClick={() => {
-              sessionStorage.removeItem("token")
-              sessionStorage.removeItem("userId")
-              sessionStorage.removeItem("user")
-              nav("/login")
-            }}
-          >
-            <i className="fas fa-sign-out-alt"></i> Logout
-          </button>
         </header>
-        
-        <div className="modern-content">
-          <div className="modern-loading">
-            <ClipLoader color="#4ca1af" loading={loading} size={50} />
-            <p>Loading events...</p>
-          </div>
+        <div className="back-button-container1">
+          <button className="backbutton20" onClick={() => nav("/requestcard")}>
+            Back
+          </button>
+        </div>
+        <div className="loading-container">
+          <ClipLoader color="#123abc" loading={loading} size={50} />
+          <p className="loading">Loading events...</p>
         </div>
       </div>
     )
@@ -261,63 +258,58 @@ const EventRequest = () => {
   if (error) {
     const isAuthError = error.includes("log in") || error.includes("expired")
     return (
-      <div className="modern-container">
-        <header className="modern-header">
-          <div className="header-left">
-            <button 
-              className="modern-button" 
-              onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}
-            >
-              <i className="fas fa-arrow-left"></i> {isAuthError ? "Go to Login" : "Back"}
-            </button>
-            <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
+      <div className="container12">
+        <header className="dashboard-header1">
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+          <div className="profile-section">
+            {!isAuthError && (
+              <button
+                className="backbutton22"
+                onClick={() => {
+                  sessionStorage.removeItem("token")
+                  sessionStorage.removeItem("userId")
+                  sessionStorage.removeItem("user")
+                  nav("/login")
+                }}
+              >
+                LogOut
+              </button>
+            )}
           </div>
-          <h1 className="header-title">Event Request</h1>
-          {!isAuthError && (
-            <button
-              className="modern-button"
-              onClick={() => {
-                sessionStorage.removeItem("token")
-                sessionStorage.removeItem("userId")
-                sessionStorage.removeItem("user")
-                nav("/login")
-              }}
-            >
-              <i className="fas fa-sign-out-alt"></i> Logout
-            </button>
-          )}
         </header>
-        
-        <div className="modern-content">
-          <div className="modern-card">
-            <div className="modern-error">
-              <i className="fas fa-exclamation-triangle"></i>
-              <h3>{isAuthError ? "Authentication Required" : "Error Loading Events"}</h3>
-              <p>{error}</p>
-              {isAuthError ? (
-                <button
-                  className="modern-button"
-                  onClick={() => {
-                    sessionStorage.clear()
-                    nav("/login")
-                  }}
-                >
-                  <i className="fas fa-sign-in-alt"></i> Go to Login
-                </button>
-              ) : (
-                <button
-                  className="modern-button"
-                  onClick={() => {
-                    setError(null)
-                    setLoading(true)
-                    setEvents([])
-                    setFilteredEvents([])
-                  }}
-                >
-                  <i className="fas fa-redo"></i> Try Again
-                </button>
-              )}
-            </div>
+        <div className="back-button-container1">
+          <button className="backbutton20" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
+            {isAuthError ? "Go to Login" : "Back"}
+          </button>
+        </div>
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h3>{isAuthError ? "Authentication Required" : "Error Loading Events"}</h3>
+          <p className="error-message">{error}</p>
+          <div className="action-buttons">
+            {isAuthError ? (
+              <button
+                className="login-button"
+                onClick={() => {
+                  sessionStorage.clear()
+                  nav("/login")
+                }}
+              >
+                Go to Login
+              </button>
+            ) : (
+              <button
+                className="retry-button"
+                onClick={() => {
+                  setError(null)
+                  setLoading(true)
+                  setEvents([])
+                  setFilteredEvents([])
+                }}
+              >
+                Try Again
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -325,105 +317,92 @@ const EventRequest = () => {
   }
 
   return (
-    <div className="modern-container">
-      <header className="modern-header">
-        <div className="header-left">
-          <button className="modern-button" onClick={() => nav("/requestcard")}>
-            <i className="fas fa-arrow-left"></i> Back
+    <div className="container12">
+      <header className="dashboard-header1">
+        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+        <div className="profile-section">
+          <button
+            className="backbutton22"
+            onClick={() => {
+              sessionStorage.removeItem("token")
+              sessionStorage.removeItem("userId")
+              sessionStorage.removeItem("user")
+              nav("/login")
+            }}
+          >
+            LogOut
           </button>
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
         </div>
-        <h1 className="header-title">Event Request</h1>
-        <button 
-          className="modern-button" 
-          onClick={() => {
-            sessionStorage.removeItem("token")
-            sessionStorage.removeItem("userId")
-            sessionStorage.removeItem("user")
-            nav("/login")
-          }}
-        >
-          <i className="fas fa-sign-out-alt"></i> Logout
-        </button>
       </header>
 
-      <div className="modern-content">
-        <div className="modern-card">
-          <div className="modern-card-header">
-            <h2 className="modern-section-title">Event Requests</h2>
-            <div className="modern-filter">
-              <label htmlFor="status-filter" className="modern-filter-label">
-                <i className="fas fa-filter"></i> Filter by Status:
-              </label>
-              <select 
-                id="status-filter" 
-                value={statusFilter} 
-                onChange={handleStatusFilterChange} 
-                className="modern-select"
-              >
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-          </div>
-
-          {filteredEvents.length === 0 ? (
-            <div className="modern-empty-state">
-              <i className="fas fa-calendar-times"></i>
-              <p>
-                No events found{statusFilter !== "all" ? ` with status "${statusFilter}"` : ""}. Create your first event to
-                get started!
-              </p>
-              <button className="modern-button" onClick={() => nav("/create-event")}>
-                <i className="fas fa-plus"></i> Create New Event
-              </button>
-            </div>
-          ) : (
-            <div className="modern-card-grid">
-              {filteredEvents.map((event) => (
-                <div key={event.id} className="modern-event-card">
-                  <div className="modern-card-image-container">
-                    <img
-                      src={event.file_url}
-                      alt={event.event_name}
-                      className="modern-card-image"
-                      onError={handleImageError}
-                    />
-                    {!event.file_url && (
-                      <div className="modern-image-placeholder">
-                        <i className="fas fa-image"></i>
-                        <span>No Image</span>
-                      </div>
-                    )}
-                  </div>
-                  <h3 className="modern-card-title">{event.event_name}</h3>
-                  <div className="modern-card-details">
-                    <p>
-                      <i className="fas fa-map-marker-alt"></i> {event.location} <br />
-                      <i className="fas fa-calendar-day"></i> {formatDate(event.date)} <br />
-                      <i className="fas fa-tag"></i> {event.price} <br />
-                      <i className="fas fa-clock"></i> {event.time}
-                    </p>
-                  </div>
-                  <div className="modern-card-footer">
-                    <span className={`modern-badge ${event.status.replace(" ", "-").toLowerCase()}`}>
-                      {event.status}
-                    </span>
-                    <button 
-                      className="modern-button" 
-                      onClick={() => nav("/viewerequest", { state: { eventid: event.id } })}
-                    >
-                      <i className="fas fa-eye"></i> View
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="back-button-container1">
+        <button className="backbutton20" onClick={() => nav("/requestcard")}>
+          Back
+        </button>
       </div>
+
+      <h2 className="title">Event Request</h2>
+
+      <div className="filter-container">
+        <label htmlFor="status-filter" className="filter-label">
+          Filter by Status:
+        </label>
+        <select id="status-filter" value={statusFilter} onChange={handleStatusFilterChange} className="filter-select">
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+
+      {filteredEvents.length === 0 ? (
+        <div className="no-events">
+          <p>
+            No events found{statusFilter !== "all" ? ` with status "${statusFilter}"` : ""}. Create your first event to
+            get started!
+          </p>
+          <button className="create-event-button" onClick={() => nav("/create-event")}>
+            Create New Event
+          </button>
+        </div>
+      ) : (
+        <div className="card-grid">
+          {filteredEvents.map((event) => (
+            <div key={event.id} className="card">
+              <div className="card-image-container">
+                <img
+                  src={event.file_url}
+                  alt={event.event_name}
+                  className="card-image"
+                  onError={handleImageError}
+                />
+                {!event.file_url && (
+                  <div className="image-placeholder">
+                    <span>No Image</span>
+                  </div>
+                )}
+              </div>
+              <h3 className="card-title">{event.event_name}</h3>
+              <div className="card-details">
+                <p>
+                  📍 {event.location} <br />
+                  📅 {formatDate(event.date)} <br />
+                  💰 {event.price} <br />
+                  ⏰ {event.time}
+                </p>
+              </div>
+              <div className="card-footer">
+                <span className={`status ${event.status.replace(" ", "-").toLowerCase()}`}>
+                  Status: {event.status}
+                </span>
+                <button className="view-btn" onClick={() => nav("/viewerequest", { state: { eventid: event.id } })}>
+                  View
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
