@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import "./RehostEventDetails.css"
 
 const RehostEventDetails = () => {
-  const nav = useNavigate()
+  const nav = useNavigate()  
   const location = useLocation()
   const { eventid } = location.state || {}
 
@@ -214,9 +214,9 @@ const RehostEventDetails = () => {
 
       // Validate package dates
       const maxPackageDate = getMaxPackageDate()
-      for (let i = 0; i < formData.packages.length; i++) {
+      for (let i = 0; i < formData.packages.length; i++) {     
         const pkg = formData.packages[i]
-        if (!pkg.startDate || !pkg.endDate) {
+        if (!pkg.startDate || !pkg.endDate) {    
           setSubmitError(`Please select start and end dates for package ${i + 1}.`)
           return
         }
