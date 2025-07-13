@@ -1145,6 +1145,7 @@ async function generatePresignedUrl(key) {
   }
 }
 
+
 //Leya organizer code
 
 app.get('/api/events', authenticateToken, async (req, res) => {
@@ -1249,7 +1250,6 @@ app.post('/api/events', authenticateToken, upload.fields([{ name: 'cover_image',
   console.log('Files received:', req.files);
   console.log('Body:', req.body);
   console.log('Raw packages:', req.body.packages);
-
   const client = await pool.connect();
   try {
     const {
@@ -1285,7 +1285,6 @@ app.post('/api/events', authenticateToken, upload.fields([{ name: 'cover_image',
     if (!type || type.trim() === '') missingFields.push('type');
     if (!capacity || capacity.trim() === '') missingFields.push('capacity');
     if (!attendees || attendees.trim() === '') missingFields.push('attendees');
-
     if (missingFields.length > 0) {
       console.log('Missing fields:', missingFields);
       return res.status(400).json({
@@ -1305,33 +1304,60 @@ app.post('/api/events', authenticateToken, upload.fields([{ name: 'cover_image',
       return res.status(400).json({ error: 'Cover image must be JPEG or PNG' });
     }
 
+    // Validate registration deadline (must be before event start date)
+    const eventStartDate = new Date(`${startdate}T${start_time}`);
+    const deadlineDate = new Date(`${deadlinedate}T${deadlinetime}`);
+    if (isNaN(eventStartDate.getTime()) || isNaN(deadlineDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format for event start or registration deadline' });
+    }
+    if (deadlineDate >= eventStartDate) {
+      return res.status(400).json({
+        error: 'Registration deadline must be before event start date',
+      });
+    }
+
     let parsedAttendees = [];
     let parsedTabs = [];
     let parsedPackages = [];
     try {
       parsedAttendees = attendees.startsWith('{') ? attendees.slice(1, -1).split(',').filter(item => item.trim()) : JSON.parse(attendees || '[]');
       parsedTabs = JSON.parse(tabs || '[]').map(tab => JSON.stringify(tab));
-      parsedPackages = JSON.parse(packages || '[]').map(pkg => {
-        console.log('Processing package:', pkg); // Log each package
+      parsedPackages = JSON.parse(packages || '[]').map((pkg, index) => {
+        console.log('Processing package:', pkg);
         if (!pkg.startDate || !pkg.endDate) {
-          throw new Error(`Package ${JSON.stringify(pkg)} is missing startDate or endDate`);
+          throw new Error(`Package ${index + 1} is missing startDate or endDate`);
         }
         if (isNaN(new Date(pkg.startDate).getTime()) || isNaN(new Date(pkg.endDate).getTime())) {
-          throw new Error(`Invalid date format in package: ${JSON.stringify(pkg)}`);
+          throw new Error(`Invalid date format in package ${index + 1}`);
         }
         if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
-          throw new Error(`End date before start date in package: ${JSON.stringify(pkg)}`);
+          throw new Error(`End date before start date in package ${index + 1}`);
+        }
+        // Validate package start date (at least one week before registration deadline)
+        const packageStartDate = new Date(pkg.startDate);
+        const packageEndDate = new Date(pkg.endDate);
+        const deadlineDateObj = new Date(deadlinedate);
+        const minPackageDate = new Date(deadlineDateObj);
+        minPackageDate.setDate(deadlineDateObj.getDate() - 7);
+        if (packageStartDate > minPackageDate) {
+          throw new Error(`Package ${index + 1} start date must be at least one week before registration deadline`);
+        }
+        // Validate package end date (before registration deadline)
+        if (packageEndDate >= deadlineDateObj) {
+          throw new Error(`Package ${index + 1} end date must be before registration deadline`);
         }
         return JSON.stringify(pkg);
       });
       console.log('Parsed packages:', parsedPackages);
     } catch (e) {
       console.error('JSON parsing or validation error:', e.message);
-      return res.status(400).json({ error: 'Invalid JSON format or validation error for attendees, tabs, or packages', details: e.message });
+      return res.status(400).json({
+        error: 'Invalid JSON format or validation error for attendees, tabs, or packages',
+        details: e.message,
+      });
     }
 
     await client.query('BEGIN');
-
     // Upload cover image to S3
     let coverImageUrl;
     let coverImageKey;
@@ -1339,18 +1365,15 @@ app.post('/api/events', authenticateToken, upload.fields([{ name: 'cover_image',
       const file = req.files['cover_image'][0];
       const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
       coverImageKey = `cover_images/${Date.now()}_${sanitizedFileName}`;
-
       const coverImageCommand = new PutObjectCommand({
         Bucket: process.env.S3_BUCKET_NAME,
         Key: coverImageKey,
         Body: file.buffer,
         ContentType: file.mimetype,
       });
-
       await s3Client.send(coverImageCommand);
       coverImageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${coverImageKey}`;
       console.log('Cover image uploaded successfully:', coverImageUrl);
-
       if (!coverImageUrl || typeof coverImageUrl !== 'string' || !coverImageUrl.startsWith('https://')) {
         throw new Error('Invalid cover image URL after upload');
       }
@@ -1383,7 +1406,6 @@ app.post('/api/events', authenticateToken, upload.fields([{ name: 'cover_image',
       req.user.userId,
       'pending',
     ];
-
     const eventResult = await client.query(
       `INSERT INTO events (
          name, location, startdate, enddate, time, duration, deadlinedate, deadlinetime,
@@ -1394,20 +1416,15 @@ app.post('/api/events', authenticateToken, upload.fields([{ name: 'cover_image',
       ) RETURNING event_id`,
       queryParams
     );
-
     const event_id = eventResult.rows[0].event_id;
     console.log('Event created with ID:', event_id);
-
     await client.query('COMMIT');
     console.log('Transaction committed');
-
     const finalEvent = await client.query(
       `SELECT * FROM events WHERE event_id = $1`,
       [event_id]
     );
-
     const finalCoverImageUrl = coverImageKey ? await generatePresignedUrl(coverImageKey) : coverImageUrl;
-
     console.log('Event created:', finalEvent.rows[0]);
     res.status(200).json({
       message: 'Event created successfully',
@@ -1455,28 +1472,60 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
       packages,
       terms_and_conditions,
     } = req.body;
-
     console.log('Received packages:', req.body.packages);
 
+    // Validate ownership and status
     const ownershipCheck = await client.query(
-      `SELECT event_id, status FROM events 
-       WHERE event_id = $1 AND user_id = $2 
-       AND (status = 'Request Edit' OR status = 'pending' OR $3 = true)`,
+      `SELECT event_id, status FROM events
+        WHERE event_id = $1 AND user_id = $2
+        AND (status = 'Request Edit' OR status = 'pending' OR $3 = true)`,
       [eventId, userId, req.user.role === 'Admin']
     );
-
     if (ownershipCheck.rows.length === 0) {
       return res.status(403).json({
         error: 'Not authorized to update this event or event not in editable status'
       });
     }
 
-    await client.query('BEGIN');
+    // Validate required fields
+    const missingFields = [];
+    if (!name || name.trim() === '') missingFields.push('name');
+    if (!location || location.trim() === '') missingFields.push('location');
+    if (!start_date || start_date.trim() === '') missingFields.push('start_date');
+    if (!end_date || end_date.trim() === '') missingFields.push('end_date');
+    if (!start_time || start_time.trim() === '') missingFields.push('start_time');
+    if (!end_time || end_time.trim() === '') missingFields.push('end_time');
+    if (!duration || duration.trim() === '') missingFields.push('duration');
+    if (!deadlinedate || deadlinedate.trim() === '') missingFields.push('deadlinedate');
+    if (!deadlinetime || deadlinetime.trim() === '') missingFields.push('deadlinetime');
+    if (!event_type || event_type.trim() === '') missingFields.push('event_type');
+    if (!capacity || capacity.trim() === '') missingFields.push('capacity');
+    if (!attendees || attendees.trim() === '') missingFields.push('attendees');
+    if (missingFields.length > 0) {
+      console.log('Missing fields:', missingFields);
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: `The following fields are missing or empty: ${missingFields.join(', ')}`,
+      });
+    }
+
+    // Validate registration deadline (must be before event start date)
+    if (start_date && deadlinedate && start_time && deadlinetime) {
+      const eventStartDate = new Date(`${start_date}T${start_time}`);
+      const deadlineDate = new Date(`${deadlinedate}T${deadlinetime}`);
+      if (isNaN(eventStartDate.getTime()) || isNaN(deadlineDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid date format for event start or registration deadline' });
+      }
+      if (deadlineDate >= eventStartDate) {
+        return res.status(400).json({
+          error: 'Registration deadline must be before event start date',
+        });
+      }
+    }
 
     let parsedAttendees = [];
     let parsedTabs = tabs;
     let parsedPackages = packages;
-
     try {
       // Parse attendees
       if (typeof attendees === 'string') {
@@ -1490,28 +1539,47 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
       } else if (Array.isArray(attendees)) {
         parsedAttendees = attendees.map(item => item.trim()).filter(item => item);
       }
-
       // Validate attendee types
       const validAttendeeTypes = ['Student', 'Professional', 'Guest', 'Sponsor', 'Exhibitor'];
       parsedAttendees = parsedAttendees.filter(type => validAttendeeTypes.includes(type));
       if (parsedAttendees.length === 0) {
         return res.status(400).json({ error: 'At least one valid attendee type is required' });
       }
-
       // Parse tabs
       parsedTabs = tabs ? JSON.parse(tabs).map(tab => JSON.stringify(tab)) : null;
-
-      // Parse packages
+      // Parse and validate packages
       parsedPackages = packages ? JSON.parse(packages).map((pkg, index) => {
         console.log(`Processing package ${index}:`, pkg);
         if (!pkg.startDate || !pkg.endDate) {
-          throw new Error(`Package ${JSON.stringify(pkg)} is missing startDate or endDate`);
+          throw new Error(`Package ${index + 1} is missing startDate or endDate`);
         }
         if (isNaN(new Date(pkg.startDate).getTime()) || isNaN(new Date(pkg.endDate).getTime())) {
-          throw new Error(`Invalid date format in package: ${JSON.stringify(pkg)}`);
+          throw new Error(`Invalid date format in package ${index + 1}`);
         }
         if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
-          throw new Error(`End date before start date in package: ${JSON.stringify(pkg)}`);
+          throw new Error(`End date before start date in package ${index + 1}`);
+        }
+        // Validate package start date (at least one week before registration deadline)
+        if (deadlinedate) {
+          const packageStartDate = new Date(pkg.startDate);
+          const packageEndDate = new Date(pkg.endDate);
+          const deadlineDateObj = new Date(deadlinedate);
+          const minPackageDate = new Date(deadlineDateObj);
+          minPackageDate.setDate(deadlineDateObj.getDate() - 7);
+          if (packageStartDate > minPackageDate) {
+            throw new Error(`Package ${index + 1} start date must be at least one week before registration deadline`);
+          }
+          // Validate package end date (before registration deadline)
+          if (packageEndDate >= deadlineDateObj) {
+            throw new Error(`Package ${index + 1} end date must be before registration deadline`);
+          }
+        }
+        // Validate pricing
+        if (!pkg.pricing || !/^\d+(\.\d{1,2})?$/.test(pkg.pricing)) {
+          throw new Error(`Package ${index + 1} pricing must be a valid number (e.g., 123.45)`);
+        }
+        if (parseFloat(pkg.pricing) <= 0) {
+          throw new Error(`Package ${index + 1} pricing must be greater than 0`);
         }
         return JSON.stringify(pkg);
       }) : null;
@@ -1522,6 +1590,8 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
         details: e.message
       });
     }
+
+    await client.query('BEGIN');
 
     const updateEventQuery = `
       UPDATE events
@@ -1547,7 +1617,6 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
       WHERE event_id = $20
       RETURNING *;
     `;
-
     const eventValues = [
       name, description, location, start_date, end_date,
       start_time, end_time, duration, deadlinetime, deadlinedate,
@@ -1556,9 +1625,7 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
       'pending',
       eventId
     ];
-
     const eventResult = await client.query(updateEventQuery, eventValues);
-
     if (eventResult.rows.length === 0) {
       return res.status(404).json({ error: 'Event not found' });
     }
@@ -1567,20 +1634,21 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
     let coverImageKey = null;
     if (req.files && req.files['cover_image']) {
       const file = req.files['cover_image'][0];
+      if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Cover image must be JPEG or PNG' });
+      }
       const sanitizedFileName = file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
       coverImageKey = `cover_images/${eventId}/${Date.now()}_${sanitizedFileName}`;
-
       const coverImageCommand = new PutObjectCommand({
         Bucket: process.env.S3_BUCKET_NAME,
         Key: coverImageKey,
         Body: file.buffer,
         ContentType: file.mimetype
       });
-
       await s3Client.send(coverImageCommand);
       coverImageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.af-south-1.amazonaws.com/${coverImageKey}`;
       console.log('Cover image uploaded:', coverImageUrl);
-
       await client.query(
         'UPDATE events SET coverimage = $1 WHERE event_id = $2',
         [coverImageUrl, eventId]
@@ -1588,20 +1656,17 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
     }
 
     await client.query('COMMIT');
-
     const { rows: [updatedEvent] } = await client.query(
-      `SELECT e.*, 
+      `SELECT e.*,
               up.firstname, up.surname, up.email, up.cellnumber
        FROM events e
        LEFT JOIN user_profiles up ON e.user_id = up.user_id
        WHERE e.event_id = $1`,
       [eventId]
     );
-
     const finalCoverImageUrl = updatedEvent.coverimage
       ? await generatePresignedUrl(updatedEvent.coverimage.split('/').slice(3).join('/'))
       : '/default-profile-picture.jpg';
-
     res.json({
       message: 'Event updated successfully and set to pending',
       event: {
@@ -1621,9 +1686,6 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
     client.release();
   }
 });
-
-
-
 
 
 // Admin routes
@@ -2330,6 +2392,10 @@ app.get('/api/payments-with-user-names', async (req, res) => {
   }
 });
 
+
+
+
+//Leya Code
 //----------------payments organizer start
 // Get all events with pending ticket request counts
 app.get('/api/organiser/events', authenticateToken, async (req, res) => {
@@ -2747,24 +2813,19 @@ app.get('/api/organiser/analytics', authenticateToken, async (req, res) => {
 });
 
 
-
-
-
-
-
 // Rehost an event by updating dates and setting status to pending
 app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
     const { eventId } = req.params;
     const { userId, role } = req.user;
-    const { startdate, enddate, packages, resetAttendees = false } = req.body; // Changed default to false
+    const { startdate, enddate, deadline_date, packages, resetAttendees = false } = req.body; // Added deadline_date
 
-    console.log("Rehost request received:", { eventId, userId, startdate, enddate, packages, resetAttendees });
+    console.log("Rehost request received:", { eventId, userId, startdate, enddate, deadline_date, packages, resetAttendees });
 
     // Validate required fields
-    if (!startdate || !enddate || !packages || !Array.isArray(packages)) {
-      return res.status(400).json({ error: "Event start date, end date, and packages array are required" });
+    if (!startdate || !enddate || !deadline_date || !packages || !Array.isArray(packages)) {
+      return res.status(400).json({ error: "Event start date, end date, registration deadline date, and packages array are required" });
     }
 
     // Validate each package
@@ -2783,9 +2844,10 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
     const currentDate = new Date();
     const startDateObj = new Date(startdate + "T00:00:00Z");
     const endDateObj = new Date(enddate + "T00:00:00Z");
+    const deadlineDateObj = new Date(deadline_date + "T00:00:00Z");
 
-    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
-      return res.status(400).json({ error: "Invalid event date format" });
+    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime()) || isNaN(deadlineDateObj.getTime())) {
+      return res.status(400).json({ error: "Invalid event or deadline date format" });
     }
 
     if (startDateObj < currentDate) {
@@ -2794,6 +2856,10 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
 
     if (endDateObj < startDateObj) {
       return res.status(400).json({ error: "Event end date must be on or after the event start date" });
+    }
+
+    if (deadlineDateObj >= startDateObj) {
+      return res.status(400).json({ error: "Registration deadline must be before the event start date" });
     }
 
     // Validate package dates
@@ -2817,7 +2883,6 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
         return res.status(400).json({ error: `Package ${i + 1} end date must be on or after the package start date` });
       }
 
-      // Ensure package start and end dates are at least one week before event start date
       if (pkgStartDateObj > oneWeekBeforeStart || pkgEndDateObj > oneWeekBeforeStart) {
         return res.status(400).json({
           error: `Package ${i + 1} start and end dates must be at least one week before the event start date (${startdate})`,
@@ -2901,32 +2966,27 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
     if (resetAttendees) {
       validatedAttendees = "{}"; // Reset to empty array
     } else {
-      // Preserve existing attendees
-      const existingAttendees = eventCheck.rows[0].attendees;
-      if (Array.isArray(existingAttendees) && existingAttendees.length > 0) {
-        const validAttendeeTypes = ['Student', 'Professional', 'Guest', 'Sponsor', 'Exhibitor'];
-        const filteredAttendees = existingAttendees.filter(type => validAttendeeTypes.includes(type));
-        validatedAttendees = filteredAttendees.length > 0 ? `{${filteredAttendees.join(",")}}` : "{}";
-      } else {
-        validatedAttendees = "{}"; // Fallback to empty if no valid attendees
-      }
+      // Preserve existing attendees without filtering
+      validatedAttendees = eventCheck.rows[0].attendees || "{}"; // Keep original attendees as-is
     }
 
     const updateQuery = `
       UPDATE events 
       SET startdate = $1,
           enddate = $2,
-          packages = $3,
+          deadlinedate = $3, -- Added deadlinedate
+          packages = $4,
           status = 'pending',
-          attendees = COALESCE($4, attendees),
+          attendees = COALESCE($5, attendees), -- Only update if validatedAttendees is not null
           admin_comment = NULL
-      WHERE event_id = $5
+      WHERE event_id = $6
       RETURNING *;
     `;
 
     const updateValues = [
       startDateObj.toISOString(),
       endDateObj.toISOString(),
+      deadlineDateObj.toISOString().split('T')[0], // Store as date-only
       updatedPackages,
       validatedAttendees,
       eventId,

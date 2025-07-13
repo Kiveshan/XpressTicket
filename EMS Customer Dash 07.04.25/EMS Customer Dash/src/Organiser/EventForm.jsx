@@ -1,12 +1,10 @@
-"use client"
-
-import React, { useState, useEffect } from "react"
-import "./EventForm.css"
-import "./ModernEventForm.css"
-import "./ModernOrganizerStyles.css"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import "./EventForm.css"
 
 export default function EventForm() {
+  const navigate = useNavigate()
+
   // Helper functions (unchanged)
   const getTodayDateString = () => {
     const today = new Date()
@@ -65,19 +63,19 @@ export default function EventForm() {
   const [selectedClientTypes, setSelectedClientTypes] = useState([])
   const [clientTypeSelection, setClientTypeSelection] = useState("")
   const [customClientType, setCustomClientType] = useState("")
- const [packages, setPackages] = useState([
-  {
-    selectType: "Full Package",
-    packageType: "",
-    location: "",
-    duration: "",
-    startDate: getTodayDateString(), // New field
-    endDate: getTodayDateString(),   // New field
-    pricing: "",
-    details: "",
-    typeOptions: ["Full Package", "Day"],
-  },
-]);
+  const [packages, setPackages] = useState([
+    {
+      selectType: "Full Package",
+      packageType: "",
+      location: "",
+      duration: "",
+      startDate: getTodayDateString(),
+      endDate: getTodayDateString(),
+      pricing: "",
+      details: "",
+      typeOptions: ["Full Package", "Day"],
+    },
+  ])
   const [tabs, setTabs] = useState([{ name: "", content: "" }])
   const [coverImageFile, setCoverImageFile] = useState(null)
   const [coverImageUrl, setCoverImageUrl] = useState("")
@@ -117,105 +115,111 @@ export default function EventForm() {
     coverImageFile,
   ])
 
-  // Validation function (unchanged)
+  // ValidateForm function (unchanged)
   const validateForm = () => {
-    const newErrors = {}
+    const newErrors = {};
     const createDate = (dateStr, timeStr = "") => {
-      if (!dateStr) return null
+      if (!dateStr) return null;
       try {
-        if (dateStr.includes("T")) return new Date(dateStr)
-        const [year, month, day] = dateStr.split("-").map(Number)
-        if (isNaN(year) || isNaN(month) || isNaN(day)) return null
-        if (!timeStr) return new Date(year, month - 1, day)
-        const [hours, minutes] = timeStr.split(":").map(Number)
-        return new Date(year, month - 1, day, hours || 0, minutes || 0)
+        if (dateStr.includes("T")) return new Date(dateStr);
+        const [year, month, day] = dateStr.split("-").map(Number);
+        if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+        if (!timeStr) return new Date(year, month - 1, day);
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        return new Date(year, month - 1, day, hours || 0, minutes || 0);
       } catch (error) {
-        console.error("Error creating date:", error)
-        return null
+        console.error("Error creating date:", error);
+        return null;
       }
-    }
+    };
 
-    if (!formData.name.trim()) newErrors.name = "Event name is required"
-    if (!formData.location.trim()) newErrors.location = "Location is required"
-    if (!formData.startdate) newErrors.startdate = "Start date is required"
-    if (!formData.enddate) newErrors.enddate = "End date is required"
-    if (!formData.start_time) newErrors.start_time = "Start time is required"
-    if (!formData.end_time) newErrors.end_time = "End time is required"
-    if (!formData.deadlinedate) newErrors.deadlinedate = "Registration deadline date is required"
-    if (!formData.deadlinetime) newErrors.deadlinetime = "Registration deadline time is required"
-    if (!formData.type.trim()) newErrors.type = "Event type is required"
-    if (!formData.capacity || formData.capacity <= 0) newErrors.capacity = "Capacity must be greater than 0"
-    if (!formData.description.trim()) newErrors.description = "Event details are required"
-    if (!formData.terms_and_conditions.trim()) newErrors.terms_and_conditions = "Terms and conditions are required"
-    if (!formData.duration) newErrors.duration = "Duration cannot be computed (check dates/times)"
+    if (!formData.name.trim()) newErrors.name = "Event name is required";
+    if (!formData.location.trim()) newErrors.location = "Location is required";
+    if (!formData.startdate) newErrors.startdate = "Start date is required";
+    if (!formData.enddate) newErrors.enddate = "End date is required";
+    if (!formData.start_time) newErrors.start_time = "Start time is required";
+    if (!formData.end_time) newErrors.end_time = "End time is required";
+    if (!formData.deadlinedate) newErrors.deadlinedate = "Registration deadline date is required";
+    if (!formData.deadlinetime) newErrors.deadlinetime = "Registration deadline time is required";
+    if (!formData.type.trim()) newErrors.type = "Event type is required";
+    if (!formData.capacity || formData.capacity <= 0) newErrors.capacity = "Capacity must be greater than 0";
+    if (!formData.description.trim()) newErrors.description = "Event details are required";
+    if (!formData.terms_and_conditions.trim()) newErrors.terms_and_conditions = "Terms and conditions are required";
+    if (!formData.duration) newErrors.duration = "Duration cannot be computed (check dates/times)";
+    if (selectedClientTypes.length === 0) newErrors.attendees = "At least one client type is required";
 
     if (formData.startdate && formData.enddate) {
-      const startDate = new Date(formData.startdate)
-      const endDate = new Date(formData.enddate)
+      const startDate = new Date(formData.startdate);
+      const endDate = new Date(formData.enddate);
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        newErrors.startdate = "Invalid date format"
+        newErrors.startdate = "Invalid date format";
       } else if (endDate < startDate) {
-        newErrors.enddate = "End date cannot be before start date"
+        newErrors.enddate = "End date cannot be before start date";
       }
     }
 
     if (formData.startdate && formData.enddate && formData.start_time && formData.end_time) {
-      const startTime = createDate(formData.startdate, formData.start_time)
-      const endTime = createDate(formData.enddate, formData.end_time)
+      const startTime = createDate(formData.startdate, formData.start_time);
+      const endTime = createDate(formData.enddate, formData.end_time);
       if (endTime <= startTime) {
-        newErrors.end_time = "End time must be after start time"
+        newErrors.end_time = "End time must be after start time";
       }
     }
 
-    if (formData.deadlinedate && formData.deadlinetime && formData.startdate && formData.start_time) {
-      try {
-        const deadline = createDate(formData.deadlinedate, formData.deadlinetime)
-        const start = createDate(formData.startdate, formData.start_time)
-        if (isNaN(deadline.getTime()) || isNaN(start.getTime())) {
-          newErrors.deadlinedate = "Invalid deadline format"
-        } else if (deadline >= start) {
-          newErrors.deadlinedate = "Deadline must be before event start"
-        }
-      } catch (error) {
-        newErrors.deadlinedate = "Error parsing deadline"
+    if (formData.deadlinedate) {
+      const deadlineDate = new Date(formData.deadlinedate);
+      if (isNaN(deadlineDate.getTime())) {
+        newErrors.deadlinedate = "Invalid deadline date format";
       }
     }
-
-    if (selectedClientTypes.length === 0) newErrors.attendees = "At least one client type is required"
 
     if (tabs.length === 0) {
-      newErrors.tabs = "At least one tab is required"
+      newErrors.tabs = "At least one tab is required";
     } else {
       tabs.forEach((tab, idx) => {
-        if (!tab.name.trim()) newErrors[`tab_name_${idx}`] = `Tab ${idx + 1} name is required`
-        if (!tab.content.trim()) newErrors[`tab_content_${idx}`] = `Tab ${idx + 1} content is required`
-      })
+        if (!tab.name.trim()) newErrors[`tab_name_${idx}`] = `Tab ${idx + 1} name is required`;
+        if (!tab.content.trim()) newErrors[`tab_content_${idx}`] = `Tab ${idx + 1} content is required`;
+      });
     }
 
     if (packages.length === 0) {
-      newErrors.packages = "At least one package is required"
+      newErrors.packages = "At least one package is required";
     } else {
-     // In the validateForm function, replace the dateChoices validation
-packages.forEach((pkg, idx) => {
-  if (!pkg.selectType.trim())
-    newErrors[`package_selectType_${idx}`] = `Package ${idx + 1} select type is required`;
-  if (!pkg.packageType.trim()) newErrors[`package_type_${idx}`] = `Package ${idx + 1} type is required`;
-  if (!pkg.location.trim()) newErrors[`package_location_${idx}`] = `Package ${idx + 1} location is required`;
-  if (!pkg.duration.trim()) newErrors[`package_duration_${idx}`] = `Package ${idx + 1} duration is required`;
-  if (!pkg.startDate) newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} start date is required`;
-  if (!pkg.endDate) newErrors[`package_endDate_${idx}`] = `Package ${idx + 1} end date is required`;
-  if (pkg.startDate && pkg.endDate) {
-    const start = new Date(pkg.startDate);
-    const end = new Date(pkg.endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} invalid date format`;
-    } else if (end < start) {
-      newErrors[`package_endDate_${idx}`] = `Package ${idx + 1} end date cannot be before start date`;
-    }
-  }
-  if (!pkg.pricing.trim()) newErrors[`package_pricing_${idx}`] = `Package ${idx + 1} pricing is required`;
-  if (!pkg.details.trim()) newErrors[`package_details_${idx}`] = `Package ${idx + 1} details are required`;
-})
+      packages.forEach((pkg, idx) => {
+        if (!pkg.selectType.trim()) newErrors[`package_selectType_${idx}`] = `Package ${idx + 1} select type is required`;
+        if (!pkg.packageType.trim()) newErrors[`package_type_${idx}`] = `Package ${idx + 1} type is required`;
+        if (!pkg.location.trim()) newErrors[`package_location_${idx}`] = `Package ${idx + 1} location is required`;
+        if (!pkg.duration.trim()) newErrors[`package_duration_${idx}`] = `Package ${idx + 1} duration is required`;
+        if (!pkg.startDate) newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} start date is required`;
+        if (!pkg.endDate) newErrors[`package_endDate_${idx}`] = `Package ${idx + 1} end date is required`;
+        if (!pkg.pricing || !/^\d+(\.\d{1,2})?$/.test(pkg.pricing))
+          newErrors[`package_pricing_${idx}`] = `Package ${idx + 1} pricing must be a valid number (e.g., 123.45)`;
+        else if (parseFloat(pkg.pricing) <= 0)
+          newErrors[`package_pricing_${idx}`] = `Package ${idx + 1} pricing must be greater than 0`;
+        if (!pkg.details.trim()) newErrors[`package_details_${idx}`] = `Package ${idx + 1} details are required`;
+
+        if (pkg.startDate && pkg.endDate) {
+          const start = new Date(pkg.startDate);
+          const end = new Date(pkg.endDate);
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} invalid date format`;
+          } else if (end < start) {
+            newErrors[`package_endDate_${idx}`] = `Package ${idx + 1} end date cannot be before start date`;
+          }
+        }
+
+        if (pkg.startDate && formData.deadlinedate) {
+          const packageStartDate = new Date(pkg.startDate);
+          const deadlineDate = new Date(formData.deadlinedate);
+          const minPackageDate = new Date(deadlineDate);
+          minPackageDate.setDate(deadlineDate.getDate() - 7);
+          if (isNaN(packageStartDate.getTime()) || isNaN(deadlineDate.getTime())) {
+            newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} invalid date format`;
+          } else if (packageStartDate > minPackageDate) {
+            newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} start date must be at least one week before registration deadline`;
+          }
+        }
+      });
     }
 
     if (
@@ -223,12 +227,12 @@ packages.forEach((pkg, idx) => {
       !(coverImageFile instanceof File) ||
       !["image/png", "image/jpeg"].includes(coverImageFile.type)
     ) {
-      newErrors.cover_image = "A valid PNG or JPEG cover image is required"
+      newErrors.cover_image = "A valid PNG or JPEG cover image is required";
     }
 
-    setErrors(newErrors)
-    setIsFormValid(Object.keys(newErrors).length === 0)
-  }
+    setErrors(newErrors);
+    setIsFormValid(Object.keys(newErrors).length === 0);
+  };
 
   // Input handlers (unchanged)
   const handleInputChange = (e) => {
@@ -260,15 +264,11 @@ packages.forEach((pkg, idx) => {
     }
   }
 
-  // Enhanced client type handlers with better functionality
   const handleClientTypeChange = (e) => {
     const value = e.target.value
     setClientTypeSelection(value)
-
-    // Automatically add non-"Other" selections if not already selected
     if (value && value !== "Other" && !selectedClientTypes.includes(value)) {
       setSelectedClientTypes((prev) => [...prev, value])
-      // Reset selection after adding
       setTimeout(() => setClientTypeSelection(""), 100)
     }
   }
@@ -296,7 +296,8 @@ packages.forEach((pkg, idx) => {
         packageType: "",
         location: "",
         duration: "",
-        dateChoices: "",
+        startDate: getTodayDateString(),
+        endDate: getTodayDateString(),
         pricing: "",
         details: "",
         typeOptions: ["Full Package", "Day"],
@@ -305,10 +306,16 @@ packages.forEach((pkg, idx) => {
   }
 
   const handlePackageChange = (index, field, value) => {
-  const updated = [...packages];
-  updated[index][field] = value;
-  setPackages(updated);
-}
+    const updated = [...packages];
+    if (field === "pricing") {
+      if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+        updated[index][field] = value;
+      }
+    } else {
+      updated[index][field] = value;
+    }
+    setPackages(updated);
+  }
 
   const addTab = () => {
     setTabs([...tabs, { name: "", content: "" }])
@@ -347,7 +354,7 @@ packages.forEach((pkg, idx) => {
     }
   }
 
-  // Form submission - UPDATED to use sessionStorage instead of localStorage
+  // Updated handleSendRequest with redirect
   const handleSendRequest = async () => {
     setErrorMessage("")
     setShowSuccess(false)
@@ -361,38 +368,28 @@ packages.forEach((pkg, idx) => {
     }
 
     try {
-      // Get token from sessionStorage instead of localStorage
       const token = sessionStorage.getItem("token")
       if (!token) {
         throw new Error("No authentication token found. Please log in.")
       }
 
-      // Create FormData object
       const formDataToSend = new FormData()
-
-      // Add all form fields with correct backend field names
       formDataToSend.append("name", formData.name)
       formDataToSend.append("location", formData.location)
       formDataToSend.append("startdate", formData.startdate)
       formDataToSend.append("enddate", formData.enddate)
-      formDataToSend.append("time", formData.start_time) // Backend expects 'time' not 'start_time'
-      formDataToSend.append("endtime", formData.end_time) // Backend expects 'endtime' not 'end_time'
+      formDataToSend.append("time", formData.start_time)
+      formDataToSend.append("endtime", formData.end_time)
       formDataToSend.append("deadlinedate", formData.deadlinedate)
       formDataToSend.append("deadlinetime", formData.deadlinetime)
-      formDataToSend.append("type", formData.type) // Backend expects 'type' not 'event_type'
+      formDataToSend.append("type", formData.type)
       formDataToSend.append("capacity", formData.capacity.toString())
       formDataToSend.append("description", formData.description)
       formDataToSend.append("terms_and_conditions", formData.terms_and_conditions)
       formDataToSend.append("duration", formData.duration)
-
-      // Add attendees (client types) - backend expects 'attendees'
       formDataToSend.append("attendees", JSON.stringify(selectedClientTypes))
-
-      // Add tabs and packages as JSON strings
       formDataToSend.append("tabs", JSON.stringify(tabs))
       formDataToSend.append("packages", JSON.stringify(packages))
-
-      // Add cover image
       if (coverImageFile) {
         formDataToSend.append("cover_image", coverImageFile)
       }
@@ -419,92 +416,59 @@ packages.forEach((pkg, idx) => {
 
       console.log("✅ Event created successfully:", result)
       setShowSuccess(true)
-
-      // Reset form after successful submission
       setTimeout(() => {
         setShowSuccess(false)
-        // Optionally reset the form
-        // resetForm()
-      }, 3000)
+        navigate("/organiser-dash")
+      }, 2000) // Redirect after 2 seconds to show success message
     } catch (error) {
       console.error("🚨 Error submitting form:", error)
       setErrorMessage(`Failed to create event: ${error.message}`)
-    } finally {
       setIsSubmitting(false)
     }
   }
 
-  // Section navigation handlers - Updated for 4 sections
+  // Section navigation handlers (unchanged)
   const showEventInfo = () => setCurrentSection("eventInfo")
   const showClientTypes = () => setCurrentSection("clientTypes")
   const showPackagesTabs = () => setCurrentSection("packagesTabs")
   const showTerms = () => setCurrentSection("terms")
 
   return (
-    <div className="modern-container">
-      <header className="modern-header">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="modern-logo" />
-        <div className="modern-header-actions">
-          <button 
-            className="modern-logout-btn" 
-            onClick={() => {
-              sessionStorage.removeItem("token")
-              sessionStorage.removeItem("userId")
-              sessionStorage.removeItem("user")
-              navigate("/login")
-            }}
+    <div className="event-form-container">
+      <div className="event-form-header">
+        <button className="back-button" onClick={() => navigate("/organiser-dash")}>
+          Back
+        </button>
+        <div className="section-navigation">
+          <button className={`nav-button ${currentSection === "eventInfo" ? "active" : ""}`} onClick={showEventInfo}>
+            Event Information
+          </button>
+          <button
+            className={`nav-button ${currentSection === "clientTypes" ? "active" : ""}`}
+            onClick={showClientTypes}
           >
-            <i className="fas fa-sign-out-alt"></i> Logout
+            Client Types & Image
+          </button>
+          <button
+            className={`nav-button ${currentSection === "packagesTabs" ? "active" : ""}`}
+            onClick={showPackagesTabs}
+          >
+            Packages & Tabs
+          </button>
+          <button className={`nav-button ${currentSection === "terms" ? "active" : ""}`} onClick={showTerms}>
+            Terms & Conditions
           </button>
         </div>
-      </header>
-      
-      {/* Back Button */}
-      <div className="modern-back-button">
-        <button className="modern-back-btn" onClick={() => navigate("/organiser-dash")}>
-          <i className="fas fa-arrow-left"></i> Back to Dashboard
-        </button>
       </div>
-      
-      <h1 className="header-title">Create Event</h1>
-      
-      <div className="modern-content">
-        <div className="modern-card">
-          <div className="modern-tabs">
-            <button 
-              className={`modern-tab ${currentSection === "eventInfo" ? "active" : ""}`} 
-              onClick={showEventInfo}
-            >
-              <i className="fas fa-info-circle"></i> Event Information
-            </button>
-            <button
-              className={`modern-tab ${currentSection === "clientTypes" ? "active" : ""}`}
-              onClick={showClientTypes}
-            >
-              <i className="fas fa-users"></i> Client Types & Image
-            </button>
-            <button
-              className={`modern-tab ${currentSection === "packagesTabs" ? "active" : ""}`}
-              onClick={showPackagesTabs}
-            >
-              <i className="fas fa-box"></i> Packages & Tabs
-            </button>
-            <button 
-              className={`modern-tab ${currentSection === "terms" ? "active" : ""}`} 
-              onClick={showTerms}
-            >
-              <i className="fas fa-file-contract"></i> Terms & Conditions
-            </button>
-          </div>
-          
-          <div className="modern-content-section">
-            {/* Section 1: Event Information */}
-            {currentSection === "eventInfo" && (
-              <div>
-                <h2 className="modern-section-title">Event Information</h2>
-                <div className="event-info-section">
-                  <div className="form-row">
-                    <div className="form-group">
+
+      <div className="section-content">
+        {/* Section 1: Event Information */}
+        {currentSection === "eventInfo" && (
+          <div className="section-wrapper">
+            <h2 className="section-title">Event Information</h2>
+            <div className="event-info-section">
+              <div className="form-row">
+                <div className="form-group">
                   <label htmlFor="name" className="form-label">
                     Event Name *
                   </label>
@@ -617,7 +581,13 @@ packages.forEach((pkg, idx) => {
                     className={`form-input ${errors.deadlinedate ? "error" : ""}`}
                     value={formData.deadlinedate}
                     onChange={handleDateChange}
-                    max={formData.startdate}
+                    max={
+                      formData.startdate
+                        ? new Date(new Date(formData.startdate).setDate(new Date(formData.startdate).getDate() - 1))
+                            .toISOString()
+                            .split("T")[0]
+                        : undefined
+                    }
                     required
                   />
                   {errors.deadlinedate && <div className="error-message">{errors.deadlinedate}</div>}
@@ -637,6 +607,9 @@ packages.forEach((pkg, idx) => {
                   />
                   {errors.deadlinetime && <div className="error-message">{errors.deadlinetime}</div>}
                 </div>
+              </div>
+
+              <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="type" className="form-label">
                     Event Type *
@@ -653,10 +626,48 @@ packages.forEach((pkg, idx) => {
                   />
                   {errors.type && <div className="error-message">{errors.type}</div>}
                 </div>
+                <div className="form-group">
+                  <label htmlFor="capacity" className="form-label">
+                    Max Capacity *
+                  </label>
+                  <div className="number-input">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: Math.max(1, prev.capacity - 1),
+                        }))
+                      }
+                      className="number-btn minus"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="text"
+                      id="capacity"
+                      name="capacity"
+                      className={`form-input ${errors.capacity ? "error" : ""}`}
+                      value={formData.capacity}
+                      onChange={handleNumberInput}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: prev.capacity + 1,
+                        }))
+                      }
+                      className="number-btn plus"
+                    >
+                      +
+                    </button>
+                  </div>
+                  {errors.capacity && <div className="error-message">{errors.capacity}</div>}
+                </div>
               </div>
-
-              {/* Removed max capacity from here */}
-              <div className="form-row"></div>
 
               <div className="form-group full-width">
                 <label htmlFor="description" className="form-label">
@@ -673,70 +684,24 @@ packages.forEach((pkg, idx) => {
                 ></textarea>
                 {errors.description && <div className="error-message">{errors.description}</div>}
               </div>
-              
-              <div className="form-group capacity-form-group">
-                <label htmlFor="capacity" className="form-label">
-                  Max Capacity *
-                </label>
-                <div className="number-input">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        capacity: Math.max(1, prev.capacity - 1),
-                      }))
-                    }
-                    className="number-btn minus"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="text"
-                    id="capacity"
-                    name="capacity"
-                    className={`form-input ${errors.capacity ? "error" : ""}`}
-                    value={formData.capacity}
-                    onChange={handleNumberInput}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        capacity: prev.capacity + 1,
-                      }))
-                    }
-                    className="number-btn plus"
-                  >
-                    +
-                  </button>
-                </div>
-                {errors.capacity && <div className="error-message">{errors.capacity}</div>}
-              </div>
             </div>
             <div className="section-footer">
-              <div className="footer-buttons">
-                <div></div>
-                <button className="modern-button" onClick={showClientTypes}>
-                  Next: Client Types & Image <i className="fas fa-arrow-right"></i>
-                </button>
-              </div>
+              <div></div>
+              <button className="next-button" onClick={showClientTypes}>
+                Next: Client Types & Image
+              </button>
             </div>
           </div>
         )}
 
-        {/* Section 2: Client Types & Cover Image - Enhanced */}
+        {/* Section 2: Client Types & Cover Image */}
         {currentSection === "clientTypes" && (
-          <div className="modern-card">
-            <h2 className="modern-section-title">Client Types & Cover Image</h2>
+          <div className="section-wrapper">
+            <h2 className="section-title">Client Types & Cover Image</h2>
             <div className="client-upload-grid">
               <div className="client-types-section">
                 <div className="client-types">
                   <label>Client Types Available *</label>
-
-                  {/* Enhanced Selected Client Types Display */}
                   <div className="client-types-list">
                     {selectedClientTypes.length === 0 ? (
                       <div className="no-client-types">
@@ -794,10 +759,9 @@ packages.forEach((pkg, idx) => {
                   </div>
                   {errors.attendees && <div className="error-message">{errors.attendees}</div>}
 
-                  {/* Quick Actions */}
                   {selectedClientTypes.length > 0 && (
                     <div className="client-type-actions">
-                      <button type="button" className="modern-button" onClick={() => setSelectedClientTypes([])}>
+                      <button type="button" className="clear-all-btn" onClick={() => setSelectedClientTypes([])}>
                         Clear All ({selectedClientTypes.length})
                       </button>
                     </div>
@@ -859,28 +823,26 @@ packages.forEach((pkg, idx) => {
               </div>
             </div>
             <div className="section-footer">
-              <div className="footer-buttons">
-                <button className="modern-button secondary" onClick={showEventInfo}>
-                  <i className="fas fa-arrow-left"></i> Back: Event Information
-                </button>
-                <button className="modern-button" onClick={showPackagesTabs}>
-                  Next: Packages & Tabs <i className="fas fa-arrow-right"></i>
-                </button>
-              </div>
+              <button className="back-button-nav" onClick={showEventInfo}>
+                Back: Event Information
+              </button>
+              <button className="next-button" onClick={showPackagesTabs}>
+                Next: Packages & Tabs
+              </button>
             </div>
           </div>
         )}
 
         {/* Section 3: Packages & Tabs */}
         {currentSection === "packagesTabs" && (
-          <div className="modern-card">
-            <h2 className="modern-section-title">Packages & Tabs</h2>
+          <div className="section-wrapper">
+            <h2 className="section-title">Packages & Tabs</h2>
             <div className="packages-tabs-grid">
               <div className="tabs-section">
                 <div className="section-header">
                   <h3>Event Tabs</h3>
-                  <button onClick={addTab} className="modern-button">
-                    <i className="fas fa-plus"></i> Add Tab
+                  <button onClick={addTab} className="add-button">
+                    Add Tab
                   </button>
                 </div>
                 <div className="tabs-container">
@@ -919,136 +881,148 @@ packages.forEach((pkg, idx) => {
               <div className="packages-section">
                 <div className="section-header">
                   <h3>Event Packages</h3>
-                  <button onClick={addPackage} className="modern-button">
-                    <i className="fas fa-plus"></i> Add Package
+                  <button onClick={addPackage} className="add-button">
+                    Add Package
                   </button>
                 </div>
                 <div className="packages-container">
-                {packages.map((pkg, idx) => (
-  <div key={idx} className="package-item">
-    <h4>Package {idx + 1}</h4>
-    <div className="package-grid">
-      <div className="form-group">
-        <label>Select Type *</label>
-        <div className="select-with-add">
-          <select
-            value={pkg.selectType}
-            onChange={(e) => handlePackageChange(idx, "selectType", e.target.value)}
-            required
-          >
-            <option value="">Select</option>
-            {pkg.typeOptions.map((opt, i) => (
-              <option key={i} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-          <button type="button" onClick={() => addDropdownOption(idx)} className="plus-button">
-            +
-          </button>
-        </div>
-        {errors[`package_selectType_${idx}`] && (
-          <div className="error-message">{errors[`package_selectType_${idx}`]}</div>
-        )}
-      </div>
-      <div className="form-group">
-        <label>Package Type *</label>
-        <input
-          type="text"
-          value={pkg.packageType}
-          onChange={(e) => handlePackageChange(idx, "packageType", e.target.value)}
-          required
-        />
-        {errors[`package_type_${idx}`] && (
-          <div className="error-message">{errors[`package_type_${idx}`]}</div>
-        )}
-      </div>
-      <div className="form-group">
-        <label>Location *</label>
-        <input
-          type="text"
-          value={pkg.location}
-          onChange={(e) => handlePackageChange(idx, "location", e.target.value)}
-          required
-        />
-        {errors[`package_location_${idx}`] && (
-          <div className="error-message">{errors[`package_location_${idx}`]}</div>
-        )}
-      </div>
-      <div className="form-group">
-        <label>Duration *</label>
-        <input
-          type="text"
-          value={pkg.duration}
-          onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
-          required
-        />
-        {errors[`package_duration_${idx}`] && (
-          <div className="error-message">{errors[`package_duration_${idx}`]}</div>
-        )}
-      </div>
-      <div className="form-group">
-        <label>Start Date *</label>
-        <input
-          type="date"
-          value={pkg.startDate}
-          onChange={(e) => handlePackageChange(idx, "startDate", e.target.value)}
-          required
-        />
-        {errors[`package_startDate_${idx}`] && (
-          <div className="error-message">{errors[`package_startDate_${idx}`]}</div>
-        )}
-      </div>
-      <div className="form-group">
-        <label>End Date *</label>
-        <input
-          type="date"
-          value={pkg.endDate}
-          onChange={(e) => handlePackageChange(idx, "endDate", e.target.value)}
-          min={pkg.startDate} // Ensure end date is not before start date
-          required
-        />
-        {errors[`package_endDate_${idx}`] && (
-          <div className="error-message">{errors[`package_endDate_${idx}`]}</div>
-        )}
-      </div>
-      <div className="form-group">
-        <label>Pricing *</label>
-        <input
-          type="text"
-          value={pkg.pricing}
-          onChange={(e) => handlePackageChange(idx, "pricing", e.target.value)}
-          required
-        />
-        {errors[`package_pricing_${idx}`] && (
-          <div className="error-message">{errors[`package_pricing_${idx}`]}</div>
-        )}
-      </div>
-    </div>
-    <div className="form-group full-width">
-      <label>Package Details *</label>
-      <textarea
-        value={pkg.details}
-        onChange={(e) => handlePackageChange(idx, "details", e.target.value)}
-        className="package-textarea"
-        required
-      ></textarea>
-      {errors[`package_details_${idx}`] && (
-        <div className="error-message">{errors[`package_details_${idx}`]}</div>
-      )}
-    </div>
-  </div>
-))}
+                  {packages.map((pkg, idx) => (
+                    <div key={idx} className="package-item">
+                      <h4>Package {idx + 1}</h4>
+                      <div className="package-grid">
+                        <div className="form-group">
+                          <label>Select Type *</label>
+                          <div className="select-with-add">
+                            <select
+                              value={pkg.selectType}
+                              onChange={(e) => handlePackageChange(idx, "selectType", e.target.value)}
+                              required
+                            >
+                              <option value="">Select</option>
+                              {pkg.typeOptions.map((opt, i) => (
+                                <option key={i} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                            <button type="button" onClick={() => addDropdownOption(idx)} className="plus-button">
+                              +
+                            </button>
+                          </div>
+                          {errors[`package_selectType_${idx}`] && (
+                            <div className="error-message">{errors[`package_selectType_${idx}`]}</div>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label>Package Type *</label>
+                          <input
+                            type="text"
+                            value={pkg.packageType}
+                            onChange={(e) => handlePackageChange(idx, "packageType", e.target.value)}
+                            required
+                          />
+                          {errors[`package_type_${idx}`] && (
+                            <div className="error-message">{errors[`package_type_${idx}`]}</div>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label>Location *</label>
+                          <input
+                            type="text"
+                            value={pkg.location}
+                            onChange={(e) => handlePackageChange(idx, "location", e.target.value)}
+                            required
+                          />
+                          {errors[`package_location_${idx}`] && (
+                            <div className="error-message">{errors[`package_location_${idx}`]}</div>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label>Duration *</label>
+                          <input
+                            type="text"
+                            value={pkg.duration}
+                            onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
+                            required
+                          />
+                          {errors[`package_duration_${idx}`] && (
+                            <div className="error-message">{errors[`package_duration_${idx}`]}</div>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label>Start Date *</label>
+                          <input
+                            type="date"
+                            value={pkg.startDate}
+                            onChange={(e) => handlePackageChange(idx, "startDate", e.target.value)}
+                            required
+                          />
+                          {errors[`package_startDate_${idx}`] && (
+                            <div className="error-message">{errors[`package_startDate_${idx}`]}</div>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label>End Date *</label>
+                          <input
+                            type="date"
+                            value={pkg.endDate}
+                            onChange={(e) => handlePackageChange(idx, "endDate", e.target.value)}
+                            min={pkg.startDate}
+                            max={
+                              formData.deadlinedate
+                                ? new Date(new Date(formData.deadlinedate).setDate(new Date(formData.deadlinedate).getDate() - 1))
+                                    .toISOString()
+                                    .split("T")[0]
+                                : undefined
+                            }
+                            required
+                          />
+                          {errors[`package_endDate_${idx}`] && (
+                            <div className="error-message">{errors[`package_endDate_${idx}`]}</div>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label>Pricing (ZAR) *</label>
+                          <div className="currency-input">
+                            <span className="currency-symbol">R</span>
+                            <input
+                              type="text"
+                              value={pkg.pricing}
+                              onChange={(e) => handlePackageChange(idx, "pricing", e.target.value)}
+                              placeholder="123.45"
+                              required
+                              className={`form-input ${errors[`package_pricing_${idx}`] ? "error" : ""}`}
+                            />
+                          </div>
+                          {errors[`package_pricing_${idx}`] && (
+                            <div className="error-message">{errors[`package_pricing_${idx}`]}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="form-group full-width">
+                        <label>Package Details *</label>
+                        <textarea
+                          value={pkg.details}
+                          onChange={(e) => handlePackageChange(idx, "details", e.target.value)}
+                          className="package-textarea"
+                          required
+                        ></textarea>
+                        {errors[`package_details_${idx}`] && (
+                          <div className="error-message">{errors[`package_details_${idx}`]}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 {errors.packages && <div className="error-message">{errors.packages}</div>}
               </div>
             </div>
             <div className="section-footer">
-              <button className="modern-button secondary" onClick={showClientTypes}>
-                <i className="fas fa-arrow-left"></i> Back: Client Types & Image
+              <button className="back-button-nav" onClick={showClientTypes}>
+                Back: Client Types & Image
               </button>
-              <button className="modern-button" onClick={showTerms}>
-                Next: Terms & Conditions <i className="fas fa-arrow-right"></i>
+              <button className="next-button" onClick={showTerms}>
+                Next: Terms & Conditions
               </button>
             </div>
           </div>
@@ -1056,8 +1030,8 @@ packages.forEach((pkg, idx) => {
 
         {/* Section 4: Terms & Conditions */}
         {currentSection === "terms" && (
-          <div className="modern-card">
-            <h2 className="modern-section-title">Terms & Conditions</h2>
+          <div className="section-wrapper">
+            <h2 className="section-title">Terms & Conditions</h2>
             <div className="terms-section">
               <div className="form-group full-width">
                 <label htmlFor="terms_and_conditions" className="form-label">
@@ -1076,19 +1050,17 @@ packages.forEach((pkg, idx) => {
               </div>
             </div>
             <div className="section-footer">
-              <button className="modern-button secondary" onClick={showPackagesTabs}>
-                <i className="fas fa-arrow-left"></i> Back: Packages & Tabs
+              <button className="back-button-nav" onClick={showPackagesTabs}>
+                Back: Packages & Tabs
               </button>
-              <button onClick={handleSendRequest} className="modern-button primary" disabled={isSubmitting || !isFormValid}>
-                {isSubmitting ? "Submitting..." : "Request Event"} <i className="fas fa-paper-plane"></i>
+              <button onClick={handleSendRequest} className="submit-button" disabled={isSubmitting || !isFormValid}>
+                {isSubmitting ? "Submitting..." : "Request Event"}
               </button>
             </div>
             {showSuccess && <div className="success-message">✅ Successfully sent event request!</div>}
             {errorMessage && <div className="error-message-box">❌ {errorMessage}</div>}
           </div>
         )}
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -15,6 +15,7 @@ const RehostEventDetails = () => {
   const [formData, setFormData] = useState({
     startdate: "",
     enddate: "",
+    deadline_date: "",
     packages: [], // Array to store { startDate, endDate } for each package
   })
   const [submitError, setSubmitError] = useState(null)
@@ -30,7 +31,8 @@ const RehostEventDetails = () => {
 
     try {
       console.log("Received dateString:", dateString)
-      const date = new Date(dateString + "T00:00:00Z")
+      // Handle ISO timestamp by extracting date part or parsing directly
+      const date = new Date(dateString);
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date")
       }
@@ -60,12 +62,12 @@ const RehostEventDetails = () => {
     }
   }
 
-  // Calculate max package date (one week before event start date)
+  // Calculate max package date (one week before registration deadline)
   const getMaxPackageDate = () => {
-    if (!formData.startdate) return null;
-    const startDate = new Date(formData.startdate + "T00:00:00Z");
-    const maxDate = new Date(startDate);
-    maxDate.setDate(startDate.getDate() - 7);
+    if (!formData.deadline_date) return null;
+    const deadlineDate = new Date(formData.deadline_date + "T00:00:00Z");
+    const maxDate = new Date(deadlineDate);
+    maxDate.setDate(deadlineDate.getDate() - 7);
     return maxDate.toISOString().split("T")[0];
   }
 
@@ -115,14 +117,15 @@ const RehostEventDetails = () => {
 
         setEvent(data)
 
-        // Initialize form data with event and package dates
+        // Initialize form data with event and package dates, ensuring date-only format
         setFormData({
-          startdate: data.start_date ? data.start_date.split("T")[0] : "",
-          enddate: data.end_date ? data.end_date.split("T")[0] : "",
-          packages: data.packages && Array.isArray(data.packages) ? 
+          startdate: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
+          enddate: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
+          deadline_date: data.registration_deadline_date ? new Date(data.registration_deadline_date).toISOString().split("T")[0] : "",
+          packages: data.packages && Array.isArray(data.packages) ?
             data.packages.map(pkg => ({
-              startDate: pkg.startDate ? pkg.startDate.split("T")[0] : "",
-              endDate: pkg.endDate ? pkg.endDate.split("T")[0] : "",
+              startDate: pkg.startDate ? new Date(pkg.startDate).toISOString().split("T")[0] : "",
+              endDate: pkg.endDate ? new Date(pkg.endDate).toISOString().split("T")[0] : "",
             })) : [],
         })
       } catch (err) {
@@ -155,10 +158,15 @@ const RehostEventDetails = () => {
       })
     } else {
       // Handle event date inputs
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-      }))
+      setFormData(prev => {
+        const updatedData = { ...prev, [name]: value }
+        if (name === "startdate" && value) {
+          const deadlineDate = new Date(value)
+          deadlineDate.setDate(deadlineDate.getDate() - 1)
+          updatedData.deadline_date = deadlineDate.toISOString().split("T")[0]
+        }
+        return updatedData
+      })
     }
     if (submitError) setSubmitError(null)
   }
@@ -180,39 +188,53 @@ const RehostEventDetails = () => {
       const currentDate = new Date().toISOString().split("T")[0]
 
       // Validate event dates
-      if (!formData.startdate || !formData.enddate) {
-        setSubmitError("Please select event start and end dates.")
+      if (!formData.startdate || !formData.enddate || !formData.deadline_date) {
+        setSubmitError("Please select event start, end, and registration deadline dates.")
         return
       }
 
-      if (new Date(formData.startdate) < new Date(currentDate)) {
+      const startDateObj = new Date(formData.startdate)
+      const endDateObj = new Date(formData.enddate)
+      const deadlineDateObj = new Date(formData.deadline_date)
+
+      if (startDateObj < new Date(currentDate)) {
         setSubmitError("Event start date must be today or in the future.")
         return
       }
 
-      if (new Date(formData.enddate) < new Date(formData.startdate)) {
+      if (endDateObj < startDateObj) {
         setSubmitError("Event end date must be on or after the event start date.")
         return
       }
 
+      if (deadlineDateObj >= startDateObj) {
+        setSubmitError("Registration deadline must be one day before the event start date.")
+        return
+      }
+
       // Validate package dates
-      const maxPackageDate = getMaxPackageDate();
+      const maxPackageDate = getMaxPackageDate()
       for (let i = 0; i < formData.packages.length; i++) {
         const pkg = formData.packages[i]
         if (!pkg.startDate || !pkg.endDate) {
           setSubmitError(`Please select start and end dates for package ${i + 1}.`)
           return
         }
-        if (new Date(pkg.startDate) < new Date(currentDate)) {
+        const pkgStartDateObj = new Date(pkg.startDate)
+        const pkgEndDateObj = new Date(pkg.endDate)
+
+        if (pkgStartDateObj < new Date(currentDate)) {
           setSubmitError(`Package ${i + 1} start date must be today or in the future.`)
           return
         }
-        if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
+
+        if (pkgEndDateObj < pkgStartDateObj) {
           setSubmitError(`Package ${i + 1} end date must be on or after the package start date.`)
           return
         }
-        if (maxPackageDate && (new Date(pkg.startDate) > new Date(maxPackageDate) || new Date(pkg.endDate) > new Date(maxPackageDate))) {
-          setSubmitError(`Package ${i + 1} start and end dates must be at least one week before the event start date (${formData.startdate}).`)
+
+        if (maxPackageDate && (pkgStartDateObj > new Date(maxPackageDate) || pkgEndDateObj > new Date(maxPackageDate))) {
+          setSubmitError(`Package ${i + 1} start and end dates must be at least one week before the registration deadline date (${formData.deadline_date}).`)
           return
         }
       }
@@ -221,8 +243,9 @@ const RehostEventDetails = () => {
         eventId: eventid,
         startdate: formData.startdate,
         enddate: formData.enddate,
+        deadline_date: formData.deadline_date,
         packages: formData.packages,
-        resetAttendees: false, // Log the value being sent
+        resetAttendees: false,
       })
 
       const response = await fetch(`http://localhost:5000/api/events/${eventid}/rehost`, {
@@ -235,8 +258,9 @@ const RehostEventDetails = () => {
         body: JSON.stringify({
           startdate: formData.startdate,
           enddate: formData.enddate,
+          deadline_date: formData.deadline_date,
           packages: formData.packages,
-          resetAttendees: false, // Changed to false to preserve attendees
+          resetAttendees: false,
         }),
       })
 
@@ -245,11 +269,11 @@ const RehostEventDetails = () => {
       if (!response.ok) {
         const errorData = await response.json()
         console.error("Rehost error:", errorData)
-        let errorMessage = errorData.error || `Server error: ${response.status} ${response.statusText}`;
+        let errorMessage = errorData.error || `Server error: ${response.status} ${response.statusText}`
         if (errorData.conflicts) {
           errorMessage += ": " + errorData.conflicts
             .map(c => `${c.eventName} (ID: ${c.eventId}) from ${c.startDate} to ${c.endDate}, overlapping ${c.conflictingPeriod.start} to ${c.conflictingPeriod.end}`)
-            .join("; ");
+            .join("; ")
         }
         throw new Error(errorMessage)
       }
@@ -410,7 +434,7 @@ const RehostEventDetails = () => {
                   <span>{event.capacity || "Not specified"}</span>
                 </div>
               </div>
-              
+
               <div className="detail-column">
                 <div className="detail-row">
                   <strong>Start Time:</strong>
@@ -428,36 +452,30 @@ const RehostEventDetails = () => {
                 )}
               </div>
             </div>
-            
-            {event.packages && Array.isArray(event.packages) && event.packages.length > 0 && (
-              <div className="package-section">
-                <div className="card-details-header">
-                  <h3>Package Information</h3>
-                </div>
-                <div className="card-details-content packages-content">
-                  {event.packages.map((pkg, index) => (
-                    <div key={index} className="package-item">
-                      <div className="package-header">
-                        <h4>{pkg.name || `Package ${index + 1}`}</h4>
-                        <span className="package-type">{pkg.type || "Standard"}</span>
-                      </div>
-                      <div className="detail-row">
-                        <strong>Start Date:</strong>
-                        <span>{formatDate(pkg.startDate)}</span>
-                      </div>
-                      <div className="detail-row">
-                        <strong>End Date:</strong>
-                        <span>{formatDate(pkg.endDate)}</span>
-                      </div>
-                      {pkg.details && (
-                        <div className="detail-row">
-                          <strong>Details:</strong>
-                          <span>{pkg.details}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+            <div className="detail-row">
+              <strong>Current End Date:</strong>
+              <span>{formatDate(event.end_date)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Current Registration Deadline:</strong>
+              <span>{formatDate(event.registration_deadline_date)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Start Time:</strong>
+              <span>{formatTime(event.start_time)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>End Time:</strong>
+              <span>{formatTime(event.end_time)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Capacity:</strong>
+              <span>{event.capacity || "Not specified"}</span>
+            </div>
+            {event.description && (
+              <div className="detail-row description">
+                <strong>Description:</strong>
+                <span>{event.description}</span>
               </div>
             )}
           </div>
@@ -468,104 +486,121 @@ const RehostEventDetails = () => {
             <h3>Select New Dates</h3>
           </div>
           <div className="form-container">
-          <form onSubmit={handleSubmit} className="rehost-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="startdate">New Event Start Date:</label>
-                <input
-                  type="date"
-                  id="startdate"
-                  name="startdate"
-                  value={formData.startdate}
-                  onChange={handleInputChange}
-                  required
-                  min={new Date().toISOString().split("T")[0]}
-                  disabled={isSubmitting}
-                  className="date-input"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="enddate">New Event End Date:</label>
-                <input
-                  type="date"
-                  id="enddate"
-                  name="enddate"
-                  value={formData.enddate}
-                  onChange={handleInputChange}
-                  required
-                  min={formData.startdate || new Date().toISOString().split("T")[0]}
-                  disabled={isSubmitting}
-                  className="date-input"
-                />
-              </div>
-            </div>
-
-            {formData.packages.map((pkg, index) => (
-              <div key={index} className="form-row">
+            <form onSubmit={handleSubmit} className="rehost-form">
+              <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor={`packageStartDate-${index}`}>New Package {index + 1} Start Date:</label>
+                  <label htmlFor="startdate">New Event Start Date:</label>
                   <input
                     type="date"
-                    id={`packageStartDate-${index}`}
-                    name="startDate"
-                    value={pkg.startDate}
-                    onChange={(e) => handleInputChange(e, index)}
+                    id="startdate"
+                    name="startdate"
+                    value={formData.startdate}
+                    onChange={handleInputChange}
                     required
                     min={new Date().toISOString().split("T")[0]}
-                    max={getMaxPackageDate()}
-                    disabled={isSubmitting || !formData.startdate}
+                    disabled={isSubmitting}
                     className="date-input"
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor={`packageEndDate-${index}`}>New Package {index + 1} End Date:</label>
+                  <label htmlFor="enddate">New Event End Date:</label>
                   <input
                     type="date"
-                    id={`packageEndDate-${index}`}
-                    name="endDate"
-                    value={pkg.endDate}
-                    onChange={(e) => handleInputChange(e, index)}
+                    id="enddate"
+                    name="enddate"
+                    value={formData.enddate}
+                    onChange={handleInputChange}
                     required
-                    min={pkg.startDate || new Date().toISOString().split("T")[0]}
-                    max={getMaxPackageDate()}
+                    min={formData.startdate || new Date().toISOString().split("T")[0]}
+                    disabled={isSubmitting}
+                    className="date-input"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="deadline_date">New Registration Deadline Date:</label>
+                  <input
+                    type="date"
+                    id="deadline_date"
+                    name="deadline_date"
+                    value={formData.deadline_date}
+                    onChange={handleInputChange}
+                    required
+                    min={new Date().toISOString().split("T")[0]}
+                    max={formData.startdate ? new Date(formData.startdate).toISOString().split("T")[0] : ""}
                     disabled={isSubmitting || !formData.startdate}
                     className="date-input"
                   />
                 </div>
               </div>
-            ))}
 
-            {submitError && (
-              <div className="message error-message">
-                <span className="message-icon">❌</span>
-                {submitError}
+              {formData.packages.map((pkg, index) => (
+                <div key={index} className="form-row">
+                  <div className="form-group">
+                    <label htmlFor={`packageStartDate-${index}`}>New Package {index + 1} Start Date:</label>
+                    <input
+                      type="date"
+                      id={`packageStartDate-${index}`}
+                      name="startDate"
+                      value={pkg.startDate}
+                      onChange={(e) => handleInputChange(e, index)}
+                      required
+                      min={new Date().toISOString().split("T")[0]}
+                      max={getMaxPackageDate()}
+                      disabled={isSubmitting || !formData.deadline_date}
+                      className="date-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor={`packageEndDate-${index}`}>New Package {index + 1} End Date:</label>
+                    <input
+                      type="date"
+                      id={`packageEndDate-${index}`}
+                      name="endDate"
+                      value={pkg.endDate}
+                      onChange={(e) => handleInputChange(e, index)}
+                      required
+                      min={pkg.startDate || new Date().toISOString().split("T")[0]}
+                      max={getMaxPackageDate()}
+                      disabled={isSubmitting || !formData.deadline_date}
+                      className="date-input"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {submitError && (
+                <div className="message error-message">
+                  <span className="message-icon">❌</span>
+                  {submitError}
+                </div>
+              )}
+
+              {submitSuccess && (
+                <div className="message success-message">
+                  <span className="message-icon">✅</span>
+                  {submitSuccess}
+                </div>
+              )}
+
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className={`submit-btn ${isSubmitting ? "submitting" : ""}`}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="spinner"></span>
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Rehost Request"
+                  )}
+                </button>
               </div>
-            )}
-
-            {submitSuccess && (
-              <div className="message success-message">
-                <span className="message-icon">✅</span>
-                {submitSuccess}
-              </div>
-            )}
-
-            <div className="form-actions">
-              <button
-                type="submit"
-                className={`submit-btn ${isSubmitting ? "submitting" : ""}`}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="spinner"></span>
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit Rehost Request"
-                )}
-              </button>
-            </div>
-          </form>
+            </form>
           </div>
         </div>
       </div>
