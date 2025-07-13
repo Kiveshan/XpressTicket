@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../shared/ModernDashboard.css';
 import { FaSignOutAlt, FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaDownload, FaEnvelope, FaTicketAlt } from 'react-icons/fa';
@@ -15,13 +15,147 @@ const Invoice = () => {
     eventName: 'ICTAS 2025',
     eventDate: '29 February 2025',
     eventLocation: 'Durban',
-    eventPrice: 'R 12,000.00'
+    eventVenue: '',
+    eventPrice: 'R 12,000.00',
+    startDate: '',
+    endDate: '',
+    coverImage: ''
   };
   
-  // Sample ticket data - in a real app, this would come from the database
-  const ticketData = [
-    { type: 'VIP Pass', quantity: 2, unitPrice: 'R 6,000.00', total: 'R 12,000.00' }
-  ];
+  // Format dates if they exist
+  const formatEventDates = () => {
+    let formattedStartDate = '';
+    let formattedEndDate = '';
+    let dateRange = eventData.eventDate || ''; // Default to eventDate if provided
+    
+    try {
+      // Try to get start and end dates from various sources
+      const startDate = eventData.startDate || 
+                       (eventData.event && eventData.event.startDate) || 
+                       '';
+      const endDate = eventData.endDate || 
+                     (eventData.event && eventData.event.endDate) || 
+                     '';
+      
+      if (startDate) {
+        // Try to parse and format the date
+        const parsedStartDate = new Date(startDate);
+        if (!isNaN(parsedStartDate.getTime())) {
+          formattedStartDate = parsedStartDate.toLocaleDateString('en-ZA', { 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+          });
+        } else {
+          formattedStartDate = startDate; // Use as is if parsing fails
+        }
+      }
+      
+      if (endDate) {
+        // Try to parse and format the date
+        const parsedEndDate = new Date(endDate);
+        if (!isNaN(parsedEndDate.getTime())) {
+          formattedEndDate = parsedEndDate.toLocaleDateString('en-ZA', { 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+          });
+        } else {
+          formattedEndDate = endDate; // Use as is if parsing fails
+        }
+      }
+      
+      // Create date range string if both dates exist
+      if (formattedStartDate && formattedEndDate) {
+        dateRange = `${formattedStartDate} - ${formattedEndDate}`;
+      } else if (formattedStartDate) {
+        dateRange = formattedStartDate;
+      }
+      
+      // If we still don't have a date range, use eventDate as fallback
+      if (!dateRange) {
+        dateRange = eventData.eventDate || 'Date TBA';
+      }
+      
+      return dateRange;
+    } catch (dateErr) {
+      console.error('Error formatting event dates:', dateErr);
+      // Use original string if there's an error
+      return eventData.eventDate || 'Date TBA';
+    }
+  };
+  
+  // Get formatted event date
+  const formattedEventDate = formatEventDates();
+  
+  // Sample ticket data - in a real app, this would come from the database or location state
+  const [ticketData, setTicketData] = useState([]);
+  
+  // Initialize ticket data from location state or use default values
+  useEffect(() => {
+    if (location.state && location.state.delegateDetails) {
+      try {
+        // Parse delegate details
+        let delegateArray = [];
+        const delegateDetails = location.state.delegateDetails;
+        
+        if (typeof delegateDetails === 'string') {
+          try {
+            const parsed = JSON.parse(delegateDetails);
+            delegateArray = Array.isArray(parsed) ? parsed : [parsed];
+          } catch (e) {
+            delegateArray = [{ name: delegateDetails }];
+          }
+        } else if (Array.isArray(delegateDetails)) {
+          delegateArray = delegateDetails;
+        } else if (typeof delegateDetails === 'object') {
+          delegateArray = [delegateDetails];
+        }
+        
+        // Create ticket data from delegate details
+        const processedTickets = delegateArray.map((delegate, index) => ({
+          type: location.state.packageName || 'Standard Package',
+          name: delegate.name || 'N/A',
+          title: delegate.title || '',
+          email: delegate.email || 'N/A',
+          phone: delegate.phone || 'N/A',
+          delegation: delegate.delegation || 'Attendee',
+          quantity: 1,
+          ieeeNumber: delegate.ieeeNumber || 'N/A',
+          organization: delegate.organization || 'N/A',
+          unitPrice: location.state.amount || 'N/A',
+          total: location.state.amount || 'N/A'
+        }));
+        
+        setTicketData(processedTickets);
+      } catch (err) {
+        console.error('Error processing delegate details:', err);
+        // Use default data if there's an error
+        setTicketData([{ 
+          type: 'VIP Pass', 
+          name: 'Attendee', 
+          email: 'N/A',
+          phone: 'N/A',
+          delegation: 'Attendee',
+          quantity: 1, 
+          unitPrice: eventData.eventPrice, 
+          total: eventData.eventPrice 
+        }]);
+      }
+    } else {
+      // Use default data if no location state
+      setTicketData([{ 
+        type: 'VIP Pass', 
+        name: 'Attendee', 
+        email: 'N/A',
+        phone: 'N/A',
+        delegation: 'Attendee',
+        quantity: 1, 
+        unitPrice: eventData.eventPrice, 
+        total: eventData.eventPrice 
+      }]);
+    }
+  }, [location.state, eventData.eventPrice]);
   
   // Generate a unique invoice number
   const invoiceNumber = `INV-${eventData.eventId}-${Date.now().toString().slice(-6)}`;
@@ -31,92 +165,250 @@ const Invoice = () => {
     window.history.back();
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     setIsGenerating(true);
     
-    // Create a new PDF document
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Add logo
-    const logoImg = new Image();
-    logoImg.src = '/XPRESS TICKETS LOGO2.png';
-    
-    logoImg.onload = () => {
+    try {
+      // Create a new PDF document
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Set background color for the entire page
+      doc.setFillColor(249, 250, 251); // Very light gray background
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+      
+      // Add header bar
+      doc.setFillColor(44, 62, 80); // #2c3e50 - dark blue from our design system
+      doc.rect(0, 0, pageWidth, 20, 'F');
+      
+      // Function to load image with promise
+      const loadImage = (src) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = (e) => {
+            console.error('Image failed to load:', e);
+            reject(e);
+          };
+          img.src = src;
+        });
+      };
+      
+      // Try to add logo
       try {
+        const logoImg = await loadImage('/XPRESS TICKETS LOGO2.png');
         // Calculate logo dimensions and position
-        const logoWidth = 60;
+        const logoWidth = 40;
         const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
-        const logoX = (pageWidth - logoWidth) / 2;
         
-        // Add logo to PDF
-        doc.addImage(logoImg, 'PNG', logoX, 15, logoWidth, logoHeight);
-        
-        // Add invoice title
-        doc.setFontSize(22);
-        doc.setTextColor(32, 32, 32);
-        doc.text('INVOICE', pageWidth / 2, 50, { align: 'center' });
-        
-        // Add invoice number and date
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Invoice #: ${invoiceNumber}`, 20, 60);
-        doc.text(`Date: ${purchaseDate}`, pageWidth - 20, 60, { align: 'right' });
-        
-        // Add event details
-        doc.setFontSize(16);
-        doc.setTextColor(32, 201, 151); // Green color
-        doc.text(eventData.eventName, pageWidth / 2, 70, { align: 'center' });
-        
-        doc.setFontSize(11);
-        doc.setTextColor(80, 80, 80);
-        doc.text(`Date: ${eventData.eventDate} | Location: ${eventData.eventLocation}`, pageWidth / 2, 78, { align: 'center' });
-        
-        // Add line
-        doc.setDrawColor(220, 220, 220);
-        doc.line(20, 85, pageWidth - 20, 85);
+        // Add logo to PDF header
+        doc.addImage(logoImg, 'PNG', 10, 3, logoWidth, 15);
+      } catch (logoErr) {
+        console.error('Error loading logo:', logoErr);
+        // Continue without logo
+      }
+      
+      // Add invoice title in header
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255); // White text for header
+      doc.text('INVOICE', pageWidth - 20, 13, { align: 'right' });
+      
+      // Add invoice number and date
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Invoice #: ${invoiceNumber}`, 20, 30);
+      doc.text(`Date: ${purchaseDate}`, pageWidth - 20, 30, { align: 'right' });
+      
+      // Try to add event cover image if available
+      let imageAdded = false;
+      const coverImageHeight = 40;
+      
+      if (eventData.coverImage) {
+        try {
+          const coverImg = await loadImage(eventData.coverImage);
+          // Add event cover image
+          doc.addImage(coverImg, 'JPEG', 20, 40, 50, coverImageHeight, undefined, 'FAST');
+          imageAdded = true;
+        } catch (imgErr) {
+          console.error('Error adding event cover image to PDF:', imgErr);
+          // Continue without the image
+        }
+      }
+      
+      // Add event details
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(44, 62, 80); // #2c3e50 - dark blue from our design system
+      
+      // Position event name based on whether image was added
+      const eventNameX = imageAdded ? 80 : pageWidth / 2;
+      const eventNameAlign = imageAdded ? 'left' : 'center';
+      doc.text(eventData.eventName, eventNameX, 50, { align: eventNameAlign });
+      
+      // Add event date and location
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(73, 80, 87); // #495057 - dark gray from our design system
+      
+      // Use formatted date
+      doc.text(`Date: ${formattedEventDate}`, eventNameX, 58, { align: eventNameAlign });
+      
+      // Add venue if available, otherwise use location
+      const locationText = eventData.eventVenue ? 
+        `Venue: ${eventData.eventVenue}, ${eventData.eventLocation}` : 
+        `Location: ${eventData.eventLocation}`;
+      
+      doc.text(locationText, eventNameX, 65, { align: eventNameAlign });
+      
+      // Add line
+      doc.setDrawColor(76, 161, 175); // #4ca1af - teal from our design system
+      doc.setLineWidth(0.5);
+      doc.line(20, 75, pageWidth - 20, 75);
         
         // Add ticket details table
-        doc.setFontSize(12);
-        doc.text('Ticket Details', 20, 95);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(44, 62, 80); // #2c3e50 - dark blue from our design system
+        doc.text('TICKET DETAILS', 20, 85);
         
-        // Create ticket table
-        const ticketTableHeaders = [['Ticket Type', 'Quantity', 'Unit Price', 'Total']];
+        // Create ticket table with comprehensive information
+        const ticketTableHeaders = [
+          ['Attendee Information', 'Contact Details', 'Ticket Information', 'Price']
+        ];
+        
         const ticketTableData = ticketData.map(ticket => [
-          ticket.type,
-          ticket.quantity,
-          ticket.unitPrice,
-          ticket.total
+          // Attendee Information column
+          `${ticket.title || ''} ${ticket.name || 'N/A'}
+${ticket.organization ? `Organization: ${ticket.organization}` : ''}
+${ticket.delegation ? `Delegation: ${ticket.delegation}` : ''}
+${ticket.ieeeNumber ? `IEEE: ${ticket.ieeeNumber}` : ''}`,
+          
+          // Contact Details column
+          `Email: ${ticket.email || 'N/A'}
+Phone: ${ticket.phone || 'N/A'}`,
+          
+          // Ticket Information column
+          `Type: ${ticket.type || 'Standard'}
+Quantity: ${ticket.quantity || 1}`,
+          
+          // Price column
+          `${ticket.unitPrice || 'N/A'}`
         ]);
         
-        // Use autoTable as a plugin
+        // Use autoTable as a plugin with improved styling for better readability
         autoTable(doc, {
           head: ticketTableHeaders,
           body: ticketTableData,
-          startY: 100,
+          startY: 90,
           theme: 'grid',
-          headStyles: { fillColor: [32, 201, 151], textColor: [255, 255, 255] },
-          styles: { fontSize: 10 },
-          margin: { left: 20, right: 20 }
+          headStyles: { 
+            fillColor: [76, 161, 175], // #4ca1af - teal from our design system 
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            halign: 'center',
+            valign: 'middle',
+            fontSize: 11
+          },
+          styles: { 
+            fontSize: 9,
+            cellPadding: 5,
+            overflow: 'linebreak',
+            lineWidth: 0.1
+          },
+          columnStyles: {
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 'auto' },
+            3: { cellWidth: 40, halign: 'right' }
+          },
+          margin: { left: 20, right: 20 },
+          didParseCell: function(data) {
+            // Add some styling to make multiline text more readable
+            if (data.section === 'body') {
+              data.cell.styles.lineWidth = 0.1;
+            }
+          }
         });
+        
+        // Calculate total amount from all tickets
+        let totalAmount = 0;
+        try {
+          // Try to parse and sum the ticket prices
+          totalAmount = ticketData.reduce((sum, ticket) => {
+            // Handle different currency formats
+            const priceString = ticket.total || ticket.unitPrice || '0';
+            const numericValue = parseFloat(priceString.replace(/[^0-9.]/g, ''));
+            return sum + (isNaN(numericValue) ? 0 : numericValue);
+          }, 0);
+        } catch (error) {
+          console.error('Error calculating total:', error);
+          // Fallback to eventData price if calculation fails
+          const priceString = eventData.eventPrice || '0';
+          totalAmount = parseFloat(priceString.replace(/[^0-9.]/g, '')) || 0;
+        }
+        
+        // Format total amount with currency
+        const formattedTotal = `R ${totalAmount.toLocaleString('en-ZA', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}`;
         
         // Add total amount
         // Get the final Y position after the table
         const finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 100) + 10;
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
+        doc.setTextColor(44, 62, 80); // #2c3e50 - dark blue from our design system
         doc.text('Total Amount:', pageWidth - 70, finalY);
-        doc.text(eventData.eventPrice, pageWidth - 20, finalY, { align: 'right' });
+        doc.text(formattedTotal, pageWidth - 20, finalY, { align: 'right' });
+        
+        // Add a subtle line above the total
+        doc.setDrawColor(76, 161, 175); // #4ca1af - teal from our design system
+        doc.setLineWidth(0.5);
+        doc.line(pageWidth - 120, finalY - 5, pageWidth - 20, finalY - 5);
+        
+        // Add payment information
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PAYMENT INFORMATION', 20, finalY + 20);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text('Payment Status: Paid', 20, finalY + 28);
+        doc.text('Payment Date: ' + purchaseDate, 20, finalY + 35);
+        doc.text('Transaction ID: ' + invoiceNumber, 20, finalY + 42);
+        
+        // Add notes section
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('NOTES', 20, finalY + 55);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text('• This invoice serves as proof of purchase for the event tickets.', 20, finalY + 63);
+        doc.text('• Please retain this invoice for your records and present it if required.', 20, finalY + 70);
         
         // Add footer
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 100, 100);
-        doc.text('Thank you for your purchase!', pageWidth / 2, finalY + 20, { align: 'center' });
-        doc.text('XpressTicket - Your Event Partner', pageWidth / 2, finalY + 26, { align: 'center' });
+        doc.setFillColor(44, 62, 80); // #2c3e50 - dark blue from our design system
+        doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
         
-        // Save the PDF
-        doc.save(`${eventData.eventName.replace(/\s+/g, '_')}_Invoice_${invoiceNumber}.pdf`);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(255, 255, 255); // White text for footer
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 10, pageHeight - 4);
+        doc.text('Powered by XpressTicket', pageWidth - 10, pageHeight - 4, { align: 'right' });
+        
+        // Save the PDF with sanitized filename
+        try {
+          const sanitizedName = eventData.eventName.replace(/\s+/g, '_');
+          doc.save(`${sanitizedName}_Invoice_${invoiceNumber}.pdf`);
+        } catch (error) {
+          console.error('Error saving PDF with custom filename:', error);
+          // Fallback to generic filename
+          doc.save('invoice.pdf');
+        }
         
         setIsGenerating(false);
       } catch (error) {
@@ -125,13 +417,6 @@ const Invoice = () => {
         alert('Error generating PDF. Please try again.');
       }
     };
-    
-    logoImg.onerror = () => {
-      console.error('Error loading logo image');
-      setIsGenerating(false);
-      alert('Error loading logo image. Please try again.');
-    };
-  };
   
   const handleDownload = (e) => {
     e.preventDefault();

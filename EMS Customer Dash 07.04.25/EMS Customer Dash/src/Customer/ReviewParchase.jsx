@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import "./ReviewParchase.css";
 import { useNavigate } from 'react-router-dom';
 import '../shared/ModernDashboard.css';
@@ -6,26 +6,118 @@ import { FaSignOutAlt, FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaClock, FaMo
 
 function ReviewParchase() {
    const nav = useNavigate();
+   const [purchasedEvents, setPurchasedEvents] = useState([]);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState(null);
 
+   useEffect(() => {
+     // Fetch user's purchased tickets
+     const fetchPurchasedTickets = async () => {
+       try {
+         setLoading(true);
+         
+         // Get the authentication token from session storage
+         const token = sessionStorage.getItem('token');
+         
+         if (!token) {
+           console.warn('No authentication token found in session storage');
+           // Redirect to login if no token is found
+           nav('/login');
+           return;
+         }
+         
+         // Since the /api/tickets/user endpoint doesn't exist, we'll use a workaround
+         // First, let's fetch available events that we can display
+         const timestamp = new Date().getTime(); // Add timestamp to prevent caching
+         const eventsResponse = await fetch(`http://localhost:5000/api/events/available?_=${timestamp}`, {
+           headers: {
+             'Authorization': `Bearer ${token}`,
+             'Content-Type': 'application/json'
+           }
+         });
+         
+         if (!eventsResponse.ok) {
+           throw new Error(`Failed to fetch events: ${eventsResponse.statusText}`);
+         }
+         
+         const eventsData = await eventsResponse.json();
+         console.log('Available events data:', eventsData);
+         
+         // For demonstration purposes, we'll simulate that the user has purchased tickets for some events
+         // In a real implementation, you would need a proper API endpoint to get user's purchased tickets
+         
+         // Get user info from token if possible
+         let userId = 'current-user';
+         try {
+           // Try to extract user ID from JWT token (this is a common pattern)
+           const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+           if (tokenPayload && tokenPayload.id) {
+             userId = tokenPayload.id;
+           }
+         } catch (e) {
+           console.warn('Could not parse token for user ID');
+         }
+         
+         // Simulate purchased tickets by taking a subset of available events
+         // In a real app, this would come from the backend
+         const simulatedPurchasedEvents = eventsData
+           // Take up to 3 events to simulate purchases
+           .slice(0, Math.min(3, eventsData.length))
+           .map((event, index) => {
+             // Determine if this should be an active or past event
+             const isPast = index === eventsData.length - 1;
+             const eventDate = new Date(event.date || Date.now());
+             
+             // Add ticket-specific information
+             return {
+               ...event,
+               ticketId: `ticket-${event._id || event.id || index}`,
+               ticketType: index % 2 === 0 ? 'Standard' : 'VIP',
+               ticketPrice: (1000 + (index * 500)).toFixed(2),
+               purchaseDate: new Date(Date.now() - (index * 86400000)).toISOString(), // days ago
+               status: isPast || eventDate < new Date() ? 'Past' : 'Active'
+             };
+           });
+         
+         setPurchasedEvents(simulatedPurchasedEvents);
+         
+         // Note for future implementation:
+         // When the backend adds support for user tickets, replace the simulation above with:
+         // const ticketsResponse = await fetch(`http://localhost:5000/api/user/tickets`, {
+         //   headers: { 'Authorization': `Bearer ${token}` }
+         // });
+         // const ticketsData = await ticketsResponse.json();
+         // Then process the real ticket data
+       } catch (err) {
+         console.error('Error fetching purchased tickets:', err);
+         setError(err.message);
+       } finally {
+         setLoading(false);
+       }
+     };
+     
+     fetchPurchasedTickets();
+   }, [nav]);
+   
    return (
     <div className="modern-dashboard-container">
       {/* Header with Logo and Logout */}
-      <header className="purchase-header">
+      <header className="modern-header">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
-          className="purchase-logo"
+          className="modern-logo"
         />
-        <div className="purchase-header-actions">
-          <button className="purchase-logout-btn" onClick={() => nav('/')}>
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
             <FaSignOutAlt /> Logout
           </button>
         </div>
       </header>
       
       {/* Back Button */}
-      <div className="purchase-back-button">
-        <button className="purchase-back-btn" onClick={() => nav("/customerdash")}>
+      <div className="modern-back-button">
+        <button className="modern-back-btn" onClick={() => nav("/customerdash")}>
           <FaArrowLeft /> Back to Dashboard
         </button>
       </div>
@@ -35,149 +127,81 @@ function ReviewParchase() {
         <p className="purchase-page-description">View all events you've purchased tickets for</p>
         
         <div className="purchase-card-grid">
-          {/* Event Card 1 */}
-          <div className="purchase-event-container" onClick={() => nav('/parchasedticket')}>
-            <div className="purchase-event-card">
-              <div className="purchase-event-status">Active</div>
-              <div className="purchase-event-image-container">
-                <img src="/pexels-photo-7723831.jpeg" alt="HOD Party" className="purchase-event-image" />
-              </div>
-              <div className="purchase-event-title-container">
-                <h3 className="purchase-event-title">HOD Party Celebration</h3>
-              </div>
+          {loading ? (
+            <div className="purchase-loading">
+              <p>Loading your tickets...</p>
             </div>
-            
-            <div className="purchase-event-details-card">
-              <div className="purchase-event-detail-item">
-                <FaMapMarkerAlt className="purchase-event-icon" />
-                <span>Amanzimtoti</span>
-              </div>
-              <div className="purchase-event-detail-item">
-                <FaCalendarAlt className="purchase-event-icon" />
-                <span>29 February</span>
-              </div>
-              <div className="purchase-event-detail-item">
-                <FaClock className="purchase-event-icon" />
-                <span>9:00 AM</span>
-              </div>
-              <div className="purchase-event-detail-item purchase-event-price">
-                <FaMoneyBillWave className="purchase-event-icon" />
-                <span>R 12,000.00</span>
-              </div>
-              <div className="purchase-button-group">
-                <button className="purchase-view-tickets-btn">View Tickets</button>
-                <button className="purchase-invoice-btn" onClick={(e) => { e.stopPropagation(); nav('/invoice', { state: { eventId: '1', eventName: 'HOD Party Celebration', eventDate: '29 February', eventLocation: 'Amanzimtoti', eventPrice: 'R 12,000.00' } }); }}>Invoice</button>
-              </div>
+          ) : error ? (
+            <div className="purchase-error">
+              <p>Error loading your tickets: {error}</p>
+              <button className="purchase-retry-btn" onClick={() => window.location.reload()}>Retry</button>
             </div>
-          </div>
-
-          {/* Event Card 2 */}
-          <div className="purchase-event-container" onClick={() => nav('/parchasedticket')}>
-            <div className="purchase-event-card">
-              <div className="purchase-event-status">Active</div>
-              <div className="purchase-event-image-container">
-                <img src="/pexels-photo-9729879.jpeg" alt="Conference B" className="purchase-event-image" />
-              </div>
-              <div className="purchase-event-title-container">
-                <h3 className="purchase-event-title">Conference B</h3>
-              </div>
+          ) : purchasedEvents.length === 0 ? (
+            <div className="purchase-no-tickets">
+              <p>You haven't purchased any tickets yet.</p>
+              <button className="purchase-browse-btn" onClick={() => nav('/eventmenu')}>Browse Events</button>
             </div>
-            
-            <div className="purchase-event-details-card">
-              <div className="purchase-event-detail-item">
-                <FaMapMarkerAlt className="purchase-event-icon" />
-                <span>Durban</span>
+          ) : (
+            purchasedEvents.map((event, index) => (
+              <div className="purchase-event-container" key={`event-${index}`} onClick={() => nav('/parchasedticket', { state: { eventId: event._id || event.id } })}>
+                <div className="purchase-event-card">
+                  <div className={`purchase-event-status ${event.status === 'Past' ? 'purchase-event-status-past' : ''}`}>
+                    {event.status}
+                  </div>
+                  <div className="purchase-event-image-container">
+                    <img 
+                      src={event.image || '/default-event.png'} 
+                      alt={event.name} 
+                      className="purchase-event-image" 
+                      onError={(e) => { e.target.src = '/default-event.png'; }}
+                    />
+                  </div>
+                  <div className="purchase-event-title-container">
+                    <h3 className="purchase-event-title">{event.name}</h3>
+                  </div>
+                </div>
+                
+                <div className="purchase-event-details-card">
+                  <div className="purchase-event-detail-item">
+                    <FaMapMarkerAlt className="purchase-event-icon" />
+                    <span>{event.location || 'TBA'}</span>
+                  </div>
+                  <div className="purchase-event-detail-item">
+                    <FaCalendarAlt className="purchase-event-icon" />
+                    <span>{event.date || 'TBA'}</span>
+                  </div>
+                  <div className="purchase-event-detail-item">
+                    <FaClock className="purchase-event-icon" />
+                    <span>{event.time || 'TBA'}</span>
+                  </div>
+                  <div className="purchase-event-detail-item purchase-event-price">
+                    <FaMoneyBillWave className="purchase-event-icon" />
+                    <span>R {event.ticketPrice || 'N/A'}</span>
+                  </div>
+                  <div className="purchase-button-group">
+                    <button className="purchase-view-tickets-btn">View Tickets</button>
+                    <button 
+                      className="purchase-invoice-btn" 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        nav('/invoice', { 
+                          state: { 
+                            eventId: event._id || event.id, 
+                            eventName: event.name, 
+                            eventDate: event.date, 
+                            eventLocation: event.location, 
+                            eventPrice: `R ${event.ticketPrice || 'N/A'}` 
+                          } 
+                        }); 
+                      }}
+                    >
+                      Invoice
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="purchase-event-detail-item">
-                <FaCalendarAlt className="purchase-event-icon" />
-                <span>30 March</span>
-              </div>
-              <div className="purchase-event-detail-item">
-                <FaClock className="purchase-event-icon" />
-                <span>9:00 AM</span>
-              </div>
-              <div className="purchase-event-detail-item purchase-event-price">
-                <FaMoneyBillWave className="purchase-event-icon" />
-                <span>R 250.00</span>
-              </div>
-              <div className="purchase-button-group">
-                <button className="purchase-view-tickets-btn">View Tickets</button>
-                <button className="purchase-invoice-btn" onClick={(e) => { e.stopPropagation(); nav('/invoice', { state: { eventId: '1', eventName: 'HOD Party Celebration', eventDate: '29 February', eventLocation: 'Amanzimtoti', eventPrice: 'R 12,000.00' } }); }}>Invoice</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Event Card 3 */}
-          <div className="purchase-event-container" onClick={() => nav('/parchasedticket')}>
-            <div className="purchase-event-card">
-              <div className="purchase-event-status">Active</div>
-              <div className="purchase-event-image-container">
-                <img src="/ICTAS.png" alt="ICTAS" className="purchase-event-image" />
-              </div>
-              <div className="purchase-event-title-container">
-                <h3 className="purchase-event-title">ICTAS</h3>
-              </div>
-            </div>
-            
-            <div className="purchase-event-details-card">
-              <div className="purchase-event-detail-item">
-                <FaMapMarkerAlt className="purchase-event-icon" />
-                <span>Umhlanga</span>
-              </div>
-              <div className="purchase-event-detail-item">
-                <FaCalendarAlt className="purchase-event-icon" />
-                <span>29 February</span>
-              </div>
-              <div className="purchase-event-detail-item">
-                <FaClock className="purchase-event-icon" />
-                <span>9:00 AM</span>
-              </div>
-              <div className="purchase-event-detail-item purchase-event-price">
-                <FaMoneyBillWave className="purchase-event-icon" />
-                <span>R 12,000.00</span>
-              </div>
-              <div className="purchase-button-group">
-                <button className="purchase-view-tickets-btn">View Tickets</button>
-                <button className="purchase-invoice-btn" onClick={(e) => { e.stopPropagation(); nav('/invoice', { state: { eventId: '1', eventName: 'HOD Party Celebration', eventDate: '29 February', eventLocation: 'Amanzimtoti', eventPrice: 'R 12,000.00' } }); }}>Invoice</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Event Card 4 */}
-          <div className="purchase-event-container" onClick={() => nav('/parchasedticket')}>
-            <div className="purchase-event-card">
-              <div className="purchase-event-status purchase-event-status-past">Past</div>
-              <div className="purchase-event-image-container">
-                <img src="/pexels-photo-9729879.jpeg" alt="Conference B" className="purchase-event-image" />
-              </div>
-              <div className="purchase-event-title-container">
-                <h3 className="purchase-event-title">Conference B</h3>
-              </div>
-            </div>
-            
-            <div className="purchase-event-details-card">
-              <div className="purchase-event-detail-item">
-                <FaMapMarkerAlt className="purchase-event-icon" />
-                <span>Durban</span>
-              </div>
-              <div className="purchase-event-detail-item">
-                <FaCalendarAlt className="purchase-event-icon" />
-                <span>30 March</span>
-              </div>
-              <div className="purchase-event-detail-item">
-                <FaClock className="purchase-event-icon" />
-                <span>9:00 AM</span>
-              </div>
-              <div className="purchase-event-detail-item purchase-event-price">
-                <FaMoneyBillWave className="purchase-event-icon" />
-                <span>R 250.00</span>
-              </div>
-              <div className="purchase-button-group">
-                <button className="purchase-view-tickets-btn">View Tickets</button>
-                <button className="purchase-invoice-btn" onClick={(e) => { e.stopPropagation(); nav('/invoice', { state: { eventId: '1', eventName: 'HOD Party Celebration', eventDate: '29 February', eventLocation: 'Amanzimtoti', eventPrice: 'R 12,000.00' } }); }}>Invoice</button>
-              </div>
-            </div>
-          </div>
+            ))
+          )}
         </div>
       </main>
     </div>

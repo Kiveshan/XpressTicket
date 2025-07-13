@@ -132,21 +132,53 @@
 /* Main Content Layout */
 .main-content {
   width: 100%;
-  max-width: 800px;
+  max-width: 1200px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 2rem;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
+/* Responsive styles */
+@media (max-width: 992px) {
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .event-details-card,
+  .rehost-form-card {
+    flex: none;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-details-content,
+  .packages-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-row.description {
+    grid-column: span 1;
+  }
 }
 
 /* Event Details Card */
 .event-details-card {
-  border: none;
+  flex: 3;
   border-radius: 12px;
   padding: 0;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   background: #ffffff;
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .event-details-card:hover {
@@ -183,36 +215,129 @@
 
 /* Card Details */
 .card-details {
-  padding: 2rem;
+  padding: 0;
   color: #495057;
   font-size: 1rem;
   line-height: 1.6;
 }
 
+.card-details-header {
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  color: white;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.card-details-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: white;
+}
+
+.card-details-content {
+  padding: 0 2rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
 .detail-row {
   display: flex;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   align-items: flex-start;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .detail-row strong {
-  min-width: 160px;
+  min-width: 140px;
   color: #2c3e50;
   font-weight: 600;
   margin-right: 1rem;
+  font-size: 0.95rem;
 }
 
 .detail-row span {
   flex: 1;
-  color: #6c757d;
+  color: #495057;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #4ca1af;
 }
 
 .detail-row.description {
   flex-direction: column;
+  grid-column: span 2;
 }
 
 .detail-row.description strong {
   margin-bottom: 0.5rem;
+}
+
+/* Package section styling */
+.package-section {
+  margin-top: 1.5rem;
+}
+
+.packages-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.package-item {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.25rem;
+  border-left: 4px solid #4ca1af;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.package-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.package-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.package-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.package-type {
+  background-color: #e9f7fe;
+  color: #4ca1af;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Detail column styling */
+.detail-column {
+  display: flex;
+  flex-direction: column;
 }
 
 .status-badge {
@@ -241,12 +366,15 @@
 
 /* Rehost Form Card */
 .rehost-form-card {
+  flex: 1;
   border: none;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 0;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   background: #ffffff;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .rehost-form-card:hover {
@@ -254,14 +382,9 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
-.form-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  border-bottom: 2px solid #e9ecef;
-  padding-bottom: 1rem;
+/* Form container */
+.form-container {
+  padding: 1.5rem 2rem;
 }
 
 /* Form Styles */

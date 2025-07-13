@@ -18,7 +18,22 @@ const CustomerViewEvent = () => {
         setLoading(true);
         console.log(`Fetching event details for ID: ${eventId}`);
         
-        const response = await fetch(`http://localhost:5000/api/events/${eventId}`);
+        // Get the authentication token from session storage
+        const token = sessionStorage.getItem('token');
+        
+        if (!token) {
+          console.warn('No authentication token found in session storage');
+          // Redirect to login if no token is found
+          nav('/login');
+          return;
+        }
+        
+        const response = await fetch(`http://localhost:5000/api/events/${eventId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         
         if (!response.ok) {
           throw new Error(`Failed to fetch event details: ${response.statusText}`);
@@ -214,7 +229,7 @@ const CustomerViewEvent = () => {
                       onClick={() => setActiveTab(index)}
                       className={activeTab === index ? 'active-tab' : ''}
                     >
-                      {tab}
+                      {typeof tab === 'object' ? (tab.name || 'Tab') : tab}
                     </button>
                   ))
                 ) : (
@@ -225,11 +240,17 @@ const CustomerViewEvent = () => {
               <div className="event-description">
                 {event.tabs && event.tabs.length > 0 ? (
                   <div className="tab-content">
-                    <h3>{event.tabs[activeTab]}</h3>
+                    <h3>
+                      {typeof event.tabs[activeTab] === 'object' 
+                        ? (event.tabs[activeTab].name || 'Tab') 
+                        : event.tabs[activeTab]}
+                    </h3>
                     <p>
                       {activeTab === 0 ? 
                         (event.description || 'No description available for this event.') : 
-                        `Information about ${event.tabs[activeTab]} will be provided by the event organizer.`
+                        typeof event.tabs[activeTab] === 'object' ?
+                          (event.tabs[activeTab].content || `Information about this tab will be provided by the event organizer.`) :
+                          `Information about ${event.tabs[activeTab]} will be provided by the event organizer.`
                       }
                     </p>
                   </div>

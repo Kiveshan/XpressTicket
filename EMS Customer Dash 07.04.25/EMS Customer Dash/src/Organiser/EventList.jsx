@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../Organiser/TicketsEventList.css";
+import "./ModernOrganizerStyles.css";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -50,67 +51,78 @@ function EventList() {
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Loading events...</p>
+      <div className="modern-container">
+        <div className="modern-loading">
+          <div className="spinner"></div>
+          <p>Loading events...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="error-message">
-        <p>{error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
+      <div className="modern-container">
+        <div className="modern-error">
+          <i className="fas fa-exclamation-circle"></i>
+          <p>{error}</p>
+          <button className="modern-button" onClick={() => window.location.reload()}>
+            <i className="fas fa-redo"></i> Retry
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="tickets-event-list-container">
-      <header className="dashboard-header1">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>LogOut </button>
+    <div className="modern-container">
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav("/organiser-dash")}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
         </div>
-      </header>
-
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/organiser-dash")}>
-          Back
+        <h1 className="header-title">Event List</h1>
+        <button className="modern-button" onClick={() => nav('/')}>
+          <i className="fas fa-sign-out-alt"></i> Logout
         </button>
+      </header>
+      
+      <div className="modern-content">
+        <div className="modern-card">
+          <h2 className="modern-section-title">Your Events</h2>
+          <div className="modern-table-container">
+            <table className="modern-table">
+              <thead>
+                <tr>
+                  <th>Event Name</th>
+                  <th>Requests</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event) => (
+                  <tr key={event.id}>
+                    <td>{event.name}</td>
+                    <td>
+                      <span className="modern-badge">{event.attendee_count || 0}</span>
+                    </td>
+                    <td>
+                      <button
+                        className="modern-button"
+                        onClick={() => nav(`/event-guest/${event.id}`)}
+                      >
+                        <i className="fas fa-eye"></i> View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <table className="tickets-event-list-table">
-        <thead>
-          <tr>
-            <th>Event Name</th>
-            <th>Requests</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {events.map((event) => (
-            <tr key={event.id}>
-              <td>{event.name}</td>
-              <td>
-                {event.attendee_count || 0}
-              </td>
-              <td>
-                <button
-                  className="view-button"
-                  onClick={() => nav(`/event-guest/${event.id}`)}
-                >
-                  View
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

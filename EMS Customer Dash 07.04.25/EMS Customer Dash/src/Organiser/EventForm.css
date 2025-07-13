@@ -920,3 +920,46 @@ body {
 .package-grid input[type="date"].error {
   border-color: #ef4444;
 }
+
+/* Select Dropdown Styling */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select-wrapper select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  padding: 0.375rem 1rem;
+  padding-right: 2rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #495057;
+  font-size: 0.75rem;
+  height: 32px;
+  cursor: pointer;
+}
+
+.select-wrapper select:focus {
+  outline: none;
+  border-color: #4ca1af;
+  box-shadow: 0 0 0 3px rgba(76, 161, 175, 0.1);
+}
+
+.select-wrapper::after {
+  content: '\25BC';
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  pointer-events: none;
+  font-size: 0.6rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}

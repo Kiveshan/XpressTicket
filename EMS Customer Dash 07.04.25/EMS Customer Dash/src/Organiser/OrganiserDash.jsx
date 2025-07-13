@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
+import "./ModernOrganizerStyles.css"
+import "./OrganiserDash.css"
 
 const OrganiserDash = () => {
   const nav = useNavigate()
@@ -112,45 +114,67 @@ const OrganiserDash = () => {
   }
 
   return (
-    <div className="dashboard-container1">
-      <header className="dashboard-header1">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav("/")}>
-            LogOut
+    <div className="modern-container">
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav("/mainmenu")}>
+            <i className="fas fa-arrow-left"></i> Back
           </button>
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
         </div>
-      </header>
-
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/mainmenu")}>
-          Back
+        <h1 className="header-title">Organizer Dashboard</h1>
+        <button className="modern-button" onClick={() => nav("/")}>
+          <i className="fas fa-sign-out-alt"></i> Logout
         </button>
-      </div>
+      </header>
 
       {/* Main Page Title */}
       <div className="page-title-container">
-        <h1 className="page-title">Organizer Dashboard</h1>
+        <h1 className="modern-page-title">Organizer Dashboard</h1>
       </div>
 
-      <main className="dashboard-main-vertical">
+      <main className="modern-content">
         {/* Tickets Sold Chart Section */}
-        <div className="chart-section-full">
+        <div className="modern-chart-container">
+          <h3 className="chart-title">Tickets Sold Analysis</h3>
           {loading ? (
             <div className="loading-container">Loading analytics...</div>
           ) : error ? (
             <div className="error-container">Error: {error}</div>
+          ) : analyticsData.ticketsSold && analyticsData.ticketsSold.length ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={analyticsData.ticketsSold}
+                  dataKey="ticketsSold"
+                  nameKey="event"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill="#FF9800"
+                  label
+                >
+                  {analyticsData.ticketsSold.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           ) : (
-            renderTicketsSoldChart()
+            <div className="text-center">No ticket sales data available</div>
           )}
         </div>
 
         {/* Action Cards Section */}
-        <div className="card-container-vertical">
+        <div className="modern-grid">
           {cards.map((card, index) => (
-            <div className="card1" key={index} onClick={() => nav(card.path)} style={{ cursor: "pointer" }}>
-              <img src={card.image || "/placeholder.svg"} alt={card.label} />
-              <div className="label">{card.label}</div>
+            <div className="grid-card" key={index} onClick={() => nav(card.path)}>
+              <img src={card.image || "/placeholder.svg"} alt={card.label} className="grid-card-image" />
+              <div className="grid-card-content">
+                <h3 className="grid-card-title">{card.label}</h3>
+              </div>
             </div>
           ))}
         </div>

@@ -29,34 +29,6 @@ const ViewEventRequest = () => {
   })
 
   const [packages, setPackages] = useState([])
-  
-  // Helper function to get price from package object
-  const getPackagePrice = (pkg) => {
-    // Check all possible price field names
-    if (!pkg) return 'N/A';
-    
-    // First check if the package has a direct price property
-    if (typeof pkg === 'object') {
-      // Log all keys to help debug
-      console.log('Package object keys:', Object.keys(pkg));
-      
-      // Try all possible price field names
-      const possiblePriceFields = [
-        'price', 'package_price', 'cost', 'package_cost',
-        'amount', 'value', 'fee', 'charge', 'rate'
-      ];
-      
-      // Check each field
-      for (const field of possiblePriceFields) {
-        if (pkg[field] !== undefined && pkg[field] !== null && pkg[field] !== '') {
-          console.log(`Found price in field: ${field} with value: ${pkg[field]}`);
-          return pkg[field];
-        }
-      }
-    }
-    
-    return 'N/A';
-  }
   const [tabs, setTabs] = useState([])
   const [clientTypes, setClientTypes] = useState([])
   const [error, setError] = useState(null)
@@ -132,33 +104,7 @@ const ViewEventRequest = () => {
 
         setClientTypes(data.attendees || [])
         setTabs(data.tabs || [])
-        // Log all packages to see their structure
-        if (data.packages && data.packages.length > 0) {
-          console.log('All packages:', data.packages)
-          data.packages.forEach((pkg, index) => {
-            console.log(`Package ${index} data:`, pkg)
-            console.log(`Package ${index} keys:`, Object.keys(pkg))
-            
-            // Check for price-related fields
-            const priceFields = ['price', 'cost', 'amount', 'value', 'fee', 'package_price']
-            priceFields.forEach(field => {
-              console.log(`Package ${index} ${field}:`, pkg[field])
-            })
-            
-            // Check if there are any nested objects that might contain price
-            Object.keys(pkg).forEach(key => {
-              if (typeof pkg[key] === 'object' && pkg[key] !== null) {
-                console.log(`Package ${index} nested object ${key}:`, pkg[key])
-              }
-            })
-          })
-        }
-        // Add price data to packages if not present
-        const packagesWithPrice = (data.packages || []).map(pkg => ({
-          ...pkg,
-          price: pkg.price || '$500' // Set default price if not present
-        }))
-        setPackages(packagesWithPrice)
+        setPackages(data.packages || [])
       } catch (err) {
         console.error("Error fetching event:", err)
         setError(err.message)
@@ -242,29 +188,25 @@ const ViewEventRequest = () => {
               className={`modern-tab ${currentSection === "eventInfo" ? "active" : ""}`}
               onClick={showEventInfo}
             >
-              <i className="fas fa-info-circle"></i>
-              Event Information
+              <i className="fas fa-info-circle"></i> Event Information
             </button>
             <button
               className={`modern-tab ${currentSection === "clientTypes" ? "active" : ""}`}
               onClick={showClientTypes}
             >
-              <i className="fas fa-users"></i>
-              Client Types
+              <i className="fas fa-users"></i> Client Types
             </button>
             <button
               className={`modern-tab ${currentSection === "packagesTabs" ? "active" : ""}`}
               onClick={showPackagesTabs}
             >
-              <i className="fas fa-box-open"></i>
-              Packages & Tabs
+              <i className="fas fa-box"></i> Packages & Tabs
             </button>
             <button
               className={`modern-tab ${currentSection === "terms" ? "active" : ""}`}
               onClick={showTerms}
             >
-              <i className="fas fa-file-contract"></i>
-              Terms & Conditions
+              <i className="fas fa-file-contract"></i> Terms & Conditions
             </button>
           </div>
 
@@ -278,9 +220,16 @@ const ViewEventRequest = () => {
                 <div className="modern-event-showcase">
                   <div className="modern-event-image-container">
                     <img
-                      src={eventData.file_url || "https://via.placeholder.com/400x280?text=Event+Image"}
-                      alt={eventData.event_name}
+                      src={
+                        imageError ? "/default-profile-picture.jpg" : eventData.file_url || "/default-profile-picture.jpg"
+                      }
+                      alt="Event Cover"
                       className="modern-event-image"
+                      onError={(e) => {
+                        console.error("Image load error:", eventData.file_url)
+                        setImageError(true)
+                      }}
+                      onLoad={() => console.log("Image loaded successfully:", eventData.file_url)}
                     />
                   </div>
 
@@ -288,11 +237,6 @@ const ViewEventRequest = () => {
                     <div className="modern-info-card">
                       <div className="modern-info-label">Event Name</div>
                       <div className="modern-info-value">{eventData.event_name}</div>
-                    </div>
-
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">Event Type</div>
-                      <div className="modern-info-value">{eventData.event_type}</div>
                     </div>
 
                     <div className="modern-info-card">
@@ -328,17 +272,26 @@ const ViewEventRequest = () => {
                     </div>
 
                     <div className="modern-info-card">
-                      <div className="modern-info-label">Maximum Capacity</div>
+                      <div className="modern-info-label">Event Type</div>
+                      <div className="modern-info-value">{eventData.event_type}</div>
+                    </div>
+
+                    <div className="modern-info-card">
+                      <div className="modern-info-label">Max Capacity</div>
                       <div className="modern-info-value">{eventData.capacity}</div>
                     </div>
+
+                    {eventData.duration && (
+                      <div className="modern-info-card">
+                        <div className="modern-info-label">Duration</div>
+                        <div className="modern-info-value">{eventData.duration}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="modern-description-card">
-                  <div className="modern-description-title">
-                    <i className="fas fa-file-alt"></i>
-                    Event Description
-                  </div>
+                  <div className="modern-description-title">Event Details</div>
                   <div className="modern-description-text">{eventData.event_details}</div>
                 </div>
 
@@ -393,10 +346,7 @@ const ViewEventRequest = () => {
                 <h2 className="modern-section-title">Packages & Tabs</h2>
 
                 <div className="modern-packages-container">
-                  <h3 className="modern-subsection-title">
-                    <i className="fas fa-box-open"></i>
-                    Packages
-                  </h3>
+                  <h3 className="modern-subsection-title">Packages</h3>
                   {packages.length === 0 ? (
                     <div className="modern-empty-state">
                       <i className="fas fa-box-open"></i>
@@ -407,36 +357,34 @@ const ViewEventRequest = () => {
                       {packages.map((pkg, index) => (
                         <div key={index} className="modern-package-card">
                           <div className="modern-package-header">
-                            <h4 className="modern-package-name">{pkg.name || pkg.package_name || 'Package'}</h4>
-                            <span className="modern-badge">{pkg.type || pkg.package_type || 'Standard'}</span>
+                            <h4 className="modern-package-name">{pkg.name}</h4>
+                            <span className="modern-badge">{pkg.type}</span>
                           </div>
                           <div className="modern-package-content">
                             <div className="modern-package-item">
-                              <div className="modern-package-item-label">PRICE</div>
-                              <div className="modern-package-item-value">
-                                {pkg.price}
-                              </div>
+                              <div className="modern-package-item-label">Price</div>
+                              <div className="modern-package-item-value">{pkg.price}</div>
                             </div>
                             <div className="modern-package-item modern-package-dates">
-                              <div className="modern-package-item-label">DATE CHOICES</div>
+                              <div className="modern-package-item-label">Date Choices</div>
                               <div className="modern-package-date-range">
                                 <div className="modern-package-date-item">
                                   <span className="modern-package-date-label">Start Date:</span>
                                   <span className="modern-package-date-value">
-                                    {pkg.startDate || pkg.start_date ? new Date(pkg.startDate || pkg.start_date).toLocaleDateString() : "N/A"}
+                                    {pkg.startDate ? new Date(pkg.startDate).toISOString().split("T")[0] : "N/A"}
                                   </span>
                                 </div>
                                 <div className="modern-package-date-item">
                                   <span className="modern-package-date-label">End Date:</span>
                                   <span className="modern-package-date-value">
-                                    {pkg.endDate || pkg.end_date ? new Date(pkg.endDate || pkg.end_date).toLocaleDateString() : "N/A"}
+                                    {pkg.endDate ? new Date(pkg.endDate).toISOString().split("T")[0] : "N/A"}
                                   </span>
                                 </div>
                               </div>
                             </div>
                             <div className="modern-package-description">
                               <div className="modern-package-description-title">Package Details</div>
-                              <div className="modern-package-description-text">{pkg.details || pkg.package_details || 'No details available'}</div>
+                              <div className="modern-package-description-text">{pkg.details}</div>
                             </div>
                           </div>
                         </div>
@@ -446,10 +394,7 @@ const ViewEventRequest = () => {
                 </div>
 
                 <div className="modern-tabs-container">
-                  <h3 className="modern-subsection-title">
-                    <i className="fas fa-folder"></i>
-                    Tabs
-                  </h3>
+                  <h3 className="modern-subsection-title">Tabs</h3>
                   {tabs.length === 0 ? (
                     <div className="modern-empty-state">
                       <i className="fas fa-folder"></i>
@@ -459,10 +404,7 @@ const ViewEventRequest = () => {
                     <div className="modern-tabs-grid">
                       {tabs.map((tab, index) => (
                         <div key={index} className="modern-tab-card">
-                          <h4 className="modern-tab-name">
-                            <i className="fas fa-clipboard-list"></i>
-                            {tab.name}
-                          </h4>
+                          <h4 className="modern-tab-name">{tab.name}</h4>
                           <div className="modern-tab-description">{tab.description}</div>
                         </div>
                       ))}
@@ -486,10 +428,7 @@ const ViewEventRequest = () => {
             {/* Section 4: Terms & Conditions */}
             {currentSection === "terms" && (
               <div>
-                <h2 className="modern-section-title">
-                  <i className="fas fa-file-contract"></i>
-                  Terms & Conditions
-                </h2>
+                <h2 className="modern-section-title">Terms & Conditions</h2>
 
                 <div className="modern-terms-container">
                   <div className="modern-terms-card">

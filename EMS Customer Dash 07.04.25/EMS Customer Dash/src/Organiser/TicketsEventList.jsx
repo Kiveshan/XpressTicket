@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './TicketsEventList.css';
+import './ModernOrganizerStyles.css';
 import { useNavigate } from 'react-router-dom';
- 
+
 function TicketsEventList() {
   const nav = useNavigate();
   const [events, setEvents] = useState([]);
@@ -43,64 +44,87 @@ function TicketsEventList() {
     fetchEvents();
   }, [nav]);
  
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
- 
-  return (
-    <div className="tickets-event-list-container">
-      <header className="dashboard-header1">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>
-            LogOut
+  if (loading) {
+    return (
+      <div className="modern-container">
+        <div className="modern-loading">
+          <div className="spinner"></div>
+          <p>Loading events...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="modern-container">
+        <div className="modern-error">
+          <i className="fas fa-exclamation-circle"></i>
+          <p>{error}</p>
+          <button className="modern-button" onClick={() => window.location.reload()}>
+            <i className="fas fa-redo"></i> Retry
           </button>
         </div>
-      </header>
- 
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/requestcard')}>
-          Back
-        </button>
       </div>
-      <h2 className="tickets-event-list-title">Event Requests</h2>
-      <div className="tickets-event-list-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Event Name</th>
-              <th>Requests</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.length === 0 ? (
-              <tr>
-                <td colSpan="3">No events found</td>
-              </tr>
-            ) : (
-              events.map((event) => (
-                <tr key={event.event_id}>
-                  <td>{event.event_name}</td>
-                  <td>
-                    <span className="bell-icon">🔔</span> {event.request_count}
-                  </td>
-                  <td>
-                    <button
-                      className="view-button"
-                      onClick={() => nav(`/ticketsrequest/${event.event_id}`)}
-                    >
-                      View
-                    </button>
-                  </td>
+    );
+  }
+ 
+  return (
+    <div className="modern-container">
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav('/requestcard')}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
+        </div>
+        <h1 className="header-title">Event Requests</h1>
+        <button className="modern-button" onClick={() => nav('/')}>
+          <i className="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </header>
+      
+      <div className="modern-content">
+        <div className="modern-card">
+          <h2 className="modern-section-title">Event Requests</h2>
+          <div className="modern-table-container">
+            <table className="modern-table">
+              <thead>
+                <tr>
+                  <th>Event Name</th>
+                  <th>Requests</th>
+                  <th>Action</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {events.length === 0 ? (
+                  <tr>
+                    <td colSpan="3">No events found</td>
+                  </tr>
+                ) : (
+                  events.map((event) => (
+                    <tr key={event.event_id}>
+                      <td>{event.event_name}</td>
+                      <td>
+                        <span className="modern-badge">
+                          <i className="fas fa-bell"></i> {event.request_count}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="modern-button"
+                          onClick={() => nav(`/ticketsrequest/${event.event_id}`)}
+                        >
+                          <i className="fas fa-eye"></i> View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

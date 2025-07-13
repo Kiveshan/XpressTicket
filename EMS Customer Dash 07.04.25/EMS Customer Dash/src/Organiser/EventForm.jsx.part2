@@ -1,0 +1,15 @@
+            </div>
+            {showSuccess && (
+              <div className="success-message">✅ Successfully sent event request!</div>
+            )}
+            {errorMessage && (
+              <div className="error-message-box">❌ {errorMessage}</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default EventForm;

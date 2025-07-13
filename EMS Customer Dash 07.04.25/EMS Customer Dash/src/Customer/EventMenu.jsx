@@ -12,12 +12,11 @@ function EventMenu() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventType, setSelectedEventType] = useState('all');
-  const [selectedCity, setSelectedCity] = useState('all');
+  // City filter removed as requested
   const [dateFilter, setDateFilter] = useState('');
   
-  // Sample cities and event types for filters
-  const cities = ['Cape Town', 'Johannesburg', 'Stellenbosch', 'Durban', 'Pretoria'];
-  const eventTypes = ['Physical event', 'Online event', 'Conference', 'Festival', 'Workshop'];
+  // Event types for filters
+  const eventTypes = ['Conference', 'Workshop', 'Seminar', 'Exhibition', 'Concert', 'Festival', 'Corporate Event', 'Sports Event'];
   const [showCustomDates, setShowCustomDates] = useState(false);
 
   // Filter events based on search query and filters
@@ -43,12 +42,7 @@ function EventMenu() {
       );
     }
     
-    // Apply city filter
-    if (selectedCity !== 'all') {
-      filtered = filtered.filter(event => 
-        event.location?.toLowerCase().includes(selectedCity.toLowerCase())
-      );
-    }
+    // City filter logic removed as requested
     
     // Apply date filter if available
     if (dateFilter) {
@@ -198,55 +192,29 @@ function EventMenu() {
 
             <div className="filter-group">
               <h4>Type</h4>
-              {eventTypes.map((type, index) => (
-                <div className="filter-checkbox" key={`type-${index}`}>
-                  <input 
-                    type="checkbox" 
-                    id={`type-${index}`}
-                    checked={selectedEventType === type.toLowerCase()}
-                    onChange={() => {
-                      setSelectedEventType(
-                        selectedEventType === type.toLowerCase() ? 'all' : type.toLowerCase()
-                      );
-                    }}
-                  />
-                  <label htmlFor={`type-${index}`}>{type} ({Math.floor(Math.random() * 100)})</label>
-                </div>
-              ))}
-              <div className="filter-actions">
-                <button onClick={() => setSelectedEventType('all')}>Clear All</button>
+              <div className="custom-select">
+                <select
+                  value={selectedEventType}
+                  onChange={(e) => setSelectedEventType(e.target.value)}
+                  className="modern-select"
+                >
+                  <option value="all">All Event Types</option>
+                  {eventTypes.map((type, index) => (
+                    <option key={`type-${index}`} value={type.toLowerCase()}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div className="filter-group">
-              <h4>City</h4>
-              {cities.map((city, index) => (
-                <div className="filter-checkbox" key={`city-${index}`}>
-                  <input 
-                    type="checkbox" 
-                    id={`city-${index}`}
-                    checked={selectedCity === city.toLowerCase()}
-                    onChange={() => {
-                      setSelectedCity(
-                        selectedCity === city.toLowerCase() ? 'all' : city.toLowerCase()
-                      );
-                    }}
-                  />
-                  <label htmlFor={`city-${index}`}>{city} ({Math.floor(Math.random() * 100)})</label>
-                </div>
-              ))}
-              <div className="filter-actions">
-                <button onClick={() => setSelectedCity('all')}>Clear All</button>
-              </div>
-            </div>
+            {/* City filter removed as requested */}
           </div>
         </div>
 
         {/* Main content area with events */}
         <main className="dashboard-main1">
-          <div className="results-header">
-            <h2>{filteredEvents.length} results found</h2>
-          </div>
+          {/* Results header removed as requested */}
           
           {loading ? (
             <div className="loading-container">

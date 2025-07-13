@@ -386,68 +386,88 @@ const RehostEventDetails = () => {
 
       <div className="main-content">
         <div className="event-details-card">
-          <div className="card-image-container">
-            <img
-              src={event.coverimage || "/default-event-image.jpg"}
-              alt={event.name || "Event"}
-              className="card-image"
-              onError={(e) => {
-                if (e.target.src !== "/default-event-image.jpg") {
-                  e.target.src = "/default-event-image.jpg"
-                  e.target.classList.add("image-error")
-                }
-              }}
-            />
-          </div>
 
           <div className="card-details">
-            <div className="detail-row">
-              <strong>Location:</strong>
-              <span>{event.location || "Not specified"}</span>
+            <div className="card-details-header">
+              <h3>Event Information</h3>
             </div>
-            <div className="detail-row">
-              <strong>Current Start Date:</strong>
-              <span>{formatDate(event.start_date)}</span>
+            <div className="card-details-content">
+              <div className="detail-column">
+                <div className="detail-row">
+                  <strong>Location:</strong>
+                  <span>{event.location || "Not specified"}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>Current Start Date:</strong>
+                  <span>{formatDate(event.start_date)}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>Current End Date:</strong>
+                  <span>{formatDate(event.end_date)}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>Capacity:</strong>
+                  <span>{event.capacity || "Not specified"}</span>
+                </div>
+              </div>
+              
+              <div className="detail-column">
+                <div className="detail-row">
+                  <strong>Start Time:</strong>
+                  <span>{formatTime(event.start_time)}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>End Time:</strong>
+                  <span>{formatTime(event.end_time)}</span>
+                </div>
+                {event.description && (
+                  <div className="detail-row description">
+                    <strong>Description:</strong>
+                    <span>{event.description}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="detail-row">
-              <strong>Current End Date:</strong>
-              <span>{formatDate(event.end_date)}</span>
-            </div>
-            <div className="detail-row">
-              <strong>Start Time:</strong>
-              <span>{formatTime(event.start_time)}</span>
-            </div>
-            <div className="detail-row">
-              <strong>End Time:</strong>
-              <span>{formatTime(event.end_time)}</span>
-            </div>
-            <div className="detail-row">
-              <strong>Capacity:</strong>
-              <span>{event.capacity || "Not specified"}</span>
-            </div>
-            {event.description && (
-              <div className="detail-row description">
-                <strong>Description:</strong>
-                <span>{event.description}</span>
+            
+            {event.packages && Array.isArray(event.packages) && event.packages.length > 0 && (
+              <div className="package-section">
+                <div className="card-details-header">
+                  <h3>Package Information</h3>
+                </div>
+                <div className="card-details-content packages-content">
+                  {event.packages.map((pkg, index) => (
+                    <div key={index} className="package-item">
+                      <div className="package-header">
+                        <h4>{pkg.name || `Package ${index + 1}`}</h4>
+                        <span className="package-type">{pkg.type || "Standard"}</span>
+                      </div>
+                      <div className="detail-row">
+                        <strong>Start Date:</strong>
+                        <span>{formatDate(pkg.startDate)}</span>
+                      </div>
+                      <div className="detail-row">
+                        <strong>End Date:</strong>
+                        <span>{formatDate(pkg.endDate)}</span>
+                      </div>
+                      {pkg.details && (
+                        <div className="detail-row">
+                          <strong>Details:</strong>
+                          <span>{pkg.details}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-            {event.packages && Array.isArray(event.packages) && event.packages.map((pkg, index) => (
-              <div key={index}>
-                <div className="detail-row">
-                  <strong>Package {index + 1} Start Date:</strong>
-                  <span>{formatDate(pkg.startDate)}</span>
-                </div>
-                <div className="detail-row">
-                  <strong>Package {index + 1} End Date:</strong>
-                  <span>{formatDate(pkg.endDate)}</span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
         <div className="rehost-form-card">
-          <h3 className="form-title">Select New Dates</h3>
+          <div className="card-details-header">
+            <h3>Select New Dates</h3>
+          </div>
+          <div className="form-container">
           <form onSubmit={handleSubmit} className="rehost-form">
             <div className="form-row">
               <div className="form-group">
@@ -546,6 +566,7 @@ const RehostEventDetails = () => {
               </button>
             </div>
           </form>
+          </div>
         </div>
       </div>
     </div>

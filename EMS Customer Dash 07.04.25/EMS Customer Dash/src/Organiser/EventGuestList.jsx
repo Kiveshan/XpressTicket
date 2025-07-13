@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "./EventGuestList.css";
+import "./ModernOrganizerStyles.css";
 import { toast } from "react-toastify";
 
 export default function EventGuestList() {
@@ -86,51 +87,60 @@ export default function EventGuestList() {
   }
 
   return (
-    <>
-      <header className="dashboard-header3">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>LogOut </button>
+    <div className="modern-container">
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav("/event-list")}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
         </div>
+        <h1 className="header-title">{event?.name || 'Event Guest List'}</h1>
+        <button className="modern-button" onClick={() => nav('/')}>
+          <i className="fas fa-sign-out-alt"></i> Logout
+        </button>
       </header>
 
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/event-list")}>
-          Back
-        </button>
-      </div>
-
-      <div className="analytics-container">
-        {/* Buttons to toggle views */}
-        <div className="toggle-buttons">
-          <button onClick={() => nav("/event-guest")}> Guest List</button>
-
-          <button onClick={() => nav("/analytics")}>Analytics </button>
+      <div className="modern-content">
+        {/* Navigation tabs */}
+        <div className="modern-tabs">
+          <button className="modern-tab active" onClick={() => nav("/event-guest")}>
+            <i className="fas fa-users"></i> Guest List
+          </button>
+          <button className="modern-tab" onClick={() => nav("/analytics")}>
+            <i className="fas fa-chart-bar"></i> Analytics
+          </button>
         </div>
 
-        <div>
-          <h2 className="table-title">{event?.name || 'Event'} - Guest List</h2>
-          <div className="event-details">
-            <p><strong>Date:</strong> {new Date(event?.start_date).toLocaleDateString()} - {new Date(event?.end_date).toLocaleDateString()}</p>
-            <p><strong>Location:</strong> {event?.location}</p>
-            <p><strong>Total Capacity:</strong> {event?.capacity}</p>
-            <p><strong>Attendees:</strong> {attendees.length} / {event?.capacity}</p>
+        <div className="modern-card">
+          <div className="event-summary-card">
+            <div className="event-details">
+              <div className="detail-item">
+                <span className="detail-label">Date:</span> 
+                <span className="detail-value">{new Date(event?.start_date).toLocaleDateString()} - {new Date(event?.end_date).toLocaleDateString()}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Location:</span> 
+                <span className="detail-value">{event?.location}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Capacity:</span> 
+                <span className="detail-value">{attendees.length} / {event?.capacity}</span>
+              </div>
+            </div>
           </div>
-          <table className="analytics-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Ticket Type</th>
-                <th>Status</th>
-                <th>Date Registered</th>
-              </tr>
-            </thead>
+          <div className="modern-table-container">
+            <table className="modern-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Ticket Type</th>
+                  <th>Status</th>
+                  <th>Date Registered</th>
+                </tr>
+              </thead>
             <tbody>
               {attendees.length > 0 ? (
                 attendees.map((attendee) => (
@@ -140,7 +150,7 @@ export default function EventGuestList() {
                     <td>{attendee.phone || 'N/A'}</td>
                     <td>{attendee.ticket_type || 'General Admission'}</td>
                     <td>
-                      <span className={`status-badge ${attendee.status?.toLowerCase() || 'pending'}`}>
+                      <span className={`modern-badge ${attendee.status?.toLowerCase() || 'pending'}`}>
                         {attendee.status || 'Pending'}
                       </span>
                     </td>
@@ -157,7 +167,8 @@ export default function EventGuestList() {
             </tbody>
           </table>
         </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -25,7 +25,22 @@ function CustomerFillinTicketPack1() {
         setLoading(true);
         console.log(`Fetching event details for ID: ${eventId}`);
         
-        const response = await fetch(`http://localhost:5000/api/events/${eventId}`);
+        // Get the authentication token from session storage
+        const token = sessionStorage.getItem('token');
+        
+        if (!token) {
+          console.warn('No authentication token found in session storage');
+          // Redirect to login if no token is found
+          navigate('/login');
+          return;
+        }
+        
+        const response = await fetch(`http://localhost:5000/api/events/${eventId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         
         if (!response.ok) {
           throw new Error(`Failed to fetch event details: ${response.statusText}`);

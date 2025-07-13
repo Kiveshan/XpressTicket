@@ -1,10 +1,9 @@
-"use client"
+﻿"use client"
 
-import React, { useState, useEffect } from "react"
-import "./EventForm.css"
+import { useState, useEffect } from "react"
+import "../shared/ModernDashboard.css"
 import "./ModernEventForm.css"
-import "./ModernOrganizerStyles.css"
-import { useNavigate } from "react-router-dom"
+import { FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaImage, FaList, FaBox, FaFileContract, FaPlus, FaMinus, FaTimes, FaUpload } from "react-icons/fa"
 
 export default function EventForm() {
   // Helper functions (unchanged)
@@ -53,10 +52,13 @@ export default function EventForm() {
       deadlinedate: today,
       deadlinetime: now,
       type: "",
+      custom_type: "",
       capacity: 1,
       description: "",
       terms_and_conditions: "",
       duration: "",
+      contactnum: "",
+      email: "",
     }
   })
 
@@ -111,6 +113,8 @@ export default function EventForm() {
     formData.description,
     formData.terms_and_conditions,
     formData.duration,
+    formData.contactnum,
+    formData.email,
     selectedClientTypes,
     tabs,
     packages,
@@ -143,11 +147,23 @@ export default function EventForm() {
     if (!formData.end_time) newErrors.end_time = "End time is required"
     if (!formData.deadlinedate) newErrors.deadlinedate = "Registration deadline date is required"
     if (!formData.deadlinetime) newErrors.deadlinetime = "Registration deadline time is required"
-    if (!formData.type.trim()) newErrors.type = "Event type is required"
+    if (!formData.type.trim()) {
+      newErrors.type = "Event type is required"
+    } else if (formData.type === "Other" && !formData.custom_type.trim()) {
+      newErrors.type = "Please specify the custom event type"
+    }
     if (!formData.capacity || formData.capacity <= 0) newErrors.capacity = "Capacity must be greater than 0"
     if (!formData.description.trim()) newErrors.description = "Event details are required"
     if (!formData.terms_and_conditions.trim()) newErrors.terms_and_conditions = "Terms and conditions are required"
     if (!formData.duration) newErrors.duration = "Duration cannot be computed (check dates/times)"
+    if (!formData.contactnum.trim()) newErrors.contactnum = "Contact number is required"
+    
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = "Email address is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = "Please enter a valid email address"
+    }
 
     if (formData.startdate && formData.enddate) {
       const startDate = new Date(formData.startdate)
@@ -384,6 +400,8 @@ packages.forEach((pkg, idx) => {
       formDataToSend.append("description", formData.description)
       formDataToSend.append("terms_and_conditions", formData.terms_and_conditions)
       formDataToSend.append("duration", formData.duration)
+      formDataToSend.append("contactnum", formData.contactnum)
+      formDataToSend.append("email", formData.email)
 
       // Add attendees (client types) - backend expects 'attendees'
       formDataToSend.append("attendees", JSON.stringify(selectedClientTypes))
@@ -441,85 +459,65 @@ packages.forEach((pkg, idx) => {
   const showTerms = () => setCurrentSection("terms")
 
   return (
-    <div className="modern-container">
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
       <header className="modern-header">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="modern-logo" />
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
         <div className="modern-header-actions">
-          <button 
-            className="modern-logout-btn" 
-            onClick={() => {
-              sessionStorage.removeItem("token")
-              sessionStorage.removeItem("userId")
-              sessionStorage.removeItem("user")
-              navigate("/login")
-            }}
-          >
-            <i className="fas fa-sign-out-alt"></i> Logout
+          <button className="modern-logout-btn" onClick={() => window.history.back()}>
+            <FaArrowLeft /> Back
           </button>
         </div>
       </header>
       
-      {/* Back Button */}
-      <div className="modern-back-button">
-        <button className="modern-back-btn" onClick={() => navigate("/organiser-dash")}>
-          <i className="fas fa-arrow-left"></i> Back to Dashboard
-        </button>
-      </div>
-      
-      <h1 className="header-title">Create Event</h1>
-      
-      <div className="modern-content">
+      <div className="modern-main-content">
+        <h1 className="modern-page-title">Host an Event</h1>
+        
+        {/* Section Navigation */}
+        <div className="modern-tabs">
+          {["eventInfo", "clientTypes", "packagesTabs", "terms"].map((section) => (
+            <button
+              key={section}
+              className={`modern-tab ${currentSection === section ? "active" : ""}`}
+              onClick={() => setCurrentSection(section)}
+            >
+              {section === "eventInfo" && <FaCalendarAlt />}
+              {section === "clientTypes" && <FaUsers />}
+              {section === "packagesTabs" && <FaBox />}
+              {section === "terms" && <FaFileContract />}
+              {sectionLabels[section]}
+            </button>
+          ))}
+        </div>
+        
         <div className="modern-card">
-          <div className="modern-tabs">
-            <button 
-              className={`modern-tab ${currentSection === "eventInfo" ? "active" : ""}`} 
-              onClick={showEventInfo}
-            >
-              <i className="fas fa-info-circle"></i> Event Information
-            </button>
-            <button
-              className={`modern-tab ${currentSection === "clientTypes" ? "active" : ""}`}
-              onClick={showClientTypes}
-            >
-              <i className="fas fa-users"></i> Client Types & Image
-            </button>
-            <button
-              className={`modern-tab ${currentSection === "packagesTabs" ? "active" : ""}`}
-              onClick={showPackagesTabs}
-            >
-              <i className="fas fa-box"></i> Packages & Tabs
-            </button>
-            <button 
-              className={`modern-tab ${currentSection === "terms" ? "active" : ""}`} 
-              onClick={showTerms}
-            >
-              <i className="fas fa-file-contract"></i> Terms & Conditions
-            </button>
-          </div>
-          
-          <div className="modern-content-section">
+          <div className="modern-card-body">
             {/* Section 1: Event Information */}
             {currentSection === "eventInfo" && (
-              <div>
-                <h2 className="modern-section-title">Event Information</h2>
+              <div className="section-wrapper">
+                <h2 className="section-title">Event Information</h2>
                 <div className="event-info-section">
                   <div className="form-row">
                     <div className="form-group">
-                  <label htmlFor="name" className="form-label">
-                    Event Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    className={`form-input ${errors.name ? "error" : ""}`}
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="ICTAS"
-                    required
-                  />
-                  {errors.name && <div className="error-message">{errors.name}</div>}
-                </div>
+                      <label htmlFor="name" className="form-label">
+                        Event Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        className={`form-input ${errors.name ? "error" : ""}`}
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        placeholder="ICTAS"
+                        required
+                      />
+                      {errors.name && <div className="error-message">{errors.name}</div>}
+                    </div>
                 <div className="form-group">
                   <label htmlFor="location" className="form-label">
                     Location *
@@ -637,26 +635,134 @@ packages.forEach((pkg, idx) => {
                   />
                   {errors.deadlinetime && <div className="error-message">{errors.deadlinetime}</div>}
                 </div>
+              </div>
+
+              <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="type" className="form-label">
                     Event Type *
                   </label>
-                  <input
-                    type="text"
-                    id="type"
-                    name="type"
-                    className={`form-input ${errors.type ? "error" : ""}`}
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    placeholder="Conference"
-                    required
-                  />
+                  <div className="select-wrapper">
+                    <select
+                      id="type"
+                      name="type"
+                      className={`form-input ${errors.type ? "error" : ""}`}
+                      value={formData.type}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Select Event Type</option>
+                      <option value="Conference">Conference</option>
+                      <option value="Workshop">Workshop</option>
+                      <option value="Seminar">Seminar</option>
+                      <option value="Concert">Concert</option>
+                      <option value="Exhibition">Exhibition</option>
+                      <option value="Networking">Networking Event</option>
+                      <option value="Corporate">Corporate Meeting</option>
+                      <option value="Trade Show">Trade Show</option>
+                      <option value="Festival">Festival</option>
+                      <option value="Gala">Gala/Fundraiser</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  {formData.type === "Other" && (
+                    <input
+                      type="text"
+                      id="custom_type"
+                      name="custom_type"
+                      className="form-input mt-2"
+                      placeholder="Specify event type"
+                      value={formData.custom_type || ""}
+                      onChange={(e) => {
+                        const customType = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          custom_type: customType,
+                          type: customType ? "Other: " + customType : "Other"
+                        }));
+                      }}
+                      required={formData.type === "Other"}
+                    />
+                  )}
                   {errors.type && <div className="error-message">{errors.type}</div>}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="capacity" className="form-label">
+                    Max Capacity *
+                  </label>
+                  <div className="number-input">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: Math.max(1, prev.capacity - 1),
+                        }))
+                      }
+                      className="number-btn minus"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="text"
+                      id="capacity"
+                      name="capacity"
+                      className={`form-input ${errors.capacity ? "error" : ""}`}
+                      value={formData.capacity}
+                      onChange={handleNumberInput}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          capacity: prev.capacity + 1,
+                        }))
+                      }
+                      className="number-btn plus"
+                    >
+                      +
+                    </button>
+                  </div>
+                  {errors.capacity && <div className="error-message">{errors.capacity}</div>}
                 </div>
               </div>
 
-              {/* Removed max capacity from here */}
-              <div className="form-row"></div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="contactnum" className="form-label">
+                    Contact Number *
+                  </label>
+                  <input
+                    type="tel"
+                    id="contactnum"
+                    name="contactnum"
+                    className={`form-input ${errors.contactnum ? "error" : ""}`}
+                    value={formData.contactnum}
+                    onChange={handleInputChange}
+                    placeholder="Contact number for inquiries"
+                    required
+                  />
+                  {errors.contactnum && <div className="error-message">{errors.contactnum}</div>}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="email" className="form-label">
+                    Contact Email *
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    className={`form-input ${errors.email ? "error" : ""}`}
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Email for inquiries"
+                    required
+                  />
+                  {errors.email && <div className="error-message">{errors.email}</div>}
+                </div>
+              </div>
 
               <div className="form-group full-width">
                 <label htmlFor="description" className="form-label">
@@ -673,64 +779,20 @@ packages.forEach((pkg, idx) => {
                 ></textarea>
                 {errors.description && <div className="error-message">{errors.description}</div>}
               </div>
-              
-              <div className="form-group capacity-form-group">
-                <label htmlFor="capacity" className="form-label">
-                  Max Capacity *
-                </label>
-                <div className="number-input">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        capacity: Math.max(1, prev.capacity - 1),
-                      }))
-                    }
-                    className="number-btn minus"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="text"
-                    id="capacity"
-                    name="capacity"
-                    className={`form-input ${errors.capacity ? "error" : ""}`}
-                    value={formData.capacity}
-                    onChange={handleNumberInput}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        capacity: prev.capacity + 1,
-                      }))
-                    }
-                    className="number-btn plus"
-                  >
-                    +
-                  </button>
-                </div>
-                {errors.capacity && <div className="error-message">{errors.capacity}</div>}
-              </div>
             </div>
             <div className="section-footer">
-              <div className="footer-buttons">
-                <div></div>
-                <button className="modern-button" onClick={showClientTypes}>
-                  Next: Client Types & Image <i className="fas fa-arrow-right"></i>
-                </button>
-              </div>
+              <div></div>
+              <button className="next-button" onClick={showClientTypes}>
+                Next: Client Types & Image
+              </button>
             </div>
           </div>
         )}
 
         {/* Section 2: Client Types & Cover Image - Enhanced */}
         {currentSection === "clientTypes" && (
-          <div className="modern-card">
-            <h2 className="modern-section-title">Client Types & Cover Image</h2>
+          <div className="section-wrapper">
+            <h2 className="section-title">Client Types & Cover Image</h2>
             <div className="client-upload-grid">
               <div className="client-types-section">
                 <div className="client-types">
@@ -797,7 +859,7 @@ packages.forEach((pkg, idx) => {
                   {/* Quick Actions */}
                   {selectedClientTypes.length > 0 && (
                     <div className="client-type-actions">
-                      <button type="button" className="modern-button" onClick={() => setSelectedClientTypes([])}>
+                      <button type="button" className="clear-all-btn" onClick={() => setSelectedClientTypes([])}>
                         Clear All ({selectedClientTypes.length})
                       </button>
                     </div>
@@ -859,28 +921,26 @@ packages.forEach((pkg, idx) => {
               </div>
             </div>
             <div className="section-footer">
-              <div className="footer-buttons">
-                <button className="modern-button secondary" onClick={showEventInfo}>
-                  <i className="fas fa-arrow-left"></i> Back: Event Information
-                </button>
-                <button className="modern-button" onClick={showPackagesTabs}>
-                  Next: Packages & Tabs <i className="fas fa-arrow-right"></i>
-                </button>
-              </div>
+              <button className="back-button-nav" onClick={showEventInfo}>
+                Back: Event Information
+              </button>
+              <button className="next-button" onClick={showPackagesTabs}>
+                Next: Packages & Tabs
+              </button>
             </div>
           </div>
         )}
 
         {/* Section 3: Packages & Tabs */}
         {currentSection === "packagesTabs" && (
-          <div className="modern-card">
-            <h2 className="modern-section-title">Packages & Tabs</h2>
+          <div className="section-wrapper">
+            <h2 className="section-title">Packages & Tabs</h2>
             <div className="packages-tabs-grid">
               <div className="tabs-section">
                 <div className="section-header">
                   <h3>Event Tabs</h3>
-                  <button onClick={addTab} className="modern-button">
-                    <i className="fas fa-plus"></i> Add Tab
+                  <button onClick={addTab} className="add-button">
+                    Add Tab
                   </button>
                 </div>
                 <div className="tabs-container">
@@ -919,8 +979,8 @@ packages.forEach((pkg, idx) => {
               <div className="packages-section">
                 <div className="section-header">
                   <h3>Event Packages</h3>
-                  <button onClick={addPackage} className="modern-button">
-                    <i className="fas fa-plus"></i> Add Package
+                  <button onClick={addPackage} className="add-button">
+                    Add Package
                   </button>
                 </div>
                 <div className="packages-container">
@@ -1038,17 +1098,17 @@ packages.forEach((pkg, idx) => {
       )}
     </div>
   </div>
-))}
+                  ))}
                 </div>
                 {errors.packages && <div className="error-message">{errors.packages}</div>}
               </div>
             </div>
             <div className="section-footer">
-              <button className="modern-button secondary" onClick={showClientTypes}>
-                <i className="fas fa-arrow-left"></i> Back: Client Types & Image
+              <button className="back-button-nav" onClick={showClientTypes}>
+                Back: Client Types & Image
               </button>
-              <button className="modern-button" onClick={showTerms}>
-                Next: Terms & Conditions <i className="fas fa-arrow-right"></i>
+              <button className="next-button" onClick={showTerms}>
+                Next: Terms & Conditions
               </button>
             </div>
           </div>
@@ -1056,8 +1116,8 @@ packages.forEach((pkg, idx) => {
 
         {/* Section 4: Terms & Conditions */}
         {currentSection === "terms" && (
-          <div className="modern-card">
-            <h2 className="modern-section-title">Terms & Conditions</h2>
+          <div className="section-wrapper">
+            <h2 className="section-title">Terms & Conditions</h2>
             <div className="terms-section">
               <div className="form-group full-width">
                 <label htmlFor="terms_and_conditions" className="form-label">
@@ -1076,20 +1136,22 @@ packages.forEach((pkg, idx) => {
               </div>
             </div>
             <div className="section-footer">
-              <button className="modern-button secondary" onClick={showPackagesTabs}>
-                <i className="fas fa-arrow-left"></i> Back: Packages & Tabs
+              <button className="back-button-nav" onClick={showPackagesTabs}>
+                Back: Packages & Tabs
               </button>
-              <button onClick={handleSendRequest} className="modern-button primary" disabled={isSubmitting || !isFormValid}>
-                {isSubmitting ? "Submitting..." : "Request Event"} <i className="fas fa-paper-plane"></i>
+              <button onClick={handleSendRequest} className="submit-button" disabled={isSubmitting || !isFormValid}>
+                {isSubmitting ? "Submitting..." : "Request Event"}
               </button>
             </div>
-            {showSuccess && <div className="success-message">✅ Successfully sent event request!</div>}
-            {errorMessage && <div className="error-message-box">❌ {errorMessage}</div>}
+            {showSuccess && (
+              <div className="success-message">✅ Successfully sent event request!</div>
+            )}
+            {errorMessage && (
+              <div className="error-message-box">❌ {errorMessage}</div>
+            )}
           </div>
         )}
-          </div>
-        </div>
       </div>
     </div>
-  )
+  );
 }
