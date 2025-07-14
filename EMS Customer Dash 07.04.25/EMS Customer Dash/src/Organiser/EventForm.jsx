@@ -68,7 +68,7 @@ export default function EventForm() {
       selectType: "Full Package",
       packageType: "",
       location: "",
-      duration: "", // This will now store numbers (hours)
+      duration: "",
       startDate: getTodayDateString(),
       endDate: getTodayDateString(),
       pricing: "",
@@ -115,7 +115,7 @@ export default function EventForm() {
     coverImageFile,
   ])
 
-  // ValidateForm function (updated to validate package duration as a number)
+  // ValidateForm function (unchanged)
   const validateForm = () => {
     const newErrors = {};
     const createDate = (dateStr, timeStr = "") => {
@@ -147,15 +147,6 @@ export default function EventForm() {
     if (!formData.terms_and_conditions.trim()) newErrors.terms_and_conditions = "Terms and conditions are required";
     if (!formData.duration) newErrors.duration = "Duration cannot be computed (check dates/times)";
     if (selectedClientTypes.length === 0) newErrors.attendees = "At least one client type is required";
-    
-    // Validate that deadline date is before event start date
-    if (formData.deadlinedate && formData.startdate) {
-      const deadlineDate = new Date(formData.deadlinedate);
-      const startDate = new Date(formData.startdate);
-      if (deadlineDate >= startDate) {
-        newErrors.deadlinedate = "Registration deadline must be before event start date";
-      }
-    }
 
     if (formData.startdate && formData.enddate) {
       const startDate = new Date(formData.startdate);
@@ -198,9 +189,7 @@ export default function EventForm() {
         if (!pkg.selectType.trim()) newErrors[`package_selectType_${idx}`] = `Package ${idx + 1} select type is required`;
         if (!pkg.packageType.trim()) newErrors[`package_type_${idx}`] = `Package ${idx + 1} type is required`;
         if (!pkg.location.trim()) newErrors[`package_location_${idx}`] = `Package ${idx + 1} location is required`;
-        // Updated validation for duration to ensure it's a positive number
-        if (!pkg.duration || !/^\d+$/.test(pkg.duration) || parseInt(pkg.duration, 10) <= 0)
-          newErrors[`package_duration_${idx}`] = `Package ${idx + 1} duration must be a positive number (hours)`;
+        if (!pkg.duration.trim()) newErrors[`package_duration_${idx}`] = `Package ${idx + 1} duration is required`;
         if (!pkg.startDate) newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} start date is required`;
         if (!pkg.endDate) newErrors[`package_endDate_${idx}`] = `Package ${idx + 1} end date is required`;
         if (!pkg.pricing || !/^\d+(\.\d{1,2})?$/.test(pkg.pricing))
@@ -275,23 +264,6 @@ export default function EventForm() {
     }
   }
 
-  // Updated handlePackageChange to handle duration as numbers only
-  const handlePackageChange = (index, field, value) => {
-    const updated = [...packages];
-    if (field === "pricing") {
-      if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
-        updated[index][field] = value;
-      }
-    } else if (field === "duration") {
-      if (value === "" || /^\d+$/.test(value)) {
-        updated[index][field] = value;
-      }
-    } else {
-      updated[index][field] = value;
-    }
-    setPackages(updated);
-  }
-
   const handleClientTypeChange = (e) => {
     const value = e.target.value
     setClientTypeSelection(value)
@@ -333,6 +305,18 @@ export default function EventForm() {
     ])
   }
 
+  const handlePackageChange = (index, field, value) => {
+    const updated = [...packages];
+    if (field === "pricing") {
+      if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+        updated[index][field] = value;
+      }
+    } else {
+      updated[index][field] = value;
+    }
+    setPackages(updated);
+  }
+
   const addTab = () => {
     setTabs([...tabs, { name: "", content: "" }])
   }
@@ -370,7 +354,7 @@ export default function EventForm() {
     }
   }
 
-  // handleSendRequest (unchanged)
+  // Updated handleSendRequest with redirect
   const handleSendRequest = async () => {
     setErrorMessage("")
     setShowSuccess(false)
@@ -403,34 +387,13 @@ export default function EventForm() {
       formDataToSend.append("description", formData.description)
       formDataToSend.append("terms_and_conditions", formData.terms_and_conditions)
       formDataToSend.append("duration", formData.duration)
-      
-      // Format attendees for PostgreSQL array format
-      // PostgreSQL expects array format like: {"value1","value2"}
-      const pgAttendees = '{' + selectedClientTypes.map(type => '"' + type.replace(/"/g, '\"') + '"').join(',') + '}'
-      formDataToSend.append("attendees", pgAttendees)
-      
-      // Format tabs for PostgreSQL array format
-      const formattedTabs = tabs.map(tab => tab.name)
-      const pgTabs = '{' + formattedTabs.map(tab => '"' + tab.replace(/"/g, '\"') + '"').join(',') + '}'
-      formDataToSend.append("tabs", pgTabs)
-      
-      // Store tab content separately in a hidden field
-      formDataToSend.append("tab_contents", JSON.stringify(tabs.map(tab => tab.content)))
-      
-      // Format packages for PostgreSQL array format
-      const formattedPackages = packages.map(pkg => pkg.packageType)
-      const pgPackages = '{' + formattedPackages.map(pkg => '"' + pkg.replace(/"/g, '\"') + '"').join(',') + '}'
-      formDataToSend.append("packages", pgPackages)
-      
-      // Store full package details separately in a hidden field for future reference
-      formDataToSend.append("package_details", JSON.stringify(packages))
-      
+      formDataToSend.append("attendees", JSON.stringify(selectedClientTypes))
+      formDataToSend.append("tabs", JSON.stringify(tabs))
+      formDataToSend.append("packages", JSON.stringify(packages))
       if (coverImageFile) {
         formDataToSend.append("cover_image", coverImageFile)
-        // Add the filename as a separate field for database reference
-        formDataToSend.append("coverimage", coverImageFile.name)
       }
-      
+
       console.log("Sending form data to backend...")
       console.log("Form data contents:")
       for (const [key, value] of formDataToSend.entries()) {
@@ -456,7 +419,7 @@ export default function EventForm() {
       setTimeout(() => {
         setShowSuccess(false)
         navigate("/organiser-dash")
-      }, 2000)
+      }, 2000) // Redirect after 2 seconds to show success message
     } catch (error) {
       console.error("🚨 Error submitting form:", error)
       setErrorMessage(`Failed to create event: ${error.message}`)
@@ -975,18 +938,13 @@ export default function EventForm() {
                           )}
                         </div>
                         <div className="form-group">
-                          <label>Duration (hours) *</label>
-                          <div className="currency-input">
-                            <input
-                              type="text"
-                              value={pkg.duration}
-                              onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
-                              required
-                              className={`form-input ${errors[`package_duration_${idx}`] ? "error" : ""}`}
-                              placeholder="Enter hours"
-                            />
-                            <span className="currency-symbol">hours</span>
-                          </div>
+                          <label>Duration *</label>
+                          <input
+                            type="text"
+                            value={pkg.duration}
+                            onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
+                            required
+                          />
                           {errors[`package_duration_${idx}`] && (
                             <div className="error-message">{errors[`package_duration_${idx}`]}</div>
                           )}

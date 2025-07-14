@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import './TicketsEventList.css';
 import { useNavigate } from 'react-router-dom';
  
- 
 function TicketsEventList() {
   const nav = useNavigate();
   const [events, setEvents] = useState([]);

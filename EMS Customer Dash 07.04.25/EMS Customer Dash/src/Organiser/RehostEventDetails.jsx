@@ -3,7 +3,6 @@ import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { format } from 'date-fns'
 import "./RehostEventDetails.css"
-import "./ModernRehostDetailsStyles.css"
 
 const RehostEventDetails = () => {
   const nav = useNavigate()
@@ -123,7 +122,7 @@ const RehostEventDetails = () => {
           startdate: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
           enddate: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
           deadline_date: data.registration_deadline_date ? new Date(data.registration_deadline_date).toISOString().split("T")[0] : "",
-          packages: data.packages && Array.isArray(data.packages) ? 
+          packages: data.packages && Array.isArray(data.packages) ?
             data.packages.map(pkg => ({
               startDate: pkg.startDate ? new Date(pkg.startDate).toISOString().split("T")[0] : "",
               endDate: pkg.endDate ? new Date(pkg.endDate).toISOString().split("T")[0] : "",
@@ -297,40 +296,31 @@ const RehostEventDetails = () => {
 
   if (loading) {
     return (
-      <div className="modern-container">
-        <header className="modern-header">
-          <div className="header-left">
-            <img
-              src="/logo.png"
-              alt="XpressTicket Logo"
-              className="header-logo"
-            />
-            <h1 className="header-title">Rehost Event</h1>
+      <div className="container12">
+        <header className="dashboard-header1">
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+          <div className="profile-section">
+            <button
+              className="backbutton22"
+              onClick={() => {
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
+              }}
+            >
+              LogOut
+            </button>
           </div>
-          <button
-            className="modern-button"
-            onClick={() => {
-              sessionStorage.removeItem("token")
-              sessionStorage.removeItem("userId")
-              sessionStorage.removeItem("user")
-              nav("/login")
-            }}
-          >
-            <i className="fas fa-sign-out-alt"></i> Logout
-          </button>
         </header>
-
-        <div className="modern-content">
-          <button className="modern-button" onClick={() => nav("/rehost-event")}>
-            <i className="fas fa-arrow-left"></i> Back to Events
+        <div className="back-button-container1">
+          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+            Back
           </button>
-
-          <div className="modern-loading">
-            <div className="spinner-border" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p>Loading event details...</p>
-          </div>
+        </div>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p className="loading">Loading event details...</p>
         </div>
       </div>
     )
@@ -338,49 +328,42 @@ const RehostEventDetails = () => {
 
   if (error) {
     return (
-      <div className="modern-container">
-        <header className="modern-header">
-          <div className="header-left">
-            <img
-              src="/logo.png"
-              alt="XpressTicket Logo"
-              className="header-logo"
-            />
-            <h1 className="header-title">Rehost Event</h1>
-          </div>
-          <button
-            className="modern-button"
-            onClick={() => {
-              sessionStorage.removeItem("token")
-              sessionStorage.removeItem("userId")
-              sessionStorage.removeItem("user")
-              nav("/login")
-            }}
-          >
-            <i className="fas fa-sign-out-alt"></i> Logout
-          </button>
-        </header>
-
-        <div className="modern-content">
-          <button className="modern-button" onClick={() => nav("/rehost-event")}>
-            <i className="fas fa-arrow-left"></i> Back to Events
-          </button>
-
-          <div className="modern-error">
-            <div className="modern-error-icon">
-              <i className="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3>Error Loading Event Details</h3>
-            <p className="modern-error-message">{error}</p>
+      <div className="container12">
+        <header className="dashboard-header1">
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+          <div className="profile-section">
             <button
-              className="modern-submit-btn"
+              className="backbutton22"
+              onClick={() => {
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
+              }}
+            >
+              LogOut
+            </button>
+          </div>
+        </header>
+        <div className="back-button-container1">
+          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+            Back
+          </button>
+        </div>
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h3>Error Loading Event Details</h3>
+          <p className="error-message">{error}</p>
+          <div className="action-buttons">
+            <button
+              className="retry-button"
               onClick={() => {
                 setError(null)
                 setLoading(true)
                 window.location.reload()
               }}
             >
-              <i className="fas fa-sync"></i> Try Again
+              Try Again
             </button>
           </div>
         </div>
@@ -390,18 +373,21 @@ const RehostEventDetails = () => {
 
   if (!event) {
     return (
-      <div className="modern-container">
-        <header className="modern-header">
-          <div className="header-left">
-            <img
-              src="/logo.png"
-              alt="XpressTicket Logo"
-              className="header-logo"
-            />
-            <h1 className="header-title">Rehost Event</h1>
-          </div>
+      <div className="container12">
+        <div className="error-container">
+          <p>No event data available.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container12">
+      <header className="dashboard-header1">
+        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+        <div className="profile-section">
           <button
-            className="modern-button"
+            className="backbutton22"
             onClick={() => {
               sessionStorage.removeItem("token")
               sessionStorage.removeItem("userId")
@@ -409,134 +395,101 @@ const RehostEventDetails = () => {
               nav("/login")
             }}
           >
-            <i className="fas fa-sign-out-alt"></i> Logout
+            LogOut
           </button>
-        </header>
-
-        <div className="modern-content">
-          <button className="modern-button" onClick={() => nav("/rehost-event")}>
-            <i className="fas fa-arrow-left"></i> Back to Events
-          </button>
-
-          <div className="modern-error">
-            <div className="modern-error-icon">
-              <i className="fas fa-info-circle"></i>
-            </div>
-            <h3>No Event Data</h3>
-            <p className="modern-error-message">No event data is available.</p>
-            <button
-              className="modern-submit-btn"
-              onClick={() => nav("/rehost-event")}
-            >
-              <i className="fas fa-list"></i> View All Events
-            </button>
-          </div>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="modern-container">
-      <header className="modern-header">
-        <div className="header-left">
-          <img
-            src="/logo.png"
-            alt="XpressTicket Logo"
-            className="header-logo"
-          />
-          <h1 className="header-title">Rehost Event</h1>
-        </div>
-        <button
-          className="modern-button"
-          onClick={() => {
-            sessionStorage.removeItem("token")
-            sessionStorage.removeItem("userId")
-            sessionStorage.removeItem("user")
-            nav("/login")
-          }}
-        >
-          <i className="fas fa-sign-out-alt"></i> Logout
-        </button>
       </header>
 
-      <div className="modern-content">
-        <button className="modern-button" onClick={() => nav("/rehost-event")}>
-          <i className="fas fa-arrow-left"></i> Back to Events
+      <div className="back-button-container1">
+        <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+          Back
         </button>
+      </div>
 
-        <h2 className="modern-title">Rehost Event: {event.name || "Unnamed Event"}</h2>
+      <h2 className="title">Rehost Event: {event.name || "Unnamed Event"}</h2>
 
-        <div className="modern-card">
-          <div className="modern-card-header">Event Information</div>
-          <div className="modern-card-content">
-            <div className="modern-details-grid">
-              <div className="modern-detail-column">
-                <div className="modern-detail-row">
-                  <div className="modern-detail-label">Location</div>
-                  <div className="modern-detail-value">{event.location || "Not specified"}</div>
-                </div>
-                <div className="modern-detail-row">
-                  <div className="modern-detail-label">Current Start Date</div>
-                  <div className="modern-detail-value">{formatDate(event.start_date)}</div>
-                </div>
-                <div className="modern-detail-row">
-                  <div className="modern-detail-label">Current End Date</div>
-                  <div className="modern-detail-value">{formatDate(event.end_date)}</div>
-                </div>
-                <div className="modern-detail-row">
-                  <div className="modern-detail-label">Current Registration Deadline</div>
-                  <div className="modern-detail-value">{formatDate(event.registration_deadline_date)}</div>
-                </div>
-              </div>
-              
-              <div className="modern-detail-column">
-                <div className="modern-detail-row">
-                  <div className="modern-detail-label">Start Time</div>
-                  <div className="modern-detail-value">{formatTime(event.start_time)}</div>
-                </div>
-                <div className="modern-detail-row">
-                  <div className="modern-detail-label">End Time</div>
-                  <div className="modern-detail-value">{formatTime(event.end_time)}</div>
-                </div>
-                <div className="modern-detail-row">
-                  <div className="modern-detail-label">Capacity</div>
-                  <div className="modern-detail-value">{event.capacity || "Not specified"}</div>
-                </div>
-              </div>
-              
-              {event.description && (
-                <div className="modern-detail-row modern-detail-description">
-                  <div className="modern-detail-label">Description</div>
-                  <div className="modern-detail-value">{event.description}</div>
-                </div>
-              )}
-              
-              {event.packages && Array.isArray(event.packages) && event.packages.length > 0 && (
-                <div className="modern-detail-row modern-detail-description">
-                  <div className="modern-detail-label">Current Package Dates</div>
-                  <div className="modern-detail-value">
-                    {event.packages.map((pkg, index) => (
-                      <div key={index} className="modern-package-item">
-                        <div className="modern-package-header">Package {index + 1}</div>
-                        <div>Start Date: {formatDate(pkg.startDate)}</div>
-                        <div>End Date: {formatDate(pkg.endDate)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      <div className="main-content">
+        <div className="event-details-card">
+
+          <div className="card-details">
+            <div className="card-details-header">
+              <h3>Event Information</h3>
             </div>
+            <div className="card-details-content">
+              <div className="detail-column">
+                <div className="detail-row">
+                  <strong>Location:</strong>
+                  <span>{event.location || "Not specified"}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>Current Start Date:</strong>
+                  <span>{formatDate(event.start_date)}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>Current End Date:</strong>
+                  <span>{formatDate(event.end_date)}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>Capacity:</strong>
+                  <span>{event.capacity || "Not specified"}</span>
+                </div>
+              </div>
+
+              <div className="detail-column">
+                <div className="detail-row">
+                  <strong>Start Time:</strong>
+                  <span>{formatTime(event.start_time)}</span>
+                </div>
+                <div className="detail-row">
+                  <strong>End Time:</strong>
+                  <span>{formatTime(event.end_time)}</span>
+                </div>
+                {event.description && (
+                  <div className="detail-row description">
+                    <strong>Description:</strong>
+                    <span>{event.description}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="detail-row">
+              <strong>Current End Date:</strong>
+              <span>{formatDate(event.end_date)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Current Registration Deadline:</strong>
+              <span>{formatDate(event.registration_deadline_date)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Start Time:</strong>
+              <span>{formatTime(event.start_time)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>End Time:</strong>
+              <span>{formatTime(event.end_time)}</span>
+            </div>
+            <div className="detail-row">
+              <strong>Capacity:</strong>
+              <span>{event.capacity || "Not specified"}</span>
+            </div>
+            {event.description && (
+              <div className="detail-row description">
+                <strong>Description:</strong>
+                <span>{event.description}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="modern-card">
-          <div className="modern-card-header">Select New Dates</div>
-          <div className="modern-form-container">
-            <form onSubmit={handleSubmit} className="modern-form">
-              <div className="modern-form-row">
-                <div className="modern-form-group">
-                  <label className="modern-form-label" htmlFor="startdate">New Event Start Date</label>
+        <div className="rehost-form-card">
+          <div className="card-details-header">
+            <h3>Select New Dates</h3>
+          </div>
+          <div className="form-container">
+            <form onSubmit={handleSubmit} className="rehost-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="startdate">New Event Start Date:</label>
                   <input
                     type="date"
                     id="startdate"
@@ -546,11 +499,11 @@ const RehostEventDetails = () => {
                     required
                     min={new Date().toISOString().split("T")[0]}
                     disabled={isSubmitting}
-                    className="modern-form-input"
+                    className="date-input"
                   />
                 </div>
-                <div className="modern-form-group">
-                  <label className="modern-form-label" htmlFor="enddate">New Event End Date</label>
+                <div className="form-group">
+                  <label htmlFor="enddate">New Event End Date:</label>
                   <input
                     type="date"
                     id="enddate"
@@ -560,13 +513,13 @@ const RehostEventDetails = () => {
                     required
                     min={formData.startdate || new Date().toISOString().split("T")[0]}
                     disabled={isSubmitting}
-                    className="modern-form-input"
+                    className="date-input"
                   />
                 </div>
               </div>
-              <div className="modern-form-row">
-                <div className="modern-form-group">
-                  <label className="modern-form-label" htmlFor="deadline_date">New Registration Deadline Date</label>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="deadline_date">New Registration Deadline Date:</label>
                   <input
                     type="date"
                     id="deadline_date"
@@ -577,90 +530,73 @@ const RehostEventDetails = () => {
                     min={new Date().toISOString().split("T")[0]}
                     max={formData.startdate ? new Date(formData.startdate).toISOString().split("T")[0] : ""}
                     disabled={isSubmitting || !formData.startdate}
-                    className="modern-form-input"
+                    className="date-input"
                   />
                 </div>
               </div>
 
-              {formData.packages.length > 0 && (
-                <div className="modern-package-section">
-                  <h4 className="modern-package-title">Package Dates</h4>
-                  {formData.packages.map((pkg, index) => (
-                    <div key={index} className="modern-package-item">
-                      <div className="modern-package-header">Package {index + 1}</div>
-                      <div className="modern-form-row">
-                        <div className="modern-form-group">
-                          <label className="modern-form-label" htmlFor={`packageStartDate-${index}`}>New Start Date</label>
-                          <input
-                            type="date"
-                            id={`packageStartDate-${index}`}
-                            name="startDate"
-                            value={pkg.startDate}
-                            onChange={(e) => handleInputChange(e, index)}
-                            required
-                            min={new Date().toISOString().split("T")[0]}
-                            max={getMaxPackageDate()}
-                            disabled={isSubmitting || !formData.deadline_date}
-                            className="modern-form-input"
-                          />
-                        </div>
-                        <div className="modern-form-group">
-                          <label className="modern-form-label" htmlFor={`packageEndDate-${index}`}>New End Date</label>
-                          <input
-                            type="date"
-                            id={`packageEndDate-${index}`}
-                            name="endDate"
-                            value={pkg.endDate}
-                            onChange={(e) => handleInputChange(e, index)}
-                            required
-                            min={pkg.startDate || new Date().toISOString().split("T")[0]}
-                            max={getMaxPackageDate()}
-                            disabled={isSubmitting || !formData.deadline_date}
-                            className="modern-form-input"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              {formData.packages.map((pkg, index) => (
+                <div key={index} className="form-row">
+                  <div className="form-group">
+                    <label htmlFor={`packageStartDate-${index}`}>New Package {index + 1} Start Date:</label>
+                    <input
+                      type="date"
+                      id={`packageStartDate-${index}`}
+                      name="startDate"
+                      value={pkg.startDate}
+                      onChange={(e) => handleInputChange(e, index)}
+                      required
+                      min={new Date().toISOString().split("T")[0]}
+                      max={getMaxPackageDate()}
+                      disabled={isSubmitting || !formData.deadline_date}
+                      className="date-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor={`packageEndDate-${index}`}>New Package {index + 1} End Date:</label>
+                    <input
+                      type="date"
+                      id={`packageEndDate-${index}`}
+                      name="endDate"
+                      value={pkg.endDate}
+                      onChange={(e) => handleInputChange(e, index)}
+                      required
+                      min={pkg.startDate || new Date().toISOString().split("T")[0]}
+                      max={getMaxPackageDate()}
+                      disabled={isSubmitting || !formData.deadline_date}
+                      className="date-input"
+                    />
+                  </div>
                 </div>
-              )}
+              ))}
 
               {submitError && (
-                <div className="modern-alert modern-alert-error">
-                  <span className="modern-alert-icon">
-                    <i className="fas fa-exclamation-circle"></i>
-                  </span>
-                  <span className="modern-alert-text">{submitError}</span>
+                <div className="message error-message">
+                  <span className="message-icon">❌</span>
+                  {submitError}
                 </div>
               )}
 
               {submitSuccess && (
-                <div className="modern-alert modern-alert-success">
-                  <span className="modern-alert-icon">
-                    <i className="fas fa-check-circle"></i>
-                  </span>
-                  <span className="modern-alert-text">{submitSuccess}</span>
+                <div className="message success-message">
+                  <span className="message-icon">✅</span>
+                  {submitSuccess}
                 </div>
               )}
 
-              <div className="modern-form-actions">
+              <div className="form-actions">
                 <button
                   type="submit"
-                  className={`modern-submit-btn ${isSubmitting ? "modern-submitting" : ""}`}
+                  className={`submit-btn ${isSubmitting ? "submitting" : ""}`}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
-                      <span className="modern-spinner">
-                        <i className="fas fa-spinner fa-spin"></i>
-                      </span>
-                      <span>Submitting...</span>
+                      <span className="spinner"></span>
+                      Submitting...
                     </>
                   ) : (
-                    <>
-                      <i className="fas fa-calendar-check"></i>
-                      <span>Submit Rehost Request</span>
-                    </>
+                    "Submit Rehost Request"
                   )}
                 </button>
               </div>
