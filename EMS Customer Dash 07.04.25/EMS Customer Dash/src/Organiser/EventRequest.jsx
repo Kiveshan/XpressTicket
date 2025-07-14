@@ -223,21 +223,31 @@ const EventRequest = () => {
 
   if (loading) {
     return (
-      <div className="modern-container">
-        <header className="modern-header">
-          <div className="header-left">
-            <img src={logo} alt="XpressTicket Logo" className="header-logo" />
-            <h1 className="header-title">Event Requests</h1>
+      <div className="container12">
+        <header className="dashboard-header1">
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+          <div className="profile-section">
+            <button
+              className="backbutton22"
+              onClick={() => {
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
+              }}
+            >
+              LogOut
+            </button>
           </div>
-          <button className="modern-button" onClick={handleLogout}>
-            <span>Logout</span>
-          </button>
         </header>
-        <div className="modern-content">
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p className="loading">Loading events...</p>
-          </div>
+        <div className="back-button-container1">
+          <button className="backbutton20" onClick={() => nav("/requestcard")}>
+            Back
+          </button>
+        </div>
+        <div className="loading-container">
+          <ClipLoader color="#123abc" loading={loading} size={50} />
+          <p className="loading">Loading events...</p>
         </div>
       </div>
     )
@@ -246,45 +256,58 @@ const EventRequest = () => {
   if (error) {
     const isAuthError = error.includes("log in") || error.includes("expired")
     return (
-      <div className="modern-container">
-        <header className="modern-header">
-          <div className="header-left">
-            <img src={logo} alt="XpressTicket Logo" className="header-logo" />
-            <h1 className="header-title">Event Requests</h1>
+      <div className="container12">
+        <header className="dashboard-header1">
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+          <div className="profile-section">
+            {!isAuthError && (
+              <button
+                className="backbutton22"
+                onClick={() => {
+                  sessionStorage.removeItem("token")
+                  sessionStorage.removeItem("userId")
+                  sessionStorage.removeItem("user")
+                  nav("/login")
+                }}
+              >
+                LogOut
+              </button>
+            )}
           </div>
-          {!isAuthError && (
-            <button className="modern-button" onClick={handleLogout}>
-              <span>Logout</span>
-            </button>
-          )}
         </header>
-        <div className="modern-content">
-          <div className="back-button-container">
-            <button className="secondary-button" onClick={() => (isAuthError ? nav("/login") : nav("/organiser"))}>
-              {isAuthError ? "Go to Login" : "← Back"}
-            </button>
-          </div>
-          <div className="error-container">
-            <div className="error-icon">⚠️</div>
-            <h3>{isAuthError ? "Authentication Required" : "Error Loading Events"}</h3>
-            <p className="error-message">{error}</p>
-            <div className="action-buttons">
-              {isAuthError ? (
-                <button
-                  className="primary-button"
-                  onClick={() => {
-                    sessionStorage.clear()
-                    nav("/login")
-                  }}
-                >
-                  Go to Login
-                </button>
-              ) : (
-                <button className="primary-button" onClick={fetchEvents}>
-                  Try Again
-                </button>
-              )}
-            </div>
+        <div className="back-button-container1">
+          <button className="backbutton20" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
+            {isAuthError ? "Go to Login" : "Back"}
+          </button>
+        </div>
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h3>{isAuthError ? "Authentication Required" : "Error Loading Events"}</h3>
+          <p className="error-message">{error}</p>
+          <div className="action-buttons">
+            {isAuthError ? (
+              <button
+                className="login-button"
+                onClick={() => {
+                  sessionStorage.clear()
+                  nav("/login")
+                }}
+              >
+                Go to Login
+              </button>
+            ) : (
+              <button
+                className="retry-button"
+                onClick={() => {
+                  setError(null)
+                  setLoading(true)
+                  setEvents([])
+                  setFilteredEvents([])
+                }}
+              >
+                Try Again
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -292,94 +315,92 @@ const EventRequest = () => {
   }
 
   return (
-    <div className="modern-container">
-      <header className="modern-header">
-        <div className="header-left">
-          <img src={logo} alt="XpressTicket Logo" className="header-logo" />
-          <h1 className="header-title">Event Requests</h1>
-        </div>
-        <button className="modern-button" onClick={handleLogout}>
-          <span>Logout</span>
-        </button>
-      </header>
-
-      <div className="modern-content">
-        <div className="back-button-container">
-          <button className="secondary-button" onClick={() => nav("/organiser")}>
-            ← Back
+    <div className="container12">
+      <header className="dashboard-header1">
+        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+        <div className="profile-section">
+          <button
+            className="backbutton22"
+            onClick={() => {
+              sessionStorage.removeItem("token")
+              sessionStorage.removeItem("userId")
+              sessionStorage.removeItem("user")
+              nav("/login")
+            }}
+          >
+            LogOut
           </button>
         </div>
+      </header>
 
-        <div className="modern-card">
-          <div className="modern-card-header">
-            <h2 className="modern-section-title">Event Requests</h2>
-            <div className="filter-container">
-              <label htmlFor="status-filter" className="filter-label">
-                <span>Filter by Status:</span>
-              </label>
-              <select id="status-filter" value={statusFilter} onChange={handleStatusFilterChange} className="filter-select">
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-          </div>
-
-          {filteredEvents.length === 0 ? (
-            <div className="modern-empty-state">
-              <i>📋</i>
-              <p>
-                No events found{statusFilter !== "all" ? ` with status "${statusFilter}"` : ""}. Create your first event to
-                get started!
-              </p>
-              <button className="primary-button" onClick={() => nav("/create-event")}>
-                Create New Event
-              </button>
-            </div>
-          ) : (
-            <div className="modern-card-grid">
-              {filteredEvents.map((event) => (
-                <div key={event.id} className="modern-event-card">
-                  <div className="modern-card-image-container">
-                    <img
-                      src={event.file_url}
-                      alt={event.event_name}
-                      className="modern-card-image"
-                      onError={handleImageError}
-                    />
-                    {!event.file_url && (
-                      <div className="modern-image-placeholder">
-                        <i>🖼️</i>
-                        <span>No Image</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="modern-card-content">
-                    <h3 className="modern-card-title">{event.event_name}</h3>
-                    <div className="modern-card-details">
-                      <p>
-                        <span className="detail-item"><i>📍</i> {event.location}</span>
-                        <span className="detail-item"><i>📅</i> {formatDate(event.date)}</span>
-                        <span className="detail-item"><i>💰</i> {event.price}</span>
-                        <span className="detail-item"><i>⏰</i> {event.time}</span>
-                      </p>
-                    </div>
-                    <div className="modern-card-footer">
-                      <span className={`status ${event.status.replace(" ", "-").toLowerCase()}`}>
-                        {event.status}
-                      </span>
-                      <button className="view-btn" onClick={() => nav("/viewerequest", { state: { eventid: event.id } })}>
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="back-button-container1">
+        <button className="backbutton20" onClick={() => nav("/requestcard")}>
+          Back
+        </button>
       </div>
+
+      <h2 className="title">Event Request</h2>
+
+      <div className="filter-container">
+        <label htmlFor="status-filter" className="filter-label">
+          Filter by Status:
+        </label>
+        <select id="status-filter" value={statusFilter} onChange={handleStatusFilterChange} className="filter-select">
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+
+      {filteredEvents.length === 0 ? (
+        <div className="no-events">
+          <p>
+            No events found{statusFilter !== "all" ? ` with status "${statusFilter}"` : ""}. Create your first event to
+            get started!
+          </p>
+          <button className="create-event-button" onClick={() => nav("/create-event")}>
+            Create New Event
+          </button>
+        </div>
+      ) : (
+        <div className="card-grid">
+          {filteredEvents.map((event) => (
+            <div key={event.id} className="card">
+              <div className="card-image-container">
+                <img
+                  src={event.file_url}
+                  alt={event.event_name}
+                  className="card-image"
+                  onError={handleImageError}
+                />
+                {!event.file_url && (
+                  <div className="image-placeholder">
+                    <span>No Image</span>
+                  </div>
+                )}
+              </div>
+              <h3 className="card-title">{event.event_name}</h3>
+              <div className="card-details">
+                <p>
+                  📍 {event.location} <br />
+                  📅 {formatDate(event.date)} <br />
+                  💰 {event.price} <br />
+                  ⏰ {event.time}
+                </p>
+              </div>
+              <div className="card-footer">
+                <span className={`status ${event.status.replace(" ", "-").toLowerCase()}`}>
+                  Status: {event.status}
+                </span>
+                <button className="view-btn" onClick={() => nav("/viewerequest", { state: { eventid: event.id } })}>
+                  View
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -48,9 +48,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'XPRESS.FINAL',
-  password: '1234567890',
-  port: 5432,
+  database: 'Xpressfinal',
+  password: '123456',
+  port: 5433,
   timezone: 'UTC', // Ensure PostgreSQL uses UTC
 });
 
@@ -131,7 +131,7 @@ async function initializeLookupTables() {
     `);
 
     // Create events table with user_id and status
-  await client.query(`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS public.events (
         event_id SERIAL NOT NULL,
         name character varying NOT NULL,
@@ -336,7 +336,7 @@ async function generatePresignedUrl(key) {
 
   // Check if URL is in cache and not expired (cache for 50 minutes to be safe)
   const cachedItem = urlCache.get(key);
-  if (cachedItem && (Date.now() - cachedItem.timestamp) < 50 * 60 * 1000) {
+  if (cachedItem && Date.now() - cachedItem.timestamp < 50 * 60 * 1000) {
     console.log(`Using cached URL for ${key}`);
     return cachedItem.url;
   }
@@ -344,14 +344,14 @@ async function generatePresignedUrl(key) {
   try {
     const command = new GetObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME,
-      Key: key
+      Key: key,
     });
     const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
 
     // Cache the URL with timestamp
     urlCache.set(key, {
       url,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     return url;
@@ -1131,20 +1131,6 @@ app.get('/api/users-without-events', authenticateToken, authenticateAdmin, async
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-
-async function generatePresignedUrl(key) {
-  try {
-    const command = new GetObjectCommand({
-      Bucket: process.env.S3_BUCKET_NAME,
-      Key: key,
-    });
-    return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-  } catch (error) {
-    console.error(`Error generating presigned URL for key ${key}:`, error);
-    return null;
-  }
-}
-
 
 //Leya organizer code
 
@@ -2408,7 +2394,7 @@ app.get('/api/organiser/events', authenticateToken, async (req, res) => {
         e.name AS event_name,
         COALESCE(COUNT(tp.purchase_id), 0) AS request_count
       FROM events e
-      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.request_status = 'pending'
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id
       WHERE e.user_id = $1
       GROUP BY e.event_id, e.name
       ORDER BY e.event_id DESC
@@ -2452,7 +2438,7 @@ app.get('/api/organiser/events/:eventId/ticket-requests', authenticateToken, asy
       FROM ticket_purchases tp
       JOIN events e ON tp.event_id = e.event_id
       JOIN user_profiles up ON tp.user_id = up.user_id
-      WHERE e.event_id = $1 AND e.user_id = $2 ${all ? '' : "AND tp.request_status = 'pending'"}
+      WHERE e.event_id = $1 AND e.user_id = $2
       ORDER BY tp.purchase_id DESC
     `;
     const result = await client.query(query, [eventId, userId]);
@@ -3015,24 +3001,24 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
 
     const parsedTabs = updatedEvent.tabs
       ? updatedEvent.tabs.map((tab) => {
-          try {
-            return JSON.parse(tab);
-          } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e);
-            return {};
-          }
-        })
+        try {
+          return JSON.parse(tab);
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e);
+          return {};
+        }
+      })
       : [];
 
     const parsedPackages = updatedEvent.packages
       ? updatedEvent.packages.map((pkg) => {
-          try {
-            return JSON.parse(pkg);
-          } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e);
-            return {};
-          }
-        })
+        try {
+          return JSON.parse(pkg);
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e);
+          return {};
+        }
+      })
       : [];
 
     console.log("Event rehosted successfully:", updatedEvent.event_id);
@@ -3243,25 +3229,25 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
     // Parse tabs
     const parsedTabs = event.tabs
       ? event.tabs.map((tab) => {
-          try {
-            return JSON.parse(tab);
-          } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e);
-            return {};
-          }
-        })
+        try {
+          return JSON.parse(tab);
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e);
+          return {};
+        }
+      })
       : [];
 
     // Parse packages
     const parsedPackages = event.packages
       ? event.packages.map((pkg) => {
-          try {
-            return JSON.parse(pkg);
-          } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e);
-            return {};
-          }
-        })
+        try {
+          return JSON.parse(pkg);
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e);
+          return {};
+        }
+      })
       : [];
 
     res.json({

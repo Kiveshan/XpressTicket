@@ -4,42 +4,6 @@ import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import "./EventForm.css"
 import "./ViewEventRequest.css"
-import "./ModernOrganizerStyles.css"
-import "./ModernStyles.css"
-
-// Helper function to handle package price display
-const getPackagePrice = (pkg) => {
-  // Check for price in different possible property names
-  const price = pkg.price || pkg.package_price || pkg.cost || pkg.amount || pkg.fee;
-  
-  // If price is not available, return N/A
-  if (!price && price !== 0) return "N/A";
-  
-  // Handle numeric price
-  if (typeof price === 'number') {
-    return `$${price.toFixed(2)}`;
-  }
-  
-  // Handle string price that might be numeric
-  if (typeof price === 'string') {
-    // Check if the price already has a currency symbol
-    if (price.startsWith('$') || price.startsWith('£') || price.startsWith('€')) {
-      return price;
-    }
-    
-    // Try to parse the price as a number
-    const numericPrice = parseFloat(price);
-    if (!isNaN(numericPrice)) {
-      return `$${numericPrice.toFixed(2)}`;
-    }
-    
-    // Return the original string if it's not a number
-    return price;
-  }
-  
-  // Fallback
-  return "N/A";
-};
 
 const ViewEventRequest = () => {
   const navigate = useNavigate()
@@ -139,78 +103,7 @@ const ViewEventRequest = () => {
 
         setClientTypes(data.attendees || [])
         setTabs(data.tabs || [])
-        // Log all packages to see their structure
-        if (data.packages && data.packages.length > 0) {
-          console.log('All packages:', data.packages)
-          data.packages.forEach((pkg, index) => {
-            console.log(`Package ${index} data:`, pkg)
-            console.log(`Package ${index} keys:`, Object.keys(pkg))
-            
-            // Check for price-related fields
-            const priceFields = ['price', 'cost', 'amount', 'value', 'fee', 'package_price']
-            priceFields.forEach(field => {
-              console.log(`Package ${index} ${field}:`, pkg[field])
-            })
-            
-            // Check if there are any nested objects that might contain price
-            Object.keys(pkg).forEach(key => {
-              if (typeof pkg[key] === 'object' && pkg[key] !== null) {
-                console.log(`Package ${index} nested object ${key}:`, pkg[key])
-              }
-            })
-          })
-        }
-        // Parse package data from string format
-        const parsedPackages = [];
-        
-        if (data.packages && Array.isArray(data.packages)) {
-          data.packages.forEach(pkg => {
-            // Check if the package is a string that needs parsing
-            if (typeof pkg === 'string' && pkg.includes('pricing')) {
-              try {
-                // Extract pricing information using regex
-                const pricingMatch = pkg.match(/\\"pricing\\":\\"([^\\"]+)\\"/);
-                const nameMatch = pkg.match(/\\"packageType\\":\\"([^\\"]+)\\"/);
-                const detailsMatch = pkg.match(/\\"details\\":\\"([^\\"]+)\\"/);
-                const locationMatch = pkg.match(/\\"location\\":\\"([^\\"]+)\\"/);
-                const durationMatch = pkg.match(/\\"duration\\":\\"([^\\"]+)\\"/);
-                const dateChoicesMatch = pkg.match(/\\"dateChoices\\":\\"([^\\"]+)\\"/);
-                
-                // Create a structured package object
-                const parsedPackage = {
-                  package_name: nameMatch ? nameMatch[1] : 'Package',
-                  package_type: nameMatch ? nameMatch[1] : 'Standard',
-                  price: pricingMatch ? pricingMatch[1] : null,
-                  details: detailsMatch ? detailsMatch[1] : 'No details available',
-                  location: locationMatch ? locationMatch[1] : '',
-                  duration: durationMatch ? durationMatch[1] : '',
-                  dateChoices: dateChoicesMatch ? dateChoicesMatch[1] : ''
-                };
-                
-                // Parse date information if available
-                if (dateChoicesMatch) {
-                  const dates = dateChoicesMatch[1].split('-');
-                  if (dates.length === 2) {
-                    parsedPackage.start_date = dates[0];
-                    parsedPackage.end_date = dates[1];
-                  }
-                }
-                
-                parsedPackages.push(parsedPackage);
-              } catch (err) {
-                console.error('Error parsing package string:', err);
-                // Add the original package as fallback
-                parsedPackages.push(pkg);
-              }
-            } else {
-              // Use the package as-is if it's already an object
-              parsedPackages.push(pkg);
-            }
-          });
-        }
-        
-        console.log('Parsed packages:', parsedPackages);
-        setPackages(parsedPackages)
+        setPackages(data.packages || [])
       } catch (err) {
         console.error("Error fetching event:", err)
         setError(err.message)
@@ -230,31 +123,20 @@ const ViewEventRequest = () => {
 
   if (loading) {
     return (
-      <div className="modern-container">
-        <div className="modern-loading">
-          <div className="spinner"></div>
-          <p>Loading event details...</p>
-        </div>
+      <div className="modern-loading-overlay">
+        <div className="view-empty-state-icon">⏳</div>
+        <p>Loading event details...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="modern-container">
-        <div className="modern-content">
-          <div className="modern-card">
-            <div className="modern-error">
-              <i className="fas fa-exclamation-triangle"></i>
-              <h3>Error Loading Event</h3>
-              <p>{error}</p>
-              <button 
-                className="modern-button" 
-                onClick={() => navigate("/organiser-dash")}
-              >
-                <i className="fas fa-arrow-left"></i> Back to Dashboard
-              </button>
-            </div>
+      <div className="view-event-container">
+        <div className="view-event-card">
+          <div className="view-empty-state">
+            <div className="view-empty-state-icon">❌</div>
+            <p>{error}</p>
           </div>
         </div>
       </div>
@@ -262,303 +144,288 @@ const ViewEventRequest = () => {
   }
 
   return (
-    <div className="modern-container">
-      {/* Modern Header */}
-      <header className="modern-header">
-        <div className="header-left">
-          <button className="modern-button" onClick={() => navigate("/organiser-dash")}>
-            <i className="fas fa-arrow-left"></i> Back
+    <div className="view-event-container">
+      <div className="view-event-card">
+        <div className="view-event-header">
+          <button className="view-back-button" onClick={() => navigate("/event-request")}>
+            ← Back to Events
           </button>
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
-        </div>
-        <h1 className="header-title">View Event Request</h1>
-        <button 
-          className="modern-button" 
-          onClick={() => {
-            sessionStorage.removeItem("token")
-            sessionStorage.removeItem("userId")
-            sessionStorage.removeItem("user")
-            navigate("/login")
-          }}
-        >
-          <i className="fas fa-sign-out-alt"></i> Logout
-        </button>
-      </header>
-      
-      {/* Main Content */}
-      <div className="modern-content">
-        <div className="modern-card">
-          {/* Modern Tabs */}
-          <div className="modern-tabs">
+          <div className="view-section-nav">
             <button
-              className={`modern-tab ${currentSection === "eventInfo" ? "active" : ""}`}
+              className={`view-nav-button ${currentSection === "eventInfo" ? "active" : ""}`}
               onClick={showEventInfo}
             >
-              <i className="fas fa-info-circle"></i>
               Event Information
             </button>
             <button
-              className={`modern-tab ${currentSection === "clientTypes" ? "active" : ""}`}
+              className={`view-nav-button ${currentSection === "clientTypes" ? "active" : ""}`}
               onClick={showClientTypes}
             >
-              <i className="fas fa-users"></i>
               Client Types
             </button>
             <button
-              className={`modern-tab ${currentSection === "packagesTabs" ? "active" : ""}`}
+              className={`view-nav-button ${currentSection === "packagesTabs" ? "active" : ""}`}
               onClick={showPackagesTabs}
             >
-              <i className="fas fa-box-open"></i>
               Packages & Tabs
             </button>
             <button
-              className={`modern-tab ${currentSection === "terms" ? "active" : ""}`}
+              className={`view-nav-button ${currentSection === "terms" ? "active" : ""}`}
               onClick={showTerms}
             >
-              <i className="fas fa-file-contract"></i>
               Terms & Conditions
             </button>
           </div>
+        </div>
 
-          {/* Section Content */}
-          <div className="modern-content-section">
-            {/* Section 1: Event Information */}
-            {currentSection === "eventInfo" && (
-              <div>
-                <h2 className="modern-section-title">Event Information</h2>
+        <div className="view-section-content">
+          {/* Section 1: Event Information */}
+          {currentSection === "eventInfo" && (
+            <div>
+              <h2 className="view-section-title">Event Information</h2>
 
-                <div className="modern-event-showcase">
-                  <div className="modern-event-image-container">
-                    <img
-                      src={eventData.file_url || "https://via.placeholder.com/400x280?text=Event+Image"}
-                      alt={eventData.event_name}
-                      className="modern-event-image"
-                    />
+              <div className="view-event-showcase">
+                <div className="view-event-image-container">
+                  <img
+                    src={
+                      imageError ? "/default-profile-picture.jpg" : eventData.file_url || "/default-profile-picture.jpg"
+                    }
+                    alt="Event Cover"
+                    className="view-event-image"
+                    onError={(e) => {
+                      console.error("Image load error:", eventData.file_url)
+                      setImageError(true)
+                    }}
+                    onLoad={() => console.log("Image loaded successfully:", eventData.file_url)}
+                  />
+                </div>
+
+                <div className="view-event-details-grid">
+                  <div className="view-info-card">
+                    <div className="view-info-label">Event Name</div>
+                    <div className="view-info-value">{eventData.event_name}</div>
                   </div>
 
-                  <div className="modern-event-details-grid">
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">Event Name</div>
-                      <div className="modern-info-value">{eventData.event_name}</div>
-                    </div>
+                  <div className="view-info-card">
+                    <div className="view-info-label">Location</div>
+                    <div className="view-info-value">{eventData.location}</div>
+                  </div>
 
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">Event Type</div>
-                      <div className="modern-info-value">{eventData.event_type}</div>
-                    </div>
+                  <div className="view-info-card">
+                    <div className="view-info-label">Start Date</div>
+                    <div className="view-info-value">{eventData.start_date}</div>
+                  </div>
 
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">Location</div>
-                      <div className="modern-info-value">{eventData.location}</div>
-                    </div>
+                  <div className="view-info-card">
+                    <div className="view-info-label">End Date</div>
+                    <div className="view-info-value">{eventData.end_date}</div>
+                  </div>
 
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">Start Date</div>
-                      <div className="modern-info-value">{eventData.start_date}</div>
-                    </div>
+                  <div className="view-info-card">
+                    <div className="view-info-label">Start Time</div>
+                    <div className="view-info-value">{eventData.start_time}</div>
+                  </div>
 
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">End Date</div>
-                      <div className="modern-info-value">{eventData.end_date}</div>
-                    </div>
+                  <div className="view-info-card">
+                    <div className="view-info-label">End Time</div>
+                    <div className="view-info-value">{eventData.end_time}</div>
+                  </div>
 
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">Start Time</div>
-                      <div className="modern-info-value">{eventData.start_time}</div>
+                  <div className="view-info-card">
+                    <div className="view-info-label">Registration Deadline</div>
+                    <div className="view-info-value">
+                      {eventData.deadline_date} at {eventData.deadline_time}
                     </div>
+                  </div>
 
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">End Time</div>
-                      <div className="modern-info-value">{eventData.end_time}</div>
-                    </div>
+                  <div className="view-info-card">
+                    <div className="view-info-label">Event Type</div>
+                    <div className="view-info-value">{eventData.event_type}</div>
+                  </div>
 
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">Registration Deadline</div>
-                      <div className="modern-info-value">
-                        {eventData.deadline_date} at {eventData.deadline_time}
+                  <div className="view-info-card">
+                    <div className="view-info-label">Max Capacity</div>
+                    <div className="view-info-value">{eventData.capacity}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="view-description-card">
+                <div className="view-description-title">Event Details</div>
+                <div className="view-description-text">{eventData.event_details}</div>
+              </div>
+
+              <div className="view-section-footer">
+                <div></div>
+                <button className="view-nav-btn view-next-nav" onClick={showClientTypes}>
+                  Next: Client Types →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Section 2: Client Types */}
+          {currentSection === "clientTypes" && (
+            <div>
+              <h2 className="view-section-title">Client Types Available</h2>
+
+              <div className="view-client-types-container">
+                {clientTypes.length === 0 ? (
+                  <div className="view-empty-state">
+                    <div className="view-empty-state-icon">👥</div>
+                    <p>No client types available for this event</p>
+                  </div>
+                ) : (
+                  <div className="view-badges-grid">
+                    {clientTypes.map((type, index) => (
+                      <div key={index} className="view-client-badge">
+                        {type}
                       </div>
-                    </div>
-
-                    <div className="modern-info-card">
-                      <div className="modern-info-label">Maximum Capacity</div>
-                      <div className="modern-info-value">{eventData.capacity}</div>
-                    </div>
+                    ))}
                   </div>
-                </div>
+                )}
+              </div>
 
-                <div className="modern-description-card">
-                  <div className="modern-description-title">
-                    <i className="fas fa-file-alt"></i>
-                    Event Description
+              <div className="view-section-footer">
+                <button className="view-nav-btn view-back-nav" onClick={showEventInfo}>
+                  ← Back: Event Information
+                </button>
+                <button className="view-nav-btn view-next-nav" onClick={showPackagesTabs}>
+                  Next: Packages & Tabs →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Packages & Tabs */}
+          {currentSection === "packagesTabs" && (
+            <div>
+              <h2 className="view-section-title">Packages & Tabs</h2>
+
+              <div className="view-packages-tabs-layout">
+                {/* Tabs Section */}
+                <div className="view-section-card">
+                  <div className="view-section-header">
+                    <span className="view-section-icon">📋</span>
+                    <h3>Event Tabs</h3>
                   </div>
-                  <div className="modern-description-text">{eventData.event_details}</div>
-                </div>
 
-                <div className="modern-section-footer">
-                  <div></div>
-                  <button className="modern-button" onClick={showClientTypes}>
-                    <span>Next: Client Types</span>
-                    <i className="fas fa-arrow-right"></i>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Section 2: Client Types */}
-            {currentSection === "clientTypes" && (
-              <div>
-                <h2 className="modern-section-title">Client Types Available</h2>
-
-                <div className="modern-client-types-container">
-                  {clientTypes.length === 0 ? (
-                    <div className="modern-empty-state">
-                      <i className="fas fa-users"></i>
-                      <p>No client types available for this event</p>
-                    </div>
-                  ) : (
-                    <div className="modern-badges-grid">
-                      {clientTypes.map((type, index) => (
-                        <div key={index} className="modern-badge client-type-badge">
-                          {type}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="modern-section-footer">
-                  <button className="modern-button" onClick={showEventInfo}>
-                    <i className="fas fa-arrow-left"></i>
-                    <span>Back: Event Information</span>
-                  </button>
-                  <button className="modern-button" onClick={showPackagesTabs}>
-                    <span>Next: Packages & Tabs</span>
-                    <i className="fas fa-arrow-right"></i>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Section 3: Packages & Tabs */}
-            {currentSection === "packagesTabs" && (
-              <div>
-                <h2 className="modern-section-title">Packages & Tabs</h2>
-
-                <div className="modern-packages-container">
-                  <h3 className="modern-subsection-title">
-                    <i className="fas fa-box-open"></i>
-                    Packages
-                  </h3>
-                  {packages.length === 0 ? (
-                    <div className="modern-empty-state">
-                      <i className="fas fa-box-open"></i>
-                      <p>No packages available for this event</p>
-                    </div>
-                  ) : (
-                    <div className="modern-packages-grid">
-                      {packages.map((pkg, index) => (
-                        <div key={index} className="modern-package-card">
-                          <div className="modern-package-header">
-                            <h4 className="modern-package-name">{pkg.name || pkg.package_name || 'Package'}</h4>
-                            <span className="modern-badge">{pkg.type || pkg.package_type || 'Standard'}</span>
-                          </div>
-                          <div className="modern-package-content">
-                            <div className="modern-package-item">
-                              <div className="modern-package-item-label">PRICE</div>
-                              <div className="modern-package-item-value">
-                                {getPackagePrice(pkg)}
-                              </div>
-                            </div>
-                            <div className="modern-package-item modern-package-dates">
-                              <div className="modern-package-item-label">DATE CHOICES</div>
-                              <div className="modern-package-date-range">
-                                <div className="modern-package-date-item">
-                                  <span className="modern-package-date-label">Start Date:</span>
-                                  <span className="modern-package-date-value">
-                                    {pkg.startDate || pkg.start_date ? new Date(pkg.startDate || pkg.start_date).toLocaleDateString() : "N/A"}
-                                  </span>
-                                </div>
-                                <div className="modern-package-date-item">
-                                  <span className="modern-package-date-label">End Date:</span>
-                                  <span className="modern-package-date-value">
-                                    {pkg.endDate || pkg.end_date ? new Date(pkg.endDate || pkg.end_date).toLocaleDateString() : "N/A"}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="modern-package-description">
-                              <div className="modern-package-description-title">Package Details</div>
-                              <div className="modern-package-description-text">{pkg.details || pkg.package_details || 'No details available'}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="modern-tabs-container">
-                  <h3 className="modern-subsection-title">
-                    <i className="fas fa-folder"></i>
-                    Tabs
-                  </h3>
                   {tabs.length === 0 ? (
-                    <div className="modern-empty-state">
-                      <i className="fas fa-folder"></i>
-                      <p>No tabs available for this event</p>
+                    <div className="view-empty-state">
+                      <div className="view-empty-state-icon">📄</div>
+                      <p>No tabs available</p>
                     </div>
                   ) : (
-                    <div className="modern-tabs-grid">
-                      {tabs.map((tab, index) => (
-                        <div key={index} className="modern-tab-card">
-                          <h4 className="modern-tab-name">
-                            <i className="fas fa-clipboard-list"></i>
-                            {tab.name}
-                          </h4>
-                          <div className="modern-tab-description">{tab.description}</div>
+                    <div className="view-tabs-list">
+                      {tabs.map((tab, idx) => (
+                        <div key={idx} className="view-tab-card">
+                          <div className="view-tab-header">{tab.name}</div>
+                          <div className="view-tab-content">{tab.content}</div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <div className="modern-section-footer">
-                  <button className="modern-button" onClick={showClientTypes}>
-                    <i className="fas fa-arrow-left"></i>
-                    <span>Back: Client Types</span>
-                  </button>
-                  <button className="modern-button" onClick={showTerms}>
-                    <span>Next: Terms & Conditions</span>
-                    <i className="fas fa-arrow-right"></i>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Section 4: Terms & Conditions */}
-            {currentSection === "terms" && (
-              <div>
-                <h2 className="modern-section-title">
-                  <i className="fas fa-file-contract"></i>
-                  Terms & Conditions
-                </h2>
-
-                <div className="modern-terms-container">
-                  <div className="modern-terms-card">
-                    <div className="modern-terms-text">{eventData.terms_and_conditions}</div>
+                {/* Packages Section */}
+                <div className="view-section-card">
+                  <div className="view-section-header">
+                    <span className="view-section-icon">📦</span>
+                    <h3>Event Packages</h3>
                   </div>
-                </div>
 
-                <div className="modern-section-footer">
-                  <button className="modern-button" onClick={showPackagesTabs}>
-                    <i className="fas fa-arrow-left"></i>
-                    <span>Back: Packages & Tabs</span>
-                  </button>
-                  <div></div>
+                  {packages.length === 0 ? (
+                    <div className="view-empty-state">
+                      <div className="view-empty-state-icon">📦</div>
+                      <p>No packages available</p>
+                    </div>
+                  ) : (
+                    <div className="view-packages-list">
+                      {packages.map((pkg, idx) => (
+                        <div key={idx} className="view-package-card">
+                          <div className="view-package-header">Package {idx + 1}</div>
+                          <div className="view-package-details">
+                            <div className="view-package-grid">
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Select Type</div>
+                                <div className="view-package-item-value">{pkg.selectType}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Package Type</div>
+                                <div className="view-package-item-value">{pkg.packageType}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Location</div>
+                                <div className="view-package-item-value">{pkg.location}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Duration</div>
+                                <div className="view-package-item-value">{pkg.duration}</div>
+                              </div>
+                              <div className="view-package-item view-package-dates">
+                                <div className="view-package-item-label">Date Choices</div>
+                                <div className="view-package-date-range">
+                                  <div className="view-package-date-item">
+                                    <span className="view-package-date-label">Start Date:</span>
+                                    <span className="view-package-date-value">
+                                      {pkg.startDate ? new Date(pkg.startDate).toISOString().split("T")[0] : "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="view-package-date-item">
+                                    <span className="view-package-date-label">End Date:</span>
+                                    <span className="view-package-date-value">
+                                      {pkg.endDate ? new Date(pkg.endDate).toISOString().split("T")[0] : "N/A"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Pricing</div>
+                                <div className="view-package-item-value">R {pkg.pricing}</div>
+                              </div>
+                            </div>
+                            <div className="view-package-description">
+                              <div className="view-package-description-title">Package Details</div>
+                              <div className="view-package-description-text">{pkg.details}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
+
+              <div className="view-section-footer">
+                <button className="view-nav-btn view-back-nav" onClick={showClientTypes}>
+                  ← Back: Client Types
+                </button>
+                <button className="view-nav-btn view-next-nav" onClick={showTerms}>
+                  Next: Terms & Conditions →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Section 4: Terms & Conditions */}
+          {currentSection === "terms" && (
+            <div>
+              <h2 className="view-section-title">Terms & Conditions</h2>
+
+              <div className="view-terms-container">
+                <div className="view-terms-card">
+                  <div className="view-terms-text">{eventData.terms_and_conditions}</div>
+                </div>
+              </div>
+
+              <div className="view-section-footer">
+                <button className="view-nav-btn view-back-nav" onClick={showPackagesTabs}>
+                  ← Back: Packages & Tabs
+                </button>
+                <div></div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

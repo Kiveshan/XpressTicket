@@ -172,70 +172,58 @@ function TicketsRequest() {
           <i className="fas fa-sign-out-alt"></i> Logout
         </button>
       </header>
-
-      <div className="modern-content">
-        <div className="modern-card">
-          <div className="modern-card-header">
-            <h2 className="modern-section-title">Ticket Requests for {eventName}</h2>
-            <button className="modern-button primary-button" onClick={handleDownloadCustomers}>
-              <i className="fas fa-download"></i> Download Customers
-            </button>
-          </div>
-          
-          <div className="modern-table-container">
-            <table className="modern-table">
-              <thead>
-                <tr>
-                  <th>Purchaser Name</th>
-                  <th>Number of Tickets</th>
-                  <th>Action</th>
+ 
+      <div className="back-button-container1">
+        <button className="backbutton20" onClick={() => nav('/tickets-event-list')}>
+          Back
+        </button>
+      </div>
+ 
+      <h2 className="tickets-request-title">Ticket Requests for {eventName}</h2>
+ 
+      <div className="button-container">
+        <button className="download-button" onClick={handleDownloadCustomers}>
+          Download all customers
+        </button>
+      </div>
+ 
+      <div className="tickets-request-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Purchaser Name</th>
+              <th>Number of Tickets</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.length === 0 ? (
+              <tr>
+                <td colSpan="3">No ticket requests found</td>
+              </tr>
+            ) : (
+              requests.map((request) => (
+                <tr key={request.purchase_id}>
+                  <td>{request.purchaser_name}</td>
+                  <td>{request.number_of_tickets}</td>
+                  <td>
+                    <button
+                      className="view-proof-button"
+                      onClick={() => handleViewProof(request.proof_of_payment_url)}
+                    >
+                      View Proof
+                    </button>
+                    {request.request_status === 'pending' && (
+                      <>
+                       
+                      </>
+                    )}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {requests.length === 0 ? (
-                  <tr>
-                    <td colSpan="3" className="text-center">No ticket requests found</td>
-                  </tr>
-                ) : (
-                  requests.map((request) => (
-                    <tr key={request.purchase_id}>
-                      <td>{request.purchaser_name}</td>
-                      <td>
-                        <span className="modern-badge">
-                          <i className="fas fa-ticket-alt"></i> {request.number_of_tickets}
-                        </span>
-                      </td>
-                      <td className="action-buttons">
-                        <button
-                          className="modern-button info-button"
-                          onClick={() => handleViewProof(request.proof_of_payment_url)}
-                        >
-                          <i className="fas fa-file-invoice"></i> View Proof
-                        </button>
-                        {request.request_status === 'pending' && (
-                          <>
-                            <button
-                              className="modern-button success-button"
-                              onClick={() => handleStatusUpdate(request.purchase_id, 'Approved')}
-                            >
-                              <i className="fas fa-check"></i> Approve
-                            </button>
-                            <button
-                              className="modern-button danger-button"
-                              onClick={() => handleStatusUpdate(request.purchase_id, 'Rejected')}
-                            >
-                              <i className="fas fa-times"></i> Reject
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

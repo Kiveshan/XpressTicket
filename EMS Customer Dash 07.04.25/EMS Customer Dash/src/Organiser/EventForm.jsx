@@ -147,15 +147,6 @@ export default function EventForm() {
     if (!formData.terms_and_conditions.trim()) newErrors.terms_and_conditions = "Terms and conditions are required";
     if (!formData.duration) newErrors.duration = "Duration cannot be computed (check dates/times)";
     if (selectedClientTypes.length === 0) newErrors.attendees = "At least one client type is required";
-    
-    // Validate that deadline date is before event start date
-    if (formData.deadlinedate && formData.startdate) {
-      const deadlineDate = new Date(formData.deadlinedate);
-      const startDate = new Date(formData.startdate);
-      if (deadlineDate >= startDate) {
-        newErrors.deadlinedate = "Registration deadline must be before event start date";
-      }
-    }
 
     if (formData.startdate && formData.enddate) {
       const startDate = new Date(formData.startdate);
@@ -396,34 +387,13 @@ export default function EventForm() {
       formDataToSend.append("description", formData.description)
       formDataToSend.append("terms_and_conditions", formData.terms_and_conditions)
       formDataToSend.append("duration", formData.duration)
-      
-      // Format attendees for PostgreSQL array format
-      // PostgreSQL expects array format like: {"value1","value2"}
-      const pgAttendees = '{' + selectedClientTypes.map(type => '"' + type.replace(/"/g, '\"') + '"').join(',') + '}'
-      formDataToSend.append("attendees", pgAttendees)
-      
-      // Format tabs for PostgreSQL array format
-      const formattedTabs = tabs.map(tab => tab.name)
-      const pgTabs = '{' + formattedTabs.map(tab => '"' + tab.replace(/"/g, '\"') + '"').join(',') + '}'
-      formDataToSend.append("tabs", pgTabs)
-      
-      // Store tab content separately in a hidden field
-      formDataToSend.append("tab_contents", JSON.stringify(tabs.map(tab => tab.content)))
-      
-      // Format packages for PostgreSQL array format
-      const formattedPackages = packages.map(pkg => pkg.packageType)
-      const pgPackages = '{' + formattedPackages.map(pkg => '"' + pkg.replace(/"/g, '\"') + '"').join(',') + '}'
-      formDataToSend.append("packages", pgPackages)
-      
-      // Store full package details separately in a hidden field for future reference
-      formDataToSend.append("package_details", JSON.stringify(packages))
-      
+      formDataToSend.append("attendees", JSON.stringify(selectedClientTypes))
+      formDataToSend.append("tabs", JSON.stringify(tabs))
+      formDataToSend.append("packages", JSON.stringify(packages))
       if (coverImageFile) {
         formDataToSend.append("cover_image", coverImageFile)
-        // Add the filename as a separate field for database reference
-        formDataToSend.append("coverimage", coverImageFile.name)
       }
-      
+
       console.log("Sending form data to backend...")
       console.log("Form data contents:")
       for (const [key, value] of formDataToSend.entries()) {

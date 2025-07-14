@@ -8,18 +8,8 @@ const RequestCard = () => {
   const nav = useNavigate();
 
   const cards = [
-    { 
-      label: "Host Request", 
-      image: "/wedding-wedding-day-marriage-marry-161018.jpeg", 
-      path: "/event-request",
-      description: "Manage event hosting requests and approvals"
-    },
-    { 
-      label: "Ticket Requests", 
-      image: "/ticket-2974645_1920.jpg", 
-      path: "/tickets-event-list",
-      description: "View and process ticket purchase requests"
-    },
+    { label: "Host Request", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-request" },
+    { label: "Tickets per event", image: "/ticket-2974645_1920.jpg", path: "/tickets-event-list" },
   ];
 
   return (
