@@ -33,7 +33,7 @@ function TicketsRequest() {
         const data = await response.json();
         console.log('Fetched requests:', data);
         setRequests(data);
-        setEventName(data.length > 0 ? data[0].event_name : 'Event');
+        setEventName(data.length > 0 ? data[0].event_name : 'Event'); // Dynamically set event name
         setLoading(false);
       } catch (err) {
         console.error('Error fetching requests:', err);
@@ -181,8 +181,8 @@ function TicketsRequest() {
  
       <h2 className="tickets-request-title">Ticket Requests for {eventName}</h2>
  
-      <div className="button-container">
-        <button className="download-button" onClick={handleDownloadCustomers}>
+      <div className="button-container" style={{ textAlign: 'center' }}>
+        <button className="primary-button" onClick={handleDownloadCustomers}>
           Download all customers
         </button>
       </div>
@@ -215,7 +215,7 @@ function TicketsRequest() {
                     </button>
                     {request.request_status === 'pending' && (
                       <>
-                       
+                        {/* Empty for now as per your instruction */}
                       </>
                     )}
                   </td>

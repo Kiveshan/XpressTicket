@@ -13,12 +13,12 @@ import {
 } from "recharts";
 import "../Organiser/Analytics.css";
 import { useNavigate } from "react-router-dom";
- 
+
 export default function Analytics() {
   const currentDate = new Date();
   const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
   const currentYear = currentDate.getFullYear().toString();
- 
+
   const [activeFilter, setActiveFilter] = useState("attendance");
   const [chartData, setChartData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -26,13 +26,13 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
- 
+
   // Generate dynamic years (2022 to current year)
   const years = Array.from(
     { length: currentYear - 2021 },
     (_, i) => (2022 + i).toString()
   );
- 
+
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       try {
@@ -42,22 +42,22 @@ export default function Analytics() {
           navigate('/');
           return;
         }
- 
+
         setLoading(true);
         const response = await fetch('http://localhost:5000/api/organiser/analytics', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
- 
+
         if (!response.ok) {
           throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         }
- 
+
         const data = await response.json();
         // Filter data by month and year
         let filteredData = data[activeFilter];
- 
+
         // Always filter by selected month for eventStatus
         if (activeFilter === "eventStatus" && selectedMonth !== "All") {
           filteredData = filteredData.filter((item) => item.month === selectedMonth);
@@ -67,7 +67,7 @@ export default function Analytics() {
         if (selectedYear !== "All") {
           filteredData = filteredData.filter((item) => item.year === selectedYear);
         }
- 
+
         setChartData(filteredData);
         setLoading(false);
       } catch (err) {
@@ -76,10 +76,10 @@ export default function Analytics() {
         setLoading(false);
       }
     };
- 
+
     fetchAnalyticsData();
   }, [activeFilter, selectedMonth, selectedYear, navigate]);
- 
+
   // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -96,10 +96,23 @@ export default function Analytics() {
     }
     return null;
   };
- 
-  // Colors for pie chart
-  const COLORS = ['#FF9800', '#2196F3', '#4CAF50', '#F44336', '#9C27B0', '#FFC107'];
- 
+
+  // Expanded unique colors for pie chart to avoid duplicates
+  const COLORS = [
+    '#FF9800', // Orange
+    '#2196F3', // Blue
+    '#4CAF50', // Green
+    '#F44336', // Red
+    '#9C27B0', // Purple
+    '#FFC107', // Amber
+    '#3F51B5', // Indigo
+    '#E91E63', // Pink
+    '#00BCD4', // Cyan
+    '#CDDC39', // Lime
+    '#795548', // Brown
+    '#607D8B', // Blue Grey
+  ];
+
   const renderChart = () => {
     switch (activeFilter) {
       case "attendance":
@@ -110,8 +123,8 @@ export default function Analytics() {
               <YAxis />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Bar dataKey="attendance" name="Attendance" fill="#2196F3" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="capacity" name="Capacity" fill="#9C27B0" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="attendance" name="Attendance" fill="#FF5722" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="capacity" name="Capacity" fill="#8BC34A" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         );
@@ -125,7 +138,7 @@ export default function Analytics() {
               <Legend />
               <Bar dataKey="approved" name="Approved" fill="#4CAF50" radius={[4, 4, 0, 0]} />
               <Bar dataKey="rejected" name="Rejected" fill="#F44336" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="pending" name="Pending" fill="#FFC107" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="pending" name="Pending" fill="#CDDC39" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         );
@@ -156,35 +169,33 @@ export default function Analytics() {
         return null;
     }
   };
- 
+
   const handleBack = () => {
     navigate("/organiser-dash");
   };
- 
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
- 
+
   return (
     <div className="analytics-container">
-      <header className="dashboard-header3">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => navigate("/")}>
-            LogOut
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={handleBack}>
+            <span className="button-icon">←</span> Back
           </button>
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="header-logo"
+          />
         </div>
-      </header>
- 
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={handleBack}>
-          Back
+        <h1 className="header-title"></h1> {/* Empty to maintain layout */}
+        <button className="modern-button" onClick={() => navigate("/")}>
+          <span className="button-icon">↩</span> Logout
         </button>
-      </div>
- 
+      </header>
+
       <div className="analytics-content">
         <div className="sidebar-filters">
           <button
@@ -206,7 +217,7 @@ export default function Analytics() {
             Tickets Sold
           </button>
         </div>
- 
+
         {/* Chart area */}
         <div className="chart-area">
           {/* Month and Year Filters */}
@@ -254,4 +265,3 @@ export default function Analytics() {
     </div>
   );
 }
- 

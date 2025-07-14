@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './TicketsEventList.css';
 import { useNavigate } from 'react-router-dom';
- 
+
 function TicketsEventList() {
   const nav = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
- 
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -42,30 +42,28 @@ function TicketsEventList() {
     };
     fetchEvents();
   }, [nav]);
- 
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
- 
+
   return (
     <div className="tickets-event-list-container">
-      <header className="dashboard-header1">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>
-            LogOut
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav('/requestcard')}>
+            <span className="button-icon">←</span> Back
           </button>
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="header-logo"
+          />
         </div>
-      </header>
- 
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/requestcard')}>
-          Back
+        <h1 className="header-title"></h1> {/* Empty to maintain layout */}
+        <button className="modern-button" onClick={() => nav('/')}>
+          <span className="button-icon">↩</span> Logout
         </button>
-      </div>
+      </header>
       <h2 className="tickets-event-list-title">Event Requests</h2>
       <div className="tickets-event-list-table">
         <table>
@@ -105,6 +103,5 @@ function TicketsEventList() {
     </div>
   );
 }
- 
+
 export default TicketsEventList;
- 

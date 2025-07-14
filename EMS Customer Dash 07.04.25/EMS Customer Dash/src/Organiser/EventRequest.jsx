@@ -223,28 +223,19 @@ const EventRequest = () => {
 
   if (loading) {
     return (
-      <div className="container12">
-        <header className="dashboard-header1">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
-          <div className="profile-section">
-            <button
-              className="backbutton22"
-              onClick={() => {
-                sessionStorage.removeItem("token")
-                sessionStorage.removeItem("userId")
-                sessionStorage.removeItem("user")
-                nav("/login")
-              }}
-            >
-              LogOut
+      <div className="modern-container">
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="modern-button" onClick={() => nav("/requestcard")}>
+              <span className="button-icon">←</span> Back
             </button>
+            <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
-        </header>
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => nav("/requestcard")}>
-            Back
+          <h1 className="header-title"></h1> {/* Empty title to maintain layout */}
+          <button className="modern-button" onClick={handleLogout}>
+            <span className="button-icon">↩</span> Logout
           </button>
-        </div>
+        </header>
         <div className="loading-container">
           <ClipLoader color="#123abc" loading={loading} size={50} />
           <p className="loading">Loading events...</p>
@@ -256,30 +247,21 @@ const EventRequest = () => {
   if (error) {
     const isAuthError = error.includes("log in") || error.includes("expired")
     return (
-      <div className="container12">
-        <header className="dashboard-header1">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
-          <div className="profile-section">
-            {!isAuthError && (
-              <button
-                className="backbutton22"
-                onClick={() => {
-                  sessionStorage.removeItem("token")
-                  sessionStorage.removeItem("userId")
-                  sessionStorage.removeItem("user")
-                  nav("/login")
-                }}
-              >
-                LogOut
-              </button>
-            )}
+      <div className="modern-container">
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="modern-button" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
+              <span className="button-icon">←</span> {isAuthError ? "Go to Login" : "Back"}
+            </button>
+            <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
+          <h1 className="header-title"></h1> {/* Empty title to maintain layout */}
+          {!isAuthError && (
+            <button className="modern-button" onClick={handleLogout}>
+              <span className="button-icon">↩</span> Logout
+            </button>
+          )}
         </header>
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
-            {isAuthError ? "Go to Login" : "Back"}
-          </button>
-        </div>
         <div className="error-container">
           <div className="error-icon">⚠️</div>
           <h3>{isAuthError ? "Authentication Required" : "Error Loading Events"}</h3>
@@ -287,7 +269,7 @@ const EventRequest = () => {
           <div className="action-buttons">
             {isAuthError ? (
               <button
-                className="login-button"
+                className="primary-button"
                 onClick={() => {
                   sessionStorage.clear()
                   nav("/login")
@@ -297,7 +279,7 @@ const EventRequest = () => {
               </button>
             ) : (
               <button
-                className="retry-button"
+                className="primary-button"
                 onClick={() => {
                   setError(null)
                   setLoading(true)
@@ -315,29 +297,19 @@ const EventRequest = () => {
   }
 
   return (
-    <div className="container12">
-      <header className="dashboard-header1">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
-        <div className="profile-section">
-          <button
-            className="backbutton22"
-            onClick={() => {
-              sessionStorage.removeItem("token")
-              sessionStorage.removeItem("userId")
-              sessionStorage.removeItem("user")
-              nav("/login")
-            }}
-          >
-            LogOut
+    <div className="modern-container">
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav("/requestcard")}>
+            <span className="button-icon">←</span> Back
           </button>
+          <img src={logo} alt="EventXpress Logo" className="header-logo" />
         </div>
-      </header>
-
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/requestcard")}>
-          Back
+        <h1 className="header-title"></h1> {/* Empty title to maintain layout */}
+        <button className="modern-button" onClick={handleLogout}>
+          <span className="button-icon">↩</span> Logout
         </button>
-      </div>
+      </header>
 
       <h2 className="title">Event Request</h2>
 
@@ -359,7 +331,7 @@ const EventRequest = () => {
             No events found{statusFilter !== "all" ? ` with status "${statusFilter}"` : ""}. Create your first event to
             get started!
           </p>
-          <button className="create-event-button" onClick={() => nav("/create-event")}>
+          <button className="primary-button" onClick={() => nav("/create-event")}>
             Create New Event
           </button>
         </div>

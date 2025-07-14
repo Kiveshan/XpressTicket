@@ -1117,3 +1117,18 @@ input[type="time"].error {
 .mt-2 {
   margin-top: 0.5rem;
 }
+
+/* Currency Input (already defined, reused for duration) */
+.currency-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.currency-symbol {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-right: 4px;
+  white-space: nowrap;
+}
