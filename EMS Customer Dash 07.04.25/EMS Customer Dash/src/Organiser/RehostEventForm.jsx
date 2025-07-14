@@ -266,7 +266,7 @@ const RehostEventForm = () => {
           />
         </header>
         <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => navigate('/requestcard')}>
+          <button className="backbutton20" onClick={() => navigate('/organiser-dash')}>
             Back
           </button>
         </div>
@@ -308,7 +308,7 @@ const RehostEventForm = () => {
         <div className="back-button-container1">
           <button
             className="backbutton20"
-            onClick={() => (isAuthError ? navigate('/login') : navigate('/requestcard'))}
+            onClick={() => (isAuthError ? navigate('/login') : navigate('/organiser-dash'))}
           >
             {isAuthError ? 'Go to Login' : 'Back'}
           </button>
@@ -370,7 +370,7 @@ const RehostEventForm = () => {
         </div>
       </header>
       <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => navigate('/requestcard')}>
+        <button className="backbutton20" onClick={() => navigate('/organiser-dash')}>
           Back
         </button>
       </div>
