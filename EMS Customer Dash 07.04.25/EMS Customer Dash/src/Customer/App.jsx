@@ -17,6 +17,7 @@ import Tickets from "./Tickets";
 import TicketsList from "./TicketsList";
 import ViewTickets from "./ViewTickets";
 import ViewMoreDetails from "./ViewMoreDetails";
+import ViewMoreDetailsCompact from "./ViewMoreDetailsCompact";
 import TicketDetails from "./TicketsDetails";
 import VieWInvoice from "./VieWInvoice"; 
 import CustomerUploadPOP from "./CustomerUploadPOP";
@@ -68,7 +69,8 @@ function App() {
           <Route path= "/eventmenu" element={<EventMenu />}/>
           <Route path= "/reviewparchase" element={<ReviewParchase />}/>
           <Route path= "/parchasedticket" element={<CompactTicketPage />}/>
-          <Route path= "/view-more-details" element={<ViewMoreDetails />}/>
+          <Route path= "/view-more-details" element={<ViewMoreDetailsCompact />}/>
+          <Route path= "/viewmoredetails/:id" element={<ViewMoreDetailsCompact />}/>
           <Route path= "/ticketdetails" element={<TicketDetails />}/>
           <Route path= "/customerviewevent/:eventId" element={<CustomerViewEvent />}/>
           <Route path= "/eventticketpackage/:eventId" element={<EventTicketPackage />}/>      
