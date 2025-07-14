@@ -8,7 +8,7 @@ const RequestCard = () => {
 
   const cards = [
     { label: "Host Request", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-request" },
-    { label: "Ticket Requests", image: "/ticket-2974645_1920.jpg", path: "/tickets-event-list" },
+    { label: "Tickets per event", image: "/ticket-2974645_1920.jpg", path: "/tickets-event-list" },
   ];
 
   return (

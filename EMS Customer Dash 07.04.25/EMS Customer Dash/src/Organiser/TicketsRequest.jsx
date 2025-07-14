@@ -210,18 +210,7 @@ function TicketsRequest() {
                     </button>
                     {request.request_status === 'pending' && (
                       <>
-                        <button
-                          className="view-proof-button"
-                          onClick={() => handleStatusUpdate(request.purchase_id, 'Approved')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          className="view-proof-button"
-                          onClick={() => handleStatusUpdate(request.purchase_id, 'Rejected')}
-                        >
-                          Reject
-                        </button>
+                       
                       </>
                     )}
                   </td>

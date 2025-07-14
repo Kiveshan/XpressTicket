@@ -48,9 +48,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'ems2.1',
+  database: 'Xpressfinal',
   password: '123456',
-  port: 5432,
+  port: 5433,
   timezone: 'UTC', // Ensure PostgreSQL uses UTC
 });
 
@@ -2394,7 +2394,7 @@ app.get('/api/organiser/events', authenticateToken, async (req, res) => {
         e.name AS event_name,
         COALESCE(COUNT(tp.purchase_id), 0) AS request_count
       FROM events e
-      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.request_status = 'pending'
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id
       WHERE e.user_id = $1
       GROUP BY e.event_id, e.name
       ORDER BY e.event_id DESC
@@ -2438,7 +2438,7 @@ app.get('/api/organiser/events/:eventId/ticket-requests', authenticateToken, asy
       FROM ticket_purchases tp
       JOIN events e ON tp.event_id = e.event_id
       JOIN user_profiles up ON tp.user_id = up.user_id
-      WHERE e.event_id = $1 AND e.user_id = $2 ${all ? '' : "AND tp.request_status = 'pending'"}
+      WHERE e.event_id = $1 AND e.user_id = $2
       ORDER BY tp.purchase_id DESC
     `;
     const result = await client.query(query, [eventId, userId]);
