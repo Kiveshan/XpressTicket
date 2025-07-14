@@ -68,7 +68,7 @@ export default function EventForm() {
       selectType: "Full Package",
       packageType: "",
       location: "",
-      duration: "",
+      duration: "", // This will now store numbers (hours)
       startDate: getTodayDateString(),
       endDate: getTodayDateString(),
       pricing: "",
@@ -115,7 +115,7 @@ export default function EventForm() {
     coverImageFile,
   ])
 
-  // ValidateForm function (unchanged)
+  // ValidateForm function (updated to validate package duration as a number)
   const validateForm = () => {
     const newErrors = {};
     const createDate = (dateStr, timeStr = "") => {
@@ -189,7 +189,9 @@ export default function EventForm() {
         if (!pkg.selectType.trim()) newErrors[`package_selectType_${idx}`] = `Package ${idx + 1} select type is required`;
         if (!pkg.packageType.trim()) newErrors[`package_type_${idx}`] = `Package ${idx + 1} type is required`;
         if (!pkg.location.trim()) newErrors[`package_location_${idx}`] = `Package ${idx + 1} location is required`;
-        if (!pkg.duration.trim()) newErrors[`package_duration_${idx}`] = `Package ${idx + 1} duration is required`;
+        // Updated validation for duration to ensure it's a positive number
+        if (!pkg.duration || !/^\d+$/.test(pkg.duration) || parseInt(pkg.duration, 10) <= 0)
+          newErrors[`package_duration_${idx}`] = `Package ${idx + 1} duration must be a positive number (hours)`;
         if (!pkg.startDate) newErrors[`package_startDate_${idx}`] = `Package ${idx + 1} start date is required`;
         if (!pkg.endDate) newErrors[`package_endDate_${idx}`] = `Package ${idx + 1} end date is required`;
         if (!pkg.pricing || !/^\d+(\.\d{1,2})?$/.test(pkg.pricing))
@@ -264,6 +266,23 @@ export default function EventForm() {
     }
   }
 
+  // Updated handlePackageChange to handle duration as numbers only
+  const handlePackageChange = (index, field, value) => {
+    const updated = [...packages];
+    if (field === "pricing") {
+      if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+        updated[index][field] = value;
+      }
+    } else if (field === "duration") {
+      if (value === "" || /^\d+$/.test(value)) {
+        updated[index][field] = value;
+      }
+    } else {
+      updated[index][field] = value;
+    }
+    setPackages(updated);
+  }
+
   const handleClientTypeChange = (e) => {
     const value = e.target.value
     setClientTypeSelection(value)
@@ -305,18 +324,6 @@ export default function EventForm() {
     ])
   }
 
-  const handlePackageChange = (index, field, value) => {
-    const updated = [...packages];
-    if (field === "pricing") {
-      if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
-        updated[index][field] = value;
-      }
-    } else {
-      updated[index][field] = value;
-    }
-    setPackages(updated);
-  }
-
   const addTab = () => {
     setTabs([...tabs, { name: "", content: "" }])
   }
@@ -354,7 +361,7 @@ export default function EventForm() {
     }
   }
 
-  // Updated handleSendRequest with redirect
+  // handleSendRequest (unchanged)
   const handleSendRequest = async () => {
     setErrorMessage("")
     setShowSuccess(false)
@@ -419,7 +426,7 @@ export default function EventForm() {
       setTimeout(() => {
         setShowSuccess(false)
         navigate("/organiser-dash")
-      }, 2000) // Redirect after 2 seconds to show success message
+      }, 2000)
     } catch (error) {
       console.error("🚨 Error submitting form:", error)
       setErrorMessage(`Failed to create event: ${error.message}`)
@@ -938,13 +945,18 @@ export default function EventForm() {
                           )}
                         </div>
                         <div className="form-group">
-                          <label>Duration *</label>
-                          <input
-                            type="text"
-                            value={pkg.duration}
-                            onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
-                            required
-                          />
+                          <label>Duration (hours) *</label>
+                          <div className="currency-input">
+                            <input
+                              type="text"
+                              value={pkg.duration}
+                              onChange={(e) => handlePackageChange(idx, "duration", e.target.value)}
+                              required
+                              className={`form-input ${errors[`package_duration_${idx}`] ? "error" : ""}`}
+                              placeholder="Enter hours"
+                            />
+                            <span className="currency-symbol">hours</span>
+                          </div>
                           {errors[`package_duration_${idx}`] && (
                             <div className="error-message">{errors[`package_duration_${idx}`]}</div>
                           )}
