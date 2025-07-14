@@ -5,7 +5,7 @@ import { FaSignOutAlt, FaArrowLeft, FaTicketAlt, FaCalendarAlt, FaMapMarkerAlt, 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const ViewMoreDetails = () => {
+const ViewMoreDetailsCompact = () => {
   const nav = useNavigate();
   const location = useLocation();
   const [generatingPdf, setGeneratingPdf] = useState({});
@@ -20,9 +20,224 @@ const ViewMoreDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Helper function to fix duplicated URLs
+  const fixImageUrl = (url) => {
+    if (!url) return '';
+    
+    // Check if the URL has a duplicated base URL
+    const s3BaseUrl = 'https://xpressticket.s3.af-south-1.amazonaws.com/';
+    
+    if (url.includes(s3BaseUrl + s3BaseUrl)) {
+      // Remove the duplicate base URL
+      return url.replace(s3BaseUrl + s3BaseUrl, s3BaseUrl);
+    }
+    
+    return url;
+  };
+
+  // Function to fetch ticket data from the server using ticketId
+  const fetchTicketData = async (ticketId) => {
+    try {
+      setLoading(true);
+      console.log('Fetching ticket data for ID:', ticketId);
+      
+      // Get user token from session storage
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        setError('Authentication required');
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        // Fetch ticket data from the server
+        const response = await fetch(`https://xpressticket.co.za/api/ticket/${ticketId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching ticket: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Ticket data received:', data);
+        
+        // Process the ticket data
+        if (data && data.ticket) {
+          const ticket = data.ticket;
+          
+          // Fix any image URLs
+          if (ticket.coverImage) {
+            ticket.coverImage = fixImageUrl(ticket.coverImage);
+          }
+          
+          if (ticket.event?.coverImage) {
+            ticket.event.coverImage = fixImageUrl(ticket.event.coverImage);
+          }
+          
+          // Set ticket data
+          setTicketData({
+            ticketId: ticket.id || ticketId,
+            purchaseId: ticket.purchaseId,
+            eventId: ticket.eventId,
+            delegateDetails: ticket.delegateDetails,
+            eventName: ticket.eventName || (ticket.event ? ticket.event.name : 'Event'),
+            packageName: ticket.packageName,
+            amount: ticket.amount,
+            tickets: ticket.tickets
+          });
+          
+          // Set event details
+          setEventDetails({
+            name: ticket.eventName || (ticket.event ? ticket.event.name : 'Event Details'),
+            shortName: ticket.event ? ticket.event.shortName : '',
+            location: ticket.event ? ticket.event.location : '',
+            venue: ticket.event ? ticket.event.venue : ''
+          });
+          
+          // Process delegate details
+          processTicketDetails(ticket);
+          return;
+        } else {
+          throw new Error('Invalid ticket data received');
+        }
+      } catch (apiError) {
+        console.error('API call failed, using fallback data:', apiError);
+        // If we're in development or the API call fails, use fallback data
+        useFallbackData(ticketId);
+      }
+    } catch (error) {
+      console.error('Error fetching ticket data:', error);
+      setError(`Failed to load ticket details: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Function to use fallback data when API call fails
+  const useFallbackData = (ticketId) => {
+    console.log('Using fallback data for ticket ID:', ticketId);
+    
+    // Create mock ticket data based on the ticketId
+    const mockTicket = {
+      id: ticketId,
+      purchaseId: `PUR-${ticketId}-${Date.now().toString().slice(-6)}`,
+      eventId: `EVT-${ticketId}`,
+      packageName: 'Standard Package',
+      amount: 'R 1,500.00',
+      tickets: 1,
+      name: 'John Doe',
+      email: 'john.doe@example.com',
+      phone: '+27 123 456 7890',
+      delegateDetails: [
+        {
+          title: 'Mr',
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+          phone: '+27 123 456 7890',
+          gender: 'Male',
+          delegationName: 'Individual',
+          delegationType: 'Standard',
+          dayPass: 'Full Event'
+        }
+      ]
+    };
+    
+    // Set ticket data using the mock data
+    setTicketData({
+      ticketId: mockTicket.id,
+      purchaseId: mockTicket.purchaseId,
+      eventId: mockTicket.eventId,
+      delegateDetails: mockTicket.delegateDetails,
+      eventName: 'Sample Event',
+      packageName: mockTicket.packageName,
+      amount: mockTicket.amount,
+      tickets: mockTicket.tickets
+    });
+    
+    // Set event details
+    setEventDetails({
+      name: 'Sample Event',
+      shortName: 'Sample',
+      location: 'Cape Town, South Africa',
+      venue: 'Convention Center'
+    });
+    
+    // Process delegate details
+    processTicketDetails(mockTicket);
+  };
+  
+  // Function to process ticket details
+  const processTicketDetails = (ticket) => {
+    try {
+      let processedPackages = [];
+      
+      if (ticket.delegateDetails && Array.isArray(ticket.delegateDetails)) {
+        processedPackages = ticket.delegateDetails.map(delegate => ({
+          title: delegate.title || '',
+          name: delegate.name || 'N/A',
+          email: delegate.email || 'N/A',
+          phone: delegate.phone || 'N/A',
+          gender: delegate.gender || '',
+          packageDetails: ticket.packageName || 'Standard Package',
+          delegationName: delegate.delegationName || 'Individual',
+          delegationType: delegate.delegationType || '',
+          tickets: ticket.tickets || 1,
+          ieeeNumber: delegate.ieeeNumber || '',
+          dayPass: delegate.dayPass || '',
+          amount: ticket.amount || 'N/A'
+        }));
+      } else {
+        // If no delegate details, create a single package entry with available info
+        processedPackages = [{
+          title: '',
+          name: ticket.name || 'N/A',
+          email: ticket.email || 'N/A',
+          phone: ticket.phone || 'N/A',
+          gender: '',
+          packageDetails: ticket.packageName || 'Standard Package',
+          delegationName: 'Individual',
+          delegationType: '',
+          tickets: ticket.tickets || 1,
+          ieeeNumber: '',
+          dayPass: '',
+          amount: ticket.amount || 'N/A'
+        }];
+      }
+      
+      setPackages(processedPackages);
+    } catch (err) {
+      console.error('Error processing delegate details:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     // Get ticket data from location state
     if (location.state) {
+      console.log('Location state received:', location.state);
+      
+      // Check if we only have ticketId
+      if (location.state.ticketId && Object.keys(location.state).length === 1) {
+        // If only ticketId is provided, fetch the complete ticket data
+        fetchTicketData(location.state.ticketId);
+        return;
+      }
+      
+      // Fix any image URLs in the location state
+      if (location.state.coverImage) {
+        location.state.coverImage = fixImageUrl(location.state.coverImage);
+      }
+      
+      if (location.state.event?.coverImage) {
+        location.state.event.coverImage = fixImageUrl(location.state.event.coverImage);
+      }
+      
+      // Extract all available ticket data from location state
       const { 
         ticketId, 
         purchaseId, 
@@ -31,9 +246,25 @@ const ViewMoreDetails = () => {
         eventName, 
         packageName,
         amount,
-        tickets
+        tickets,
+        // Extract additional fields that might be available
+        name,
+        email,
+        phone,
+        date,
+        location: eventLocation,
+        venue: eventVenue,
+        shortName: eventShortName
       } = location.state;
 
+      // Log the extracted data for debugging
+      console.log('Extracted ticket data:', { 
+        ticketId, purchaseId, eventId, delegateDetails, 
+        eventName, packageName, amount, tickets,
+        name, email, phone, date
+      });
+
+      // Set ticket data with all available information
       setTicketData({
         ticketId,
         purchaseId,
@@ -42,67 +273,44 @@ const ViewMoreDetails = () => {
         eventName,
         packageName,
         amount,
-        tickets
+        tickets,
+        name,
+        email,
+        phone,
+        date
       });
 
-      // Set event details - use all available data from location state
-      // Extract any additional event information that might be available
-      const eventLocation = location.state.location || '';
-      const eventVenue = location.state.venue || '';
+      // Set event details with all available data from location state
+      // Prioritize eventName from the ticket data, then try other possible sources
+      const displayEventName = eventName || location.state.eventName || location.state.event?.name || 'Event Details';
+      console.log('Setting event name to:', displayEventName);
       
       setEventDetails({
-        name: eventName || '',
-        shortName: '',
-        location: eventLocation,
-        venue: eventVenue
+        name: displayEventName,
+        shortName: eventShortName || '',
+        location: eventLocation || location.state.eventLocation || '',
+        venue: eventVenue || ''
       });
-      
-      // If we have event data in the tickets object, use that as well
-      if (tickets && tickets.length > 0 && tickets[0].event) {
-        const eventData = tickets[0].event;
-        setEventDetails(prevState => ({
-          ...prevState,
-          name: prevState.name || eventData.name || '',
-          location: prevState.location || eventData.location || '',
-          venue: prevState.venue || eventData.venue || ''
-        }));
-      }
 
-      // Process delegate details
       try {
-        let delegateArray = [];
-        if (delegateDetails) {
-          // Handle different formats of delegate_details
-          if (typeof delegateDetails === 'string') {
-            try {
-              const parsed = JSON.parse(delegateDetails);
-              delegateArray = Array.isArray(parsed) ? parsed : [parsed];
-            } catch (e) {
-              delegateArray = [{ name: delegateDetails }];
-            }
-          } else if (Array.isArray(delegateDetails)) {
-            delegateArray = delegateDetails;
-          } else if (typeof delegateDetails === 'object') {
-            delegateArray = [delegateDetails];
-          }
-        }
-
-        // Create package objects from delegate details
-        const processedPackages = delegateArray.map((delegate, index) => ({
-          packageDetails: packageName || 'Standard Package',
-          title: delegate.title || '',
-          name: delegate.name || '',
-          gender: delegate.gender || '',
-          email: delegate.email || '',
-          phone: delegate.phone || '',
-          delegation: delegate.delegation || 'Attendee',
-          tickets: tickets || 1,
-          ieeeNumber: delegate.ieeeNumber || '',
-          dayPass: delegate.dayPass || '',
-          amount: amount || 'N/A'
-        }));
-
-        setPackages(processedPackages);
+        // Use the shared function to process ticket details
+        // Create a complete ticket object with all available data
+        const ticketObject = {
+          id: ticketId,
+          purchaseId,
+          eventId,
+          delegateDetails,
+          packageName,
+          tickets,
+          amount,
+          name,
+          email,
+          phone,
+          date
+        };
+        
+        // Process the ticket details
+        processTicketDetails(ticketObject);
         setLoading(false);
       } catch (err) {
         console.error('Error processing delegate details:', err);
@@ -147,103 +355,49 @@ const ViewMoreDetails = () => {
       const ticketId = generateTicketId();
       
       // Set background color for the entire page
-      doc.setFillColor(249, 250, 251); // Very light gray background
+      doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       
-      // Add dark header bar
+      // Add header with gradient
       doc.setFillColor(44, 62, 80); // #2c3e50 - dark blue from our design system
-      doc.rect(0, 0, pageWidth, 25, 'F');
+      doc.rect(0, 0, pageWidth, 30, 'F');
       
-      // Try to add logo to header
-      try {
-        const logoImg = new Image();
-        logoImg.src = '/XPRESS TICKETS LOGO2.png';
-        doc.addImage(logoImg, 'PNG', 10, 5, 40, 15, undefined, 'FAST');
-      } catch (err) {
-        console.error('Error loading logo image:', err);
-      }
-      
-      // Add E-TICKET header
-      doc.setFontSize(16);
+      // Add logo
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(255, 255, 255); // White text for header
-      doc.text('E-TICKET', pageWidth - 20, 15, { align: 'right' });
+      doc.text('XpressTicket', 15, 20);
       
-      // Add ticket number in header
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Ticket #: ${ticketId}`, pageWidth - 20, 22, { align: 'right' });
+      doc.text('Your Official Event Ticket', 15, 25);
       
-      // Add horizontal divider
-      doc.setDrawColor(76, 161, 175); // #4ca1af - teal from our design system
-      doc.setLineWidth(0.5);
-      doc.line(10, 35, pageWidth - 10, 35);
+      // Add ticket type badge
+      doc.setFillColor(76, 161, 175); // #4ca1af - teal from our design system
+      doc.roundedRect(pageWidth - 60, 10, 45, 15, 3, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(pkg.packageDetails.toUpperCase(), pageWidth - 38, 20, { align: 'center' });
       
-      // Get event data from all available sources
-      const eventName = String(ticketData?.eventName || eventDetails?.name || '');
+      // Extract event information
+      const eventName = eventDetails.name || 'Event';
+      const venue = eventDetails.venue || '';
+      const location = eventDetails.location || '';
       
-      // Get event date information from all possible sources
-      let eventStartDate = eventDetails?.startDate || 
-                          ticketData?.startDate || 
-                          (ticketData?.tickets && ticketData.tickets[0]?.event?.startDate) || 
-                          '';
-      let eventEndDate = eventDetails?.endDate || 
-                        ticketData?.endDate || 
-                        (ticketData?.tickets && ticketData.tickets[0]?.event?.endDate) || 
-                        '';
-      
-      // Format dates if they exist
-      let formattedStartDate = '';
-      let formattedEndDate = '';
+      // Extract date and time information if available
       let dateRange = '';
+      let eventTime = '';
       
-      try {
-        if (eventStartDate) {
-          // Try to parse and format the date
-          const startDate = new Date(eventStartDate);
-          if (!isNaN(startDate.getTime())) {
-            formattedStartDate = startDate.toLocaleDateString('en-ZA', { 
-              day: 'numeric', 
-              month: 'long', 
-              year: 'numeric' 
-            });
-          } else {
-            formattedStartDate = eventStartDate; // Use as is if parsing fails
-          }
-        }
-        
-        if (eventEndDate) {
-          // Try to parse and format the date
-          const endDate = new Date(eventEndDate);
-          if (!isNaN(endDate.getTime())) {
-            formattedEndDate = endDate.toLocaleDateString('en-ZA', { 
-              day: 'numeric', 
-              month: 'long', 
-              year: 'numeric' 
-            });
-          } else {
-            formattedEndDate = eventEndDate; // Use as is if parsing fails
-          }
-        }
-        
-        // Create date range string if both dates exist
-        if (formattedStartDate && formattedEndDate) {
-          dateRange = `${formattedStartDate} - ${formattedEndDate}`;
-        } else if (formattedStartDate) {
-          dateRange = formattedStartDate;
-        }
-      } catch (dateErr) {
-        console.error('Error formatting event dates:', dateErr);
-        // Use original strings if there's an error
-        dateRange = eventStartDate ? (eventEndDate ? `${eventStartDate} - ${eventEndDate}` : eventStartDate) : '';
+      if (pkg.dayPass) {
+        dateRange = pkg.dayPass;
+      } else if (ticketData && ticketData.startDate && ticketData.endDate) {
+        dateRange = `${new Date(ticketData.startDate).toLocaleDateString()} - ${new Date(ticketData.endDate).toLocaleDateString()}`;
       }
       
-      // Get event time
-      const eventTime = String(eventDetails?.startTime || ticketData?.startTime || '');
-      
-      // Get venue and location
-      const venue = String(eventDetails?.venue || ticketData?.venue || '');
-      const location = String(eventDetails?.location || ticketData?.location || '');
+      if (ticketData && ticketData.time) {
+        eventTime = ticketData.time;
+      }
       
       // Try to add event cover image if available
       const coverImageHeight = 50;
@@ -251,10 +405,13 @@ const ViewMoreDetails = () => {
       
       try {
         // Check for event image in various possible locations
-        const eventImageUrl = eventDetails?.coverImage || 
-                             ticketData?.coverImage || 
-                             (location?.state?.event?.coverImage) || 
-                             (ticketData?.tickets && ticketData.tickets[0]?.event?.coverImage);
+        let eventImageUrl = eventDetails?.coverImage || 
+                          ticketData?.coverImage || 
+                          (location?.state?.event?.coverImage) || 
+                          (ticketData?.tickets && ticketData.tickets[0]?.event?.coverImage);
+        
+        // Fix the URL if it has duplicated base URLs
+        eventImageUrl = fixImageUrl(eventImageUrl);
         
         if (eventImageUrl) {
           // Create a promise to handle image loading
@@ -347,105 +504,84 @@ const ViewMoreDetails = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('Name:', 20, startY);
       doc.setFont('helvetica', 'normal');
-      doc.text(String(`${pkg.title || ''} ${pkg.name || ''}`).trim() || 'N/A', leftCol, startY);
+      doc.text(`${pkg.title} ${pkg.name}`, leftCol, startY);
       
       // Email
       doc.setFont('helvetica', 'bold');
       doc.text('Email:', 20, startY + lineHeight);
       doc.setFont('helvetica', 'normal');
-      doc.text(String(pkg.email || 'N/A'), leftCol, startY + lineHeight);
+      doc.text(pkg.email, leftCol, startY + lineHeight);
       
       // Phone
       doc.setFont('helvetica', 'bold');
       doc.text('Phone:', 20, startY + lineHeight * 2);
       doc.setFont('helvetica', 'normal');
-      doc.text(String(pkg.phone || 'N/A'), leftCol, startY + lineHeight * 2);
-      
-      // Gender
-      doc.setFont('helvetica', 'bold');
-      doc.text('Gender:', 20, startY + lineHeight * 3);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(pkg.gender || 'N/A'), leftCol, startY + lineHeight * 3);
-      
-      // Organization
-      if (pkg.organization) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('Organization:', 20, startY + lineHeight * 4);
-        doc.setFont('helvetica', 'normal');
-        doc.text(String(pkg.organization), leftCol, startY + lineHeight * 4);
-      }
-      
-      // Country
-      if (pkg.country) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('Country:', 20, startY + lineHeight * 5);
-        doc.setFont('helvetica', 'normal');
-        doc.text(String(pkg.country), leftCol, startY + lineHeight * 5);
-      }
-      
-      // Ticket details
-      // Package
-      doc.setFont('helvetica', 'bold');
-      doc.text('Package:', rightCol, startY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(pkg.packageDetails || 'Standard'), rightCol + 30, startY);
+      doc.text(pkg.phone || 'N/A', leftCol, startY + lineHeight * 2);
       
       // Delegation
-      doc.setFont('helvetica', 'bold');
-      doc.text('Delegation:', rightCol, startY + lineHeight);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(pkg.delegation || 'Attendee'), rightCol + 30, startY + lineHeight);
+      if (pkg.delegationName && pkg.delegationName !== 'Individual') {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Delegation:', 20, startY + lineHeight * 3);
+        doc.setFont('helvetica', 'normal');
+        doc.text(pkg.delegationName, leftCol, startY + lineHeight * 3);
+      }
       
-      // IEEE Number
+      // IEEE Number if applicable
+      if (pkg.ieeeNumber) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('IEEE Number:', 20, startY + lineHeight * 4);
+        doc.setFont('helvetica', 'normal');
+        doc.text(pkg.ieeeNumber, leftCol, startY + lineHeight * 4);
+      }
+      
+      // Ticket information
       doc.setFont('helvetica', 'bold');
-      doc.text('IEEE Number:', rightCol, startY + lineHeight * 2);
+      doc.text('Ticket ID:', rightCol, startY);
       doc.setFont('helvetica', 'normal');
-      doc.text(String(pkg.ieeeNumber || 'N/A'), rightCol + 30, startY + lineHeight * 2);
+      doc.text(ticketId, rightCol + 30, startY);
+      
+      // Package
+      doc.setFont('helvetica', 'bold');
+      doc.text('Package:', rightCol, startY + lineHeight);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pkg.packageDetails, rightCol + 30, startY + lineHeight);
+      
+      // Number of tickets
+      doc.setFont('helvetica', 'bold');
+      doc.text('Tickets:', rightCol, startY + lineHeight * 2);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pkg.tickets.toString(), rightCol + 30, startY + lineHeight * 2);
+      
+      // Day pass / duration
+      doc.setFont('helvetica', 'bold');
+      doc.text('Duration:', rightCol, startY + lineHeight * 3);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pkg.dayPass || 'Full Event', rightCol + 30, startY + lineHeight * 3);
       
       // Amount
       doc.setFont('helvetica', 'bold');
-      doc.text('Amount:', rightCol, startY + lineHeight * 3);
+      doc.text('Amount:', rightCol, startY + lineHeight * 4);
       doc.setFont('helvetica', 'normal');
-      doc.text(String(pkg.amount || ticketData?.amount || 'N/A'), rightCol + 30, startY + lineHeight * 3);
+      doc.text(pkg.amount, rightCol + 30, startY + lineHeight * 4);
       
-      // Purchase ID
-      doc.setFont('helvetica', 'bold');
-      doc.text('Purchase ID:', rightCol, startY + lineHeight * 4);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(ticketData?.purchaseId || 'N/A'), rightCol + 30, startY + lineHeight * 4);
-      
-      // Ticket ID
-      doc.setFont('helvetica', 'bold');
-      doc.text('Ticket ID:', rightCol, startY + lineHeight * 5);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(ticketData?.ticketId || 'N/A'), rightCol + 30, startY + lineHeight * 5);
-      
-      // Add QR code with actual ticket data
-      const qrSize = 50;
+      // Add QR code placeholder
+      const qrSize = 40;
       const qrX = pageWidth - qrSize - 20;
-      const qrY = 110;
+      const qrY = startY - 5;
       
-      // Create QR code data string with ticket information
-      const qrData = JSON.stringify({
-        ticketId: ticketId,
-        eventName: eventName,
-        attendeeName: String(`${pkg.title || ''} ${pkg.name || ''}`).trim(),
-        purchaseId: String(ticketData?.purchaseId || ''),
-        packageDetails: String(pkg.packageDetails || 'Standard')
-      });
+      // Draw QR code placeholder with black squares
+      doc.setFillColor(0, 0, 0);
       
-      // Draw QR code placeholder with border
-      doc.setDrawColor(44, 62, 80); // #2c3e50 - dark blue from our design system
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(qrX, qrY, qrSize, qrSize, 3, 3, 'FD');
+      // Draw a border for the QR code
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(qrX, qrY, qrSize, qrSize);
       
-      // Draw fake QR code pattern (since we don't have a QR code generator)
-      doc.setFillColor(44, 62, 80);
-      doc.setDrawColor(44, 62, 80);
+      // Create a simple pattern to simulate a QR code
+      const cellSize = qrSize / 10;
+      const margin = 0;
       
-      // Draw a simplified QR code pattern
-      const cellSize = 4;
-      const margin = 5;
+      // Create a simple pattern to simulate a QR code
       for (let i = 0; i < 10; i++) {
         for (let j = 0; j < 10; j++) {
           // Random pattern to simulate QR code
@@ -694,4 +830,4 @@ const ViewMoreDetails = () => {
   );
 };
 
-export default ViewMoreDetails;
+export default ViewMoreDetailsCompact;

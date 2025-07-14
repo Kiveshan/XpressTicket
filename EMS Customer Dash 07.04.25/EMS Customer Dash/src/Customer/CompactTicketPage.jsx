@@ -87,8 +87,30 @@ const CompactTicketPage = () => {
     );
   });
 
-  const handleViewDetails = (ticketId) => {
-    nav(`/viewmoredetails/${ticketId}`, { state: { ticketId } });
+  const handleViewDetails = (ticket) => {
+    // Find the complete ticket data
+    const ticketData = {
+      ticketId: ticket.id,
+      purchaseId: ticket.purchaseId || `PUR-${ticket.id}`,
+      eventId: eventData.eventId,
+      delegateDetails: ticket.delegateDetails || [{
+        title: 'Mr/Ms',
+        name: ticket.name,
+        email: ticket.email,
+        phone: ticket.phone || '',
+        gender: '',
+        delegationName: ticket.delegationName || 'Individual',
+        delegationType: ticket.packageName,
+        dayPass: 'Full Event'
+      }],
+      eventName: eventData.eventName,
+      packageName: ticket.packageName,
+      amount: ticket.amount,
+      tickets: ticket.tickets || 1
+    };
+    
+    // Navigate to the details page with complete ticket data
+    nav(`/view-more-details`, { state: ticketData });
   };
 
   const handleLogout = () => {
@@ -207,7 +229,7 @@ const CompactTicketPage = () => {
                         <td>
                           <button
                             className="compact-btn compact-btn-primary"
-                            onClick={() => handleViewDetails(ticket.id)}
+                            onClick={() => handleViewDetails(ticket)}
                           >
                             <FaEye /> View
                           </button>
