@@ -1,14 +1,13 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { format } from 'date-fns'
+import { format } from "date-fns"
 import "./RehostEventDetails.css"
 
 const RehostEventDetails = () => {
   const nav = useNavigate()
   const location = useLocation()
   const { eventid } = location.state || {}
-
   const [event, setEvent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -16,7 +15,7 @@ const RehostEventDetails = () => {
     startdate: "",
     enddate: "",
     deadline_date: "",
-    packages: [], // Array to store { startDate, endDate } for each package
+    packages: [],
   })
   const [submitError, setSubmitError] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(null)
@@ -28,11 +27,9 @@ const RehostEventDetails = () => {
       console.warn("Date string is empty or null")
       return "Date not specified"
     }
-
     try {
       console.log("Received dateString:", dateString)
-      // Handle ISO timestamp by extracting date part or parsing directly
-      const date = new Date(dateString);
+      const date = new Date(dateString)
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date")
       }
@@ -49,10 +46,13 @@ const RehostEventDetails = () => {
       console.warn("Time string is empty or null")
       return "Time not specified"
     }
-
     try {
       const timeParts = timeString.split(":")
-      if (timeParts.length < 2 || isNaN(Number.parseInt(timeParts[0], 10)) || isNaN(Number.parseInt(timeParts[1], 10))) {
+      if (
+        timeParts.length < 2 ||
+        isNaN(Number.parseInt(timeParts[0], 10)) ||
+        isNaN(Number.parseInt(timeParts[1], 10))
+      ) {
         throw new Error("Invalid time format")
       }
       return timeString
@@ -64,11 +64,11 @@ const RehostEventDetails = () => {
 
   // Calculate max package date (one week before registration deadline)
   const getMaxPackageDate = () => {
-    if (!formData.deadline_date) return null;
-    const deadlineDate = new Date(formData.deadline_date + "T00:00:00Z");
-    const maxDate = new Date(deadlineDate);
-    maxDate.setDate(deadlineDate.getDate() - 7);
-    return maxDate.toISOString().split("T")[0];
+    if (!formData.deadline_date) return null
+    const deadlineDate = new Date(formData.deadline_date + "T00:00:00Z")
+    const maxDate = new Date(deadlineDate)
+    maxDate.setDate(deadlineDate.getDate() - 7)
+    return maxDate.toISOString().split("T")[0]
   }
 
   useEffect(() => {
@@ -76,7 +76,6 @@ const RehostEventDetails = () => {
       try {
         setLoading(true)
         setError(null)
-
         const token = sessionStorage.getItem("token")
         if (!token) {
           setError("No authentication token found. Please log in.")
@@ -85,7 +84,6 @@ const RehostEventDetails = () => {
         }
 
         console.log("Fetching event details for ID:", eventid)
-
         const response = await fetch(`http://localhost:5000/api/events/${eventid}`, {
           method: "GET",
           headers: {
@@ -97,11 +95,9 @@ const RehostEventDetails = () => {
         })
 
         console.log("Response status:", response.status)
-
         if (!response.ok) {
           const errorData = await response.json()
           console.error("API Error:", errorData)
-
           if (response.status === 401 || response.status === 403) {
             sessionStorage.removeItem("token")
             sessionStorage.removeItem("userId")
@@ -114,19 +110,21 @@ const RehostEventDetails = () => {
 
         const data = await response.json()
         console.log("Event data received:", data)
-
         setEvent(data)
 
-        // Initialize form data with event and package dates, ensuring date-only format
         setFormData({
           startdate: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
           enddate: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
-          deadline_date: data.registration_deadline_date ? new Date(data.registration_deadline_date).toISOString().split("T")[0] : "",
-          packages: data.packages && Array.isArray(data.packages) ?
-            data.packages.map(pkg => ({
-              startDate: pkg.startDate ? new Date(pkg.startDate).toISOString().split("T")[0] : "",
-              endDate: pkg.endDate ? new Date(pkg.endDate).toISOString().split("T")[0] : "",
-            })) : [],
+          deadline_date: data.registration_deadline_date
+            ? new Date(data.registration_deadline_date).toISOString().split("T")[0]
+            : "",
+          packages:
+            data.packages && Array.isArray(data.packages)
+              ? data.packages.map((pkg) => ({
+                  startDate: pkg.startDate ? new Date(pkg.startDate).toISOString().split("T")[0] : "",
+                  endDate: pkg.endDate ? new Date(pkg.endDate).toISOString().split("T")[0] : "",
+                }))
+              : [],
         })
       } catch (err) {
         console.error("Fetch error:", err)
@@ -147,8 +145,7 @@ const RehostEventDetails = () => {
   const handleInputChange = (e, index = null) => {
     const { name, value } = e.target
     if (index !== null) {
-      // Handle package date inputs
-      setFormData(prev => {
+      setFormData((prev) => {
         const updatedPackages = [...prev.packages]
         updatedPackages[index] = {
           ...updatedPackages[index],
@@ -157,8 +154,7 @@ const RehostEventDetails = () => {
         return { ...prev, packages: updatedPackages }
       })
     } else {
-      // Handle event date inputs
-      setFormData(prev => {
+      setFormData((prev) => {
         const updatedData = { ...prev, [name]: value }
         if (name === "startdate" && value) {
           const deadlineDate = new Date(value)
@@ -187,7 +183,6 @@ const RehostEventDetails = () => {
 
       const currentDate = new Date().toISOString().split("T")[0]
 
-      // Validate event dates
       if (!formData.startdate || !formData.enddate || !formData.deadline_date) {
         setSubmitError("Please select event start, end, and registration deadline dates.")
         return
@@ -212,7 +207,6 @@ const RehostEventDetails = () => {
         return
       }
 
-      // Validate package dates
       const maxPackageDate = getMaxPackageDate()
       for (let i = 0; i < formData.packages.length; i++) {
         const pkg = formData.packages[i]
@@ -220,6 +214,7 @@ const RehostEventDetails = () => {
           setSubmitError(`Please select start and end dates for package ${i + 1}.`)
           return
         }
+
         const pkgStartDateObj = new Date(pkg.startDate)
         const pkgEndDateObj = new Date(pkg.endDate)
 
@@ -233,8 +228,13 @@ const RehostEventDetails = () => {
           return
         }
 
-        if (maxPackageDate && (pkgStartDateObj > new Date(maxPackageDate) || pkgEndDateObj > new Date(maxPackageDate))) {
-          setSubmitError(`Package ${i + 1} start and end dates must be at least one week before the registration deadline date (${formData.deadline_date}).`)
+        if (
+          maxPackageDate &&
+          (pkgStartDateObj > new Date(maxPackageDate) || pkgEndDateObj > new Date(maxPackageDate))
+        ) {
+          setSubmitError(
+            `Package ${i + 1} start and end dates must be at least one week before the registration deadline date (${formData.deadline_date}).`,
+          )
           return
         }
       }
@@ -265,22 +265,25 @@ const RehostEventDetails = () => {
       })
 
       console.log("Rehost response status:", response.status)
-
       if (!response.ok) {
         const errorData = await response.json()
         console.error("Rehost error:", errorData)
         let errorMessage = errorData.error || `Server error: ${response.status} ${response.statusText}`
         if (errorData.conflicts) {
-          errorMessage += ": " + errorData.conflicts
-            .map(c => `${c.eventName} (ID: ${c.eventId}) from ${c.startDate} to ${c.endDate}, overlapping ${c.conflictingPeriod.start} to ${c.conflictingPeriod.end}`)
-            .join("; ")
+          errorMessage +=
+            ": " +
+            errorData.conflicts
+              .map(
+                (c) =>
+                  `${c.eventName} (ID: ${c.eventId}) from ${c.startDate} to ${c.endDate}, overlapping ${c.conflictingPeriod.start} to ${c.conflictingPeriod.end}`,
+              )
+              .join("; ")
         }
         throw new Error(errorMessage)
       }
 
       const result = await response.json()
       console.log("Rehost success:", result)
-
       setSubmitSuccess("Event rehost request submitted successfully. Awaiting admin approval.")
 
       setTimeout(() => {
@@ -297,8 +300,13 @@ const RehostEventDetails = () => {
   if (loading) {
     return (
       <div className="container12">
-        <header className="dashboard-header1">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+              Back
+            </button>
+            <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
+          </div>
           <div className="profile-section">
             <button
               className="backbutton22"
@@ -313,11 +321,6 @@ const RehostEventDetails = () => {
             </button>
           </div>
         </header>
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
-            Back
-          </button>
-        </div>
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p className="loading">Loading event details...</p>
@@ -329,15 +332,20 @@ const RehostEventDetails = () => {
   if (error) {
     return (
       <div className="container12">
-        <header className="dashboard-header1">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+              Back
+            </button>
+            <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
+          </div>
           <div className="profile-section">
             <button
               className="backbutton22"
               onClick={() => {
                 sessionStorage.removeItem("token")
                 sessionStorage.removeItem("userId")
-                sessionStorage.removeItem("user")
+                sessionStorage.removeUser("user")
                 nav("/login")
               }}
             >
@@ -345,11 +353,6 @@ const RehostEventDetails = () => {
             </button>
           </div>
         </header>
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
-            Back
-          </button>
-        </div>
         <div className="error-container">
           <div className="error-icon">⚠️</div>
           <h3>Error Loading Event Details</h3>
@@ -374,6 +377,27 @@ const RehostEventDetails = () => {
   if (!event) {
     return (
       <div className="container12">
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+              Back
+            </button>
+            <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
+          </div>
+          <div className="profile-section">
+            <button
+              className="backbutton22"
+              onClick={() => {
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                nav("/login")
+              }}
+            >
+              LogOut
+            </button>
+          </div>
+        </header>
         <div className="error-container">
           <p>No event data available.</p>
         </div>
@@ -383,8 +407,13 @@ const RehostEventDetails = () => {
 
   return (
     <div className="container12">
-      <header className="dashboard-header1">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+            Back
+          </button>
+          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
+        </div>
         <div className="profile-section">
           <button
             className="backbutton22"
@@ -400,17 +429,10 @@ const RehostEventDetails = () => {
         </div>
       </header>
 
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/rehost-event")}>
-          Back
-        </button>
-      </div>
-
       <h2 className="title">Rehost Event: {event.name || "Unnamed Event"}</h2>
 
       <div className="main-content">
         <div className="event-details-card">
-
           <div className="card-details">
             <div className="card-details-header">
               <h3>Event Information</h3>
@@ -434,7 +456,6 @@ const RehostEventDetails = () => {
                   <span>{event.capacity || "Not specified"}</span>
                 </div>
               </div>
-
               <div className="detail-column">
                 <div className="detail-row">
                   <strong>Start Time:</strong>
@@ -444,6 +465,10 @@ const RehostEventDetails = () => {
                   <strong>End Time:</strong>
                   <span>{formatTime(event.end_time)}</span>
                 </div>
+                <div className="detail-row">
+                  <strong>Current Registration Deadline:</strong>
+                  <span>{formatDate(event.registration_deadline_date)}</span>
+                </div>
                 {event.description && (
                   <div className="detail-row description">
                     <strong>Description:</strong>
@@ -452,32 +477,6 @@ const RehostEventDetails = () => {
                 )}
               </div>
             </div>
-            <div className="detail-row">
-              <strong>Current End Date:</strong>
-              <span>{formatDate(event.end_date)}</span>
-            </div>
-            <div className="detail-row">
-              <strong>Current Registration Deadline:</strong>
-              <span>{formatDate(event.registration_deadline_date)}</span>
-            </div>
-            <div className="detail-row">
-              <strong>Start Time:</strong>
-              <span>{formatTime(event.start_time)}</span>
-            </div>
-            <div className="detail-row">
-              <strong>End Time:</strong>
-              <span>{formatTime(event.end_time)}</span>
-            </div>
-            <div className="detail-row">
-              <strong>Capacity:</strong>
-              <span>{event.capacity || "Not specified"}</span>
-            </div>
-            {event.description && (
-              <div className="detail-row description">
-                <strong>Description:</strong>
-                <span>{event.description}</span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -517,6 +516,7 @@ const RehostEventDetails = () => {
                   />
                 </div>
               </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="deadline_date">New Registration Deadline Date:</label>
