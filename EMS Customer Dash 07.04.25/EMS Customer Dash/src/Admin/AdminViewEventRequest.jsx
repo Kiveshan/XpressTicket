@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../shared/ModernDashboard.css';
-import './AdminViewEventRequest.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaUsers, FaInfoCircle, FaImage, FaBox, FaFileAlt, FaMoneyBillWave, FaCommentAlt, FaCheck, FaPencilAlt, FaTimes } from 'react-icons/fa';
 import { MdEventAvailable } from 'react-icons/md';
