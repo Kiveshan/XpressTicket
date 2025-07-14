@@ -48,9 +48,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'Xpressfinal',
+  database: 'ems2.1',
   password: '123456',
-  port: 5433,
+  port: 5432,
   timezone: 'UTC', // Ensure PostgreSQL uses UTC
 });
 
