@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import './TicketsRequest.css';
- 
+import './ModernOrganizerStyles.css';
+
 function TicketsRequest() {
   const nav = useNavigate();
   const { eventId } = useParams();
@@ -10,7 +11,7 @@ function TicketsRequest() {
   const [eventName, setEventName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
- 
+
   useEffect(() => {
     const fetchRequests = async () => {
       try {
@@ -42,7 +43,7 @@ function TicketsRequest() {
     };
     fetchRequests();
   }, [eventId, nav]);
- 
+
   const handleStatusUpdate = async (purchaseId, request_status) => {
     try {
       const token = sessionStorage.getItem('token');
@@ -73,7 +74,7 @@ function TicketsRequest() {
       alert('Failed to update request status');
     }
   };
- 
+
   const handleViewProof = (proofUrl) => {
     if (proofUrl) {
       window.open(proofUrl, '_blank');
@@ -81,7 +82,7 @@ function TicketsRequest() {
       alert('No proof of payment available');
     }
   };
- 
+
   const handleDownloadCustomers = async () => {
     try {
       const token = sessionStorage.getItem('token');
@@ -99,12 +100,12 @@ function TicketsRequest() {
         throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
- 
+
       if (data.length === 0) {
         alert('No customer data available for download.');
         return;
       }
- 
+
       // Prepare data for Excel
       const excelData = data.map((request) => ({
         'Purchaser Name': request.purchaser_name,
@@ -112,11 +113,11 @@ function TicketsRequest() {
         'Number of Tickets': request.number_of_tickets,
         'Amount': `R ${Number(request.amount).toFixed(2)}`,
       }));
- 
+
       // Calculate totals
       const totalTickets = data.reduce((sum, request) => sum + request.number_of_tickets, 0);
       const totalAmount = data.reduce((sum, request) => sum + Number(request.amount), 0);
- 
+
       // Add totals row
       excelData.push({
         'Purchaser Name': 'Total',
@@ -124,12 +125,12 @@ function TicketsRequest() {
         'Number of Tickets': totalTickets,
         'Amount': `R ${totalAmount.toFixed(2)}`,
       });
- 
+
       // Create worksheet
       const ws = XLSX.utils.json_to_sheet(excelData, {
         header: ['Purchaser Name', 'Package', 'Number of Tickets', 'Amount'],
       });
- 
+
       // Set column widths
       ws['!cols'] = [
         { wch: 20 }, // Purchaser Name
@@ -137,11 +138,11 @@ function TicketsRequest() {
         { wch: 15 }, // Number of Tickets
         { wch: 15 }, // Amount
       ];
- 
+
       // Create workbook and add the worksheet
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, data[0]?.event_name || 'Customers');
- 
+
       // Generate and download the Excel file
       XLSX.writeFile(wb, `${data[0]?.event_name || 'event'}_customers.xlsx`);
     } catch (error) {
@@ -149,91 +150,95 @@ function TicketsRequest() {
       alert('Failed to download customer list: ' + error.message);
     }
   };
- 
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
- 
+
   return (
-    <div className="tickets-request-container">
-      <header className="dashboard-header1">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>
-            LogOut
+    <div className="modern-container">
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav('/tickets-event-list')}>
+            <i className="fas fa-arrow-left"></i> Back
           </button>
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="header-logo"
+          />
         </div>
+        <h1 className="header-title">Ticket Requests</h1>
+        <button className="modern-button" onClick={() => nav('/')}>
+          <i className="fas fa-sign-out-alt"></i> Logout
+        </button>
       </header>
- 
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/tickets-event-list')}>
-          Back
-        </button>
-      </div>
- 
-      <h2 className="tickets-request-title">Ticket Requests for {eventName}</h2>
- 
-      <div className="button-container">
-        <button className="download-button" onClick={handleDownloadCustomers}>
-          Download all customers
-        </button>
-      </div>
- 
-      <div className="tickets-request-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Purchaser Name</th>
-              <th>Number of Tickets</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.length === 0 ? (
-              <tr>
-                <td colSpan="3">No ticket requests found</td>
-              </tr>
-            ) : (
-              requests.map((request) => (
-                <tr key={request.purchase_id}>
-                  <td>{request.purchaser_name}</td>
-                  <td>{request.number_of_tickets}</td>
-                  <td>
-                    <button
-                      className="view-proof-button"
-                      onClick={() => handleViewProof(request.proof_of_payment_url)}
-                    >
-                      View Proof
-                    </button>
-                    {request.request_status === 'pending' && (
-                      <>
-                        <button
-                          className="view-proof-button"
-                          onClick={() => handleStatusUpdate(request.purchase_id, 'Approved')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          className="view-proof-button"
-                          onClick={() => handleStatusUpdate(request.purchase_id, 'Rejected')}
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                  </td>
+
+      <div className="modern-content">
+        <div className="modern-card">
+          <div className="modern-card-header">
+            <h2 className="modern-section-title">Ticket Requests for {eventName}</h2>
+            <button className="modern-button primary-button" onClick={handleDownloadCustomers}>
+              <i className="fas fa-download"></i> Download Customers
+            </button>
+          </div>
+          
+          <div className="modern-table-container">
+            <table className="modern-table">
+              <thead>
+                <tr>
+                  <th>Purchaser Name</th>
+                  <th>Number of Tickets</th>
+                  <th>Action</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {requests.length === 0 ? (
+                  <tr>
+                    <td colSpan="3" className="text-center">No ticket requests found</td>
+                  </tr>
+                ) : (
+                  requests.map((request) => (
+                    <tr key={request.purchase_id}>
+                      <td>{request.purchaser_name}</td>
+                      <td>
+                        <span className="modern-badge">
+                          <i className="fas fa-ticket-alt"></i> {request.number_of_tickets}
+                        </span>
+                      </td>
+                      <td className="action-buttons">
+                        <button
+                          className="modern-button info-button"
+                          onClick={() => handleViewProof(request.proof_of_payment_url)}
+                        >
+                          <i className="fas fa-file-invoice"></i> View Proof
+                        </button>
+                        {request.request_status === 'pending' && (
+                          <>
+                            <button
+                              className="modern-button success-button"
+                              onClick={() => handleStatusUpdate(request.purchase_id, 'Approved')}
+                            >
+                              <i className="fas fa-check"></i> Approve
+                            </button>
+                            <button
+                              className="modern-button danger-button"
+                              onClick={() => handleStatusUpdate(request.purchase_id, 'Rejected')}
+                            >
+                              <i className="fas fa-times"></i> Reject
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
- 
+
 export default TicketsRequest;
- 

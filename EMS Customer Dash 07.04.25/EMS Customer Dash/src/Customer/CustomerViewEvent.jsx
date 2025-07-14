@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import "./CustomerViewEvent.css";
+import "../shared/ModernDashboard.css";
 import { useNavigate, useParams } from 'react-router-dom';
-import { fixS3ImageUrl, DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
+import { FaSignOutAlt, FaArrowLeft } from 'react-icons/fa';
+import EventImage from '../utils/EventImage';
 
 const CustomerViewEvent = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -164,21 +166,25 @@ const CustomerViewEvent = () => {
     }
   }, [eventId]);
   return (
-    <div className="dashboard-container">
-      <header className="dashboard-header2">
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
-          className="dashboard-logo"
+          className="modern-logo"
         />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={()=> nav('/')}>LogOut </button>
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
       
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/eventmenu")}>
-          Back
+      {/* Back Button */}
+      <div className="modern-back-button-container">
+        <button className="modern-back-btn" onClick={() => nav("/eventmenu")}>
+          <FaArrowLeft /> Back
         </button>
       </div>
 
@@ -200,15 +206,11 @@ const CustomerViewEvent = () => {
         <>
           {/* Full-width hero image */}
           <div className="event-hero-image">
-            <img 
-              src={fixS3ImageUrl(event.image)}
+            <EventImage 
+              image={event.image}
+              coverimage={event.coverimage}
               alt={event.name} 
               className="hero-image" 
-              onError={(e) => {
-                console.log('Image failed to load:', e.target.src);
-                e.target.onerror = null;
-                e.target.src = DEFAULT_IMAGE_DATA_URI;
-              }}
             />
           </div>
           

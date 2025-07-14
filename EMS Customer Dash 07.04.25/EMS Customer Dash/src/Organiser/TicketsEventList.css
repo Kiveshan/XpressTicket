@@ -1,64 +1,112 @@
-.tickets-event-list-container {
-    font-family: Arial, sans-serif;
-  padding: -0px 2px;
-  background-color: #f9f9f9;
-  min-height: 100vh;
-  margin-top: -20px;
+/* Modern styling for the Event Requests page */
+
+/* Override content area padding to extend card width */
+.modern-content {
+  padding: 0;
+  width: 100%;
 }
 
-.tickets-event-list-title {
-  text-align: center;
-  font-size: 24px;
-  font-weight: bold;
+/* Override card styling to extend full width */
+.modern-card {
+  border-radius: 0;
+  margin-bottom: 0;
+  box-shadow: none;
+  padding: 20px;
+  width: 100%;
+  min-height: calc(100vh - 80px); /* Subtract header height */
+}
+
+/* Section title styling */
+.modern-section-title {
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+/* Table container for responsive tables */
+.modern-table-container {
+  width: 100%;
+  overflow-x: auto;
   margin-bottom: 20px;
+  border-radius: 8px;
 }
 
-.tickets-event-list-table {
-    width: 70%;
-    border-collapse: collapse;
-    background-color: white;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-left: 212px;
+/* Badge styling for request counts */
+.modern-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ff9800;
+  color: #000000;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-shadow: 0 1px 1px rgba(255,255,255,0.3);
 }
 
-
-.tickets-event-list-table td {
-    padding:6px 8px;
-    border-bottom: 1px solid #ddd;
-    text-align: left;
+.modern-badge i {
+  color: #000000;
+  margin-right: 8px;
+  font-size: 1rem;
 }
 
-.tickets-event-list-table th {
-    background-color: #20c997;
-    color: rgb(0, 0, 0);
-    font-weight: bold;
-    padding: 9px 8px;
-    border-bottom: 1px solid #ddd;
-    text-align: left;
-}
-
-.tickets-event-list-table tr:hover {
-  background-color: #dbeee9;
-}
-
-.bell-icon {
-  margin-right: 5px;
-  color: #ff9800;
-  font-size: 18px;
-}
-
-.view-button {
-  padding: 8px 12px;
+/* Action button styling */
+.modern-table td .modern-button {
   background-color: #28a745;
   color: white;
   border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
 }
 
-.view-button:hover {
+/* Button hover effects */
+.modern-table td .modern-button:hover {
   background-color: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Text alignment utilities */
+.text-center {
+  text-align: center;
+}
+
+/* Empty state styling */
+tbody tr:only-child td {
+  padding: 30px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .modern-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .header-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .modern-table th,
+  .modern-table td {
+    padding: 10px 8px;
+    font-size: 0.9rem;
+  }
+  
+  .modern-button {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
 }

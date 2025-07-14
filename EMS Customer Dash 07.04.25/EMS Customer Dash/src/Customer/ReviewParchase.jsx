@@ -3,6 +3,7 @@ import "./ReviewParchase.css";
 import { useNavigate } from 'react-router-dom';
 import '../shared/ModernDashboard.css';
 import { FaSignOutAlt, FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaClock, FaMoneyBillWave } from 'react-icons/fa';
+import EventImage from '../utils/EventImage';
 
 function ReviewParchase() {
    const nav = useNavigate();
@@ -67,6 +68,14 @@ function ReviewParchase() {
              // Determine if this should be an active or past event
              const isPast = index === eventsData.length - 1;
              const eventDate = new Date(event.date || Date.now());
+             
+             // Debug image fields
+             console.log(`ReviewParchase - Event ${event.id || event._id} (${event.name}) image fields:`, {
+               image: event.image,
+               coverimage: event.coverimage,
+               imageType: typeof event.image,
+               coverimageType: typeof event.coverimage
+             });
              
              // Add ticket-specific information
              return {
@@ -149,11 +158,11 @@ function ReviewParchase() {
                     {event.status}
                   </div>
                   <div className="purchase-event-image-container">
-                    <img 
-                      src={event.image || '/default-event.png'} 
+                    <EventImage 
+                      image={event.image}
+                      coverimage={event.coverimage}
                       alt={event.name} 
                       className="purchase-event-image" 
-                      onError={(e) => { e.target.src = '/default-event.png'; }}
                     />
                   </div>
                   <div className="purchase-event-title-container">

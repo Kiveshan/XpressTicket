@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import './CustomerFillinTicketPack1.css';
-import { useNavigate, useParams } from 'react-router-dom';
-import { fixS3ImageUrl, DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
+import '../shared/ModernDashboard.css';
+import { FaSignOutAlt, FaArrowLeft } from 'react-icons/fa';
+import EventImage from '../utils/EventImage';
 
 const titles = ['Prof', 'Dr', 'Mr', 'Ms'];
 const genders = ['Male', 'Female', 'Other'];
@@ -171,16 +173,25 @@ if (data.attendees) {
   };
 
   return (
-    <div className="ictas-container1">
-      <header className="dashboard-header4">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo" />
-        <div className="profile-section">
-              <button className="backbutton22" onClick={()=> nav('/')}>LogOut </button>
-          </div>
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
+          </button>
+        </div>
       </header>
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav(`/customerviewevent/${eventId}`)}>
-          Back
+      
+      {/* Back Button */}
+      <div className="modern-back-button-container">
+        <button className="modern-back-btn" onClick={() => nav(`/customerviewevent/${eventId}`)}>
+          <FaArrowLeft /> Back
         </button>
       </div>
 
@@ -193,15 +204,11 @@ if (data.attendees) {
           <div className="event-details1">
             <div className="conference-info1">
               {(event.coverimage || event.image) && (
-                <img 
-                  src={fixS3ImageUrl(event.image || event.coverimage)} 
+                <EventImage 
+                  image={event.image}
+                  coverimage={event.coverimage}
                   alt={`${event.name} Logo`} 
                   className="ictas-logo" 
-                  onError={(e) => {
-                    console.log('Image failed to load:', e.target.src);
-                    e.target.onerror = null;
-                    e.target.src = DEFAULT_IMAGE_DATA_URI;
-                  }}
                 />
               )}
               <h3>{event.name}</h3>

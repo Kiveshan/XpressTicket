@@ -5,6 +5,41 @@ import { useNavigate, useLocation } from "react-router-dom"
 import "./EventForm.css"
 import "./ViewEventRequest.css"
 import "./ModernOrganizerStyles.css"
+import "./ModernStyles.css"
+
+// Helper function to handle package price display
+const getPackagePrice = (pkg) => {
+  // Check for price in different possible property names
+  const price = pkg.price || pkg.package_price || pkg.cost || pkg.amount || pkg.fee;
+  
+  // If price is not available, return N/A
+  if (!price && price !== 0) return "N/A";
+  
+  // Handle numeric price
+  if (typeof price === 'number') {
+    return `$${price.toFixed(2)}`;
+  }
+  
+  // Handle string price that might be numeric
+  if (typeof price === 'string') {
+    // Check if the price already has a currency symbol
+    if (price.startsWith('$') || price.startsWith('£') || price.startsWith('€')) {
+      return price;
+    }
+    
+    // Try to parse the price as a number
+    const numericPrice = parseFloat(price);
+    if (!isNaN(numericPrice)) {
+      return `$${numericPrice.toFixed(2)}`;
+    }
+    
+    // Return the original string if it's not a number
+    return price;
+  }
+  
+  // Fallback
+  return "N/A";
+};
 
 const ViewEventRequest = () => {
   const navigate = useNavigate()
@@ -29,34 +64,6 @@ const ViewEventRequest = () => {
   })
 
   const [packages, setPackages] = useState([])
-  
-  // Helper function to get price from package object
-  const getPackagePrice = (pkg) => {
-    // Check all possible price field names
-    if (!pkg) return 'N/A';
-    
-    // First check if the package has a direct price property
-    if (typeof pkg === 'object') {
-      // Log all keys to help debug
-      console.log('Package object keys:', Object.keys(pkg));
-      
-      // Try all possible price field names
-      const possiblePriceFields = [
-        'price', 'package_price', 'cost', 'package_cost',
-        'amount', 'value', 'fee', 'charge', 'rate'
-      ];
-      
-      // Check each field
-      for (const field of possiblePriceFields) {
-        if (pkg[field] !== undefined && pkg[field] !== null && pkg[field] !== '') {
-          console.log(`Found price in field: ${field} with value: ${pkg[field]}`);
-          return pkg[field];
-        }
-      }
-    }
-    
-    return 'N/A';
-  }
   const [tabs, setTabs] = useState([])
   const [clientTypes, setClientTypes] = useState([])
   const [error, setError] = useState(null)
@@ -153,12 +160,57 @@ const ViewEventRequest = () => {
             })
           })
         }
-        // Add price data to packages if not present
-        const packagesWithPrice = (data.packages || []).map(pkg => ({
-          ...pkg,
-          price: pkg.price || '$500' // Set default price if not present
-        }))
-        setPackages(packagesWithPrice)
+        // Parse package data from string format
+        const parsedPackages = [];
+        
+        if (data.packages && Array.isArray(data.packages)) {
+          data.packages.forEach(pkg => {
+            // Check if the package is a string that needs parsing
+            if (typeof pkg === 'string' && pkg.includes('pricing')) {
+              try {
+                // Extract pricing information using regex
+                const pricingMatch = pkg.match(/\\"pricing\\":\\"([^\\"]+)\\"/);
+                const nameMatch = pkg.match(/\\"packageType\\":\\"([^\\"]+)\\"/);
+                const detailsMatch = pkg.match(/\\"details\\":\\"([^\\"]+)\\"/);
+                const locationMatch = pkg.match(/\\"location\\":\\"([^\\"]+)\\"/);
+                const durationMatch = pkg.match(/\\"duration\\":\\"([^\\"]+)\\"/);
+                const dateChoicesMatch = pkg.match(/\\"dateChoices\\":\\"([^\\"]+)\\"/);
+                
+                // Create a structured package object
+                const parsedPackage = {
+                  package_name: nameMatch ? nameMatch[1] : 'Package',
+                  package_type: nameMatch ? nameMatch[1] : 'Standard',
+                  price: pricingMatch ? pricingMatch[1] : null,
+                  details: detailsMatch ? detailsMatch[1] : 'No details available',
+                  location: locationMatch ? locationMatch[1] : '',
+                  duration: durationMatch ? durationMatch[1] : '',
+                  dateChoices: dateChoicesMatch ? dateChoicesMatch[1] : ''
+                };
+                
+                // Parse date information if available
+                if (dateChoicesMatch) {
+                  const dates = dateChoicesMatch[1].split('-');
+                  if (dates.length === 2) {
+                    parsedPackage.start_date = dates[0];
+                    parsedPackage.end_date = dates[1];
+                  }
+                }
+                
+                parsedPackages.push(parsedPackage);
+              } catch (err) {
+                console.error('Error parsing package string:', err);
+                // Add the original package as fallback
+                parsedPackages.push(pkg);
+              }
+            } else {
+              // Use the package as-is if it's already an object
+              parsedPackages.push(pkg);
+            }
+          });
+        }
+        
+        console.log('Parsed packages:', parsedPackages);
+        setPackages(parsedPackages)
       } catch (err) {
         console.error("Error fetching event:", err)
         setError(err.message)
@@ -198,9 +250,9 @@ const ViewEventRequest = () => {
               <p>{error}</p>
               <button 
                 className="modern-button" 
-                onClick={() => navigate("/event-request")}
+                onClick={() => navigate("/organiser-dash")}
               >
-                <i className="fas fa-arrow-left"></i> Back to Events
+                <i className="fas fa-arrow-left"></i> Back to Dashboard
               </button>
             </div>
           </div>
@@ -214,7 +266,7 @@ const ViewEventRequest = () => {
       {/* Modern Header */}
       <header className="modern-header">
         <div className="header-left">
-          <button className="modern-button" onClick={() => navigate("/event-request")}>
+          <button className="modern-button" onClick={() => navigate("/organiser-dash")}>
             <i className="fas fa-arrow-left"></i> Back
           </button>
           <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
@@ -366,7 +418,7 @@ const ViewEventRequest = () => {
                   ) : (
                     <div className="modern-badges-grid">
                       {clientTypes.map((type, index) => (
-                        <div key={index} className="modern-badge">
+                        <div key={index} className="modern-badge client-type-badge">
                           {type}
                         </div>
                       ))}
@@ -414,7 +466,7 @@ const ViewEventRequest = () => {
                             <div className="modern-package-item">
                               <div className="modern-package-item-label">PRICE</div>
                               <div className="modern-package-item-value">
-                                {pkg.price}
+                                {getPackagePrice(pkg)}
                               </div>
                             </div>
                             <div className="modern-package-item modern-package-dates">

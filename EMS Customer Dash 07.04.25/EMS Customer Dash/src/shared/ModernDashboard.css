@@ -54,7 +54,7 @@
 }
 
 /* Back button - consistent styling */
-.modern-back-button {
+.modern-back-button, .modern-back-button-container {
   margin: 15px 25px;
 }
 
@@ -260,7 +260,7 @@
 }
 
 .modern-card-image-container {
-  height: 160px;
+  height: 120px;
   overflow: hidden;
   position: relative;
 }
@@ -277,7 +277,7 @@
 }
 
 .modern-card-content {
-  padding: 20px;
+  padding: 12px;
 }
 
 .modern-card-title {

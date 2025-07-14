@@ -2,8 +2,8 @@ import React from "react";
 import { BrowserRouter as Router, Routes ,Route} from "react-router-dom";
 import Form from "./Form";
 import InformationForm from "./InformationForm";
-import Menupage from "./Menupage";
-import CustomerDash from "./CustomerDash";
+import NewMenupage from "./NewMenupage";
+import NewCustomerDash from "./NewCustomerDash";
 import EventMenu from "./EventMenu";
 import ReviewParchase from "./ReviewParchase";
 import ParchasedTicket from "./ParchasedTicket";
@@ -62,8 +62,8 @@ function App() {
           {/* Customer */}
           <Route path="/" element={<Form />}/>
           <Route path="/information-form" element={<InformationForm />}/>
-          <Route path= "/mainmenu" element={<Menupage />}/>
-          <Route path= "/customerdash" element={<CustomerDash />}/>
+          <Route path= "/mainmenu" element={<NewMenupage />}/>
+          <Route path= "/customerdash" element={<NewCustomerDash />}/>
           <Route path= "/eventmenu" element={<EventMenu />}/>
           <Route path= "/reviewparchase" element={<ReviewParchase />}/>
           <Route path= "/parchasedticket" element={<ParchasedTicket />}/>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipLoader } from "react-spinners";
 import './RehostEventForm.css';
+import './ModernRehostStyles.css';
 
 const RehostEventForm = () => {
   const navigate = useNavigate();
@@ -257,22 +258,26 @@ const RehostEventForm = () => {
 
   if (loading) {
     return (
-      <div className="container12">
-        <header className="dashboard-header1">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="dashboard-logo1"
-          />
-        </header>
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => navigate('/requestcard')}>
-            Back
+      <div className="modern-container">
+        <header className="modern-header">
+          <div className="header-left">
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="header-logo"
+            />
+            <h1 className="header-title">Past Events</h1>
+          </div>
+          <button
+            className="modern-button"
+            onClick={() => navigate('/requestcard')}
+          >
+            <i className="fas fa-arrow-left"></i> Back
           </button>
-        </div>
-        <div className="loading-container">
-          <ClipLoader color="#123abc" loading={loading} size={50} />
-          <p className="loading">Loading past events...</p>
+        </header>
+        <div className="modern-loading">
+          <ClipLoader color="#4ca1af" loading={loading} size={50} />
+          <p>Loading past events...</p>
         </div>
       </div>
     );
@@ -282,45 +287,45 @@ const RehostEventForm = () => {
     const isAuthError = error.includes('log in') || error.includes('expired');
 
     return (
-      <div className="container12">
-        <header className="dashboard-header1">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="dashboard-logo1"
-          />
-          <div className="profile-section">
-            {!isAuthError && (
-              <button
-                className="backbutton22"
-                onClick={() => {
-                  sessionStorage.removeItem('token');
-                  sessionStorage.removeItem('userId');
-                  sessionStorage.removeItem('user');
-                  navigate('/login');
-                }}
-              >
-                LogOut
-              </button>
-            )}
+      <div className="modern-container">
+        <header className="modern-header">
+          <div className="header-left">
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="header-logo"
+            />
+            <h1 className="header-title">Past Events</h1>
           </div>
+          {!isAuthError && (
+            <button
+              className="modern-button"
+              onClick={() => {
+                sessionStorage.removeItem('token');
+                sessionStorage.removeItem('userId');
+                sessionStorage.removeItem('user');
+                navigate('/login');
+              }}
+            >
+              <i className="fas fa-sign-out-alt"></i> LogOut
+            </button>
+          )}
         </header>
-        <div className="back-button-container1">
-          <button
-            className="backbutton20"
-            onClick={() => (isAuthError ? navigate('/login') : navigate('/requestcard'))}
-          >
-            {isAuthError ? 'Go to Login' : 'Back'}
-          </button>
-        </div>
-        <div className="error-container">
-          <div className="error-icon">⚠️</div>
+        <button
+          className="modern-button"
+          style={{ margin: '20px 0', alignSelf: 'flex-start' }}
+          onClick={() => (isAuthError ? navigate('/login') : navigate('/requestcard'))}
+        >
+          <i className="fas fa-arrow-left"></i> {isAuthError ? 'Go to Login' : 'Back'}
+        </button>
+        <div className="modern-error">
+          <div className="modern-error-icon">⚠️</div>
           <h3>{isAuthError ? 'Authentication Required' : 'Error Loading Past Events'}</h3>
-          <p className="error-message">{error}</p>
-          <div className="action-buttons">
+          <p className="modern-error-message">{error}</p>
+          <div className="modern-action-buttons">
             {isAuthError ? (
               <button
-                className="login-button"
+                className="modern-login-button"
                 onClick={() => {
                   sessionStorage.clear();
                   navigate('/login');
@@ -330,7 +335,7 @@ const RehostEventForm = () => {
               </button>
             ) : (
               <button
-                className="retry-button"
+                className="modern-retry-button"
                 onClick={() => {
                   setError(null);
                   setLoading(true);
@@ -348,95 +353,115 @@ const RehostEventForm = () => {
   }
 
   return (
-    <div className="container12">
-      <header className="dashboard-header1">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
-        <div className="profile-section">
-          <button
-            className="backbutton22"
-            onClick={() => {
-              sessionStorage.removeItem('token');
-              sessionStorage.removeItem('userId');
-              sessionStorage.removeItem('user');
-              navigate('/login');
-            }}
-          >
-            LogOut
-          </button>
+    <div className="modern-container">
+      <header className="modern-header">
+        <div className="header-left">
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="header-logo"
+          />
+          <h1 className="header-title">Past Events</h1>
         </div>
-      </header>
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => navigate('/requestcard')}>
-          Back
+        <button
+          className="modern-button"
+          onClick={() => {
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('userId');
+            sessionStorage.removeItem('user');
+            navigate('/login');
+          }}
+        >
+          <i className="fas fa-sign-out-alt"></i> LogOut
         </button>
-      </div>
-      <h2 className="title">Past Events</h2>
-      <div className="filter-container">
-        <label htmlFor="status-filter" className="filter-label">Filter by Status:</label>
+      </header>
+      
+      <button 
+        className="modern-button" 
+        style={{ margin: '20px 0', alignSelf: 'flex-start' }}
+        onClick={() => navigate('/requestcard')}
+      >
+        <i className="fas fa-arrow-left"></i> Back
+      </button>
+      
+      <div className="modern-filter-container">
+        <label htmlFor="status-filter" className="modern-filter-label">Filter by Status:</label>
         <select
           id="status-filter"
           value={statusFilter}
           onChange={handleStatusFilterChange}
-          className="filter-select"
+          className="modern-filter-select"
         >
           <option value="all">All</option>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
         </select>
       </div>
+      
       {filteredEvents.length === 0 ? (
-        <div className="no-events">
+        <div className="modern-no-events">
           <p>No past events found{statusFilter !== 'all' ? ` with status "${statusFilter}"` : ''}. Create a new event to get started!</p>
           <button
-            className="create-event-button"
+            className="modern-create-event-button"
             onClick={() => navigate('/create-event')}
           >
             Create New Event
           </button>
         </div>
       ) : (
-        <div className="card-grid">
-          {filteredEvents.map((event) => (
-            <div key={event.id} className="card">
-              <div className="card-image-container">
-                <img
-                  src={event.file_url}
-                  alt={event.event_name}
-                  className="card-image"
-                  onError={handleImageError}
-                />
-                {!event.file_url && (
-                  <div className="image-placeholder">
-                    <span>No Image</span>
+        <div className="modern-content">
+          <div className="modern-card-grid">
+            {filteredEvents.map((event) => (
+              <div key={event.id} className="modern-card">
+                <div className="modern-card-image-container">
+                  <img
+                    src={event.file_url}
+                    alt={event.event_name}
+                    className="modern-card-image"
+                    onError={handleImageError}
+                  />
+                  {!event.file_url && (
+                    <div className="modern-image-placeholder">
+                      <i className="fas fa-image" style={{ fontSize: '2rem', marginBottom: '10px' }}></i>
+                      <span>No Image</span>
+                    </div>
+                  )}
+                </div>
+                <div className="modern-card-content">
+                  <h3 className="modern-card-title">{event.event_name}</h3>
+                  <div className="modern-card-details">
+                    <div className="modern-detail-item">
+                      <span className="modern-detail-icon"><i className="fas fa-map-marker-alt"></i></span>
+                      <span>{event.location}</span>
+                    </div>
+                    <div className="modern-detail-item">
+                      <span className="modern-detail-icon"><i className="fas fa-calendar-alt"></i></span>
+                      <span>{formatDate(event.date)}</span>
+                    </div>
+                    <div className="modern-detail-item">
+                      <span className="modern-detail-icon"><i className="fas fa-money-bill-wave"></i></span>
+                      <span>{event.price}</span>
+                    </div>
+                    <div className="modern-detail-item">
+                      <span className="modern-detail-icon"><i className="fas fa-clock"></i></span>
+                      <span>{event.time}</span>
+                    </div>
                   </div>
-                )}
+                </div>
+                <div className="modern-card-footer">
+                  <span className={`modern-status ${event.status.replace(' ', '-').toLowerCase()}`}>
+                    {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                  </span>
+                  <button
+                    className="modern-view-btn"
+                    onClick={() => navigate('/view-past-event', { state: { eventid: event.id } })}
+                  >
+                    View
+                  </button>
+                </div>
               </div>
-              <h3 className="card-title">{event.event_name}</h3>
-              <div className="card-details">
-                <p>
-                  📍 {event.location} <br />
-                  📅 {formatDate(event.date)} <br />
-                  💰 {event.price} <br />
-                  ⏰ {event.time}
-                </p>
-              </div>
-              <div className="card-footer">
-                <span className={`status ${event.status.replace(' ', '-').toLowerCase()}`}>
-                  Status: {event.status}
-                </span>
-                <button
-                  className="view-btn"
-                  onClick={() => navigate('/view-past-event', { state: { eventid: event.id } })}
-                >
-                  View
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

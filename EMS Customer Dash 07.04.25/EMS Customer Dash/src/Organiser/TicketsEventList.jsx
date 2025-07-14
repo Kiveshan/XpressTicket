@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './TicketsEventList.css';
 import './ModernOrganizerStyles.css';
 import { useNavigate } from 'react-router-dom';
-
+ 
 function TicketsEventList() {
   const nav = useNavigate();
   const [events, setEvents] = useState([]);
@@ -44,30 +44,8 @@ function TicketsEventList() {
     fetchEvents();
   }, [nav]);
  
-  if (loading) {
-    return (
-      <div className="modern-container">
-        <div className="modern-loading">
-          <div className="spinner"></div>
-          <p>Loading events...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="modern-container">
-        <div className="modern-error">
-          <i className="fas fa-exclamation-circle"></i>
-          <p>{error}</p>
-          <button className="modern-button" onClick={() => window.location.reload()}>
-            <i className="fas fa-redo"></i> Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
  
   return (
     <div className="modern-container">
@@ -76,14 +54,18 @@ function TicketsEventList() {
           <button className="modern-button" onClick={() => nav('/requestcard')}>
             <i className="fas fa-arrow-left"></i> Back
           </button>
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="header-logo"
+          />
         </div>
         <h1 className="header-title">Event Requests</h1>
         <button className="modern-button" onClick={() => nav('/')}>
           <i className="fas fa-sign-out-alt"></i> Logout
         </button>
       </header>
-      
+
       <div className="modern-content">
         <div className="modern-card">
           <h2 className="modern-section-title">Event Requests</h2>
@@ -99,7 +81,7 @@ function TicketsEventList() {
               <tbody>
                 {events.length === 0 ? (
                   <tr>
-                    <td colSpan="3">No events found</td>
+                    <td colSpan="3" className="text-center">No events found</td>
                   </tr>
                 ) : (
                   events.map((event) => (
@@ -107,7 +89,7 @@ function TicketsEventList() {
                       <td>{event.event_name}</td>
                       <td>
                         <span className="modern-badge">
-                          <i className="fas fa-bell"></i> {event.request_count}
+                          <i className="fas fa-bell"></i> {event.request_count || 0}
                         </span>
                       </td>
                       <td>
