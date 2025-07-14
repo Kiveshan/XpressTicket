@@ -1,0 +1,300 @@
+/* ParchasedTicketModern.css - Clean implementation for the ParchasedTicket component */
+
+/* Main container */
+.modern-dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header */
+.modern-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.modern-logo {
+  height: 50px;
+}
+
+.modern-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.modern-logout-btn {
+  background-color: transparent;
+  color: #4ca1af;
+  border: 1px solid #4ca1af;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.modern-logout-btn:hover {
+  background-color: #4ca1af;
+  color: white;
+}
+
+/* Main content */
+.modern-dashboard-content {
+  padding: 0 20px 5px !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+
+/* Back button */
+.modern-back-button {
+  margin: 5px 0 !important;
+}
+
+.modern-back-btn {
+  background-color: transparent;
+  color: #2c3e50;
+  border: 1px solid #2c3e50;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.modern-back-btn:hover {
+  background-color: #2c3e50;
+  color: white;
+}
+
+/* Page title */
+.modern-dashboard-page-title {
+  margin: 5px 0 !important;
+}
+
+.modern-dashboard-page-title h1 {
+  font-size: 1.3rem;
+  color: #2c3e50;
+  margin: 0 0 3px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modern-dashboard-page-title p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+/* Cards */
+.modern-card {
+  background-color: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden !important;
+  margin-bottom: 8px !important;
+  padding: 0 !important;
+}
+
+/* Event info card */
+.event-info-card {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af) !important;
+  color: white !important;
+  margin-bottom: 8px !important;
+}
+
+.event-info-header {
+  padding: 8px 15px !important;
+}
+
+.event-info-header h2 {
+  margin: 0 0 5px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+
+.event-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Search */
+.search-container {
+  padding: 6px 15px !important;
+}
+
+.search-input-container {
+  position: relative;
+  max-width: 500px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+}
+
+.modern-search-input {
+  width: 100%;
+  padding: 8px 8px 8px 30px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: border-color 0.2s;
+}
+
+.modern-search-input:focus {
+  outline: none;
+  border-color: #4ca1af;
+  box-shadow: 0 0 0 2px rgba(76, 161, 175, 0.2);
+}
+
+/* Table */
+.modern-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.modern-table th {
+  background-color: #f8f9fa !important;
+  color: #495057 !important;
+  font-weight: 600 !important;
+  text-align: left !important;
+  padding: 6px 10px !important;
+  border-bottom: 2px solid #e9ecef !important;
+}
+
+.modern-table td {
+  padding: 6px 10px !important;
+  border-bottom: 1px solid #e9ecef !important;
+  color: #495057 !important;
+}
+
+.modern-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Package badge */
+.package-badge {
+  background-color: #e9f7fe;
+  color: #2c3e50;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Buttons */
+.modern-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modern-btn-primary {
+  background-color: #4ca1af;
+  color: white;
+}
+
+.modern-btn-primary:hover {
+  background-color: #3d8e9c;
+}
+
+.modern-btn-secondary {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.modern-btn-secondary:hover {
+  background-color: #dee2e6;
+}
+
+/* Loading and error states */
+.loading-container, .error-container, .no-tickets-container {
+  padding: 10px !important;
+  text-align: center !important;
+}
+
+.loading-container p {
+  color: #4ca1af;
+  margin: 0;
+}
+
+.error-text {
+  color: #e74c3c;
+  margin-bottom: 8px;
+}
+
+.amount-text {
+  font-weight: 500;
+}
+
+/* Package badge */
+.package-badge {
+  background-color: #e9f7fe;
+  color: #2c3e50;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .modern-table-container {
+    margin: 0 -10px;
+    width: calc(100% + 20px);
+  }
+  
+  .event-meta {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .modern-dashboard-content {
+    padding: 0 10px 10px;
+  }
+}

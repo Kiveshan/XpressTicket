@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import "./ParchasedTicket.css";
-import '../shared/ModernDashboard.css';
-import { FaSignOutAlt, FaArrowLeft, FaTicketAlt, FaCalendarAlt, FaEnvelope, FaSearch } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import './ParchasedTicketModern.css';
+import { FaTicketAlt, FaSearch, FaEye, FaCalendarAlt, FaEnvelope, FaArrowLeft, FaSignOutAlt } from 'react-icons/fa';
 
 // Ticket data will be fetched from the ticket_purchases table
 
@@ -300,30 +299,33 @@ const ParchasedTicket = () => {
       </header>
 
       <main className="modern-dashboard-content">
-        {/* Back Button & Page Title - Combined for less vertical space */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '5px 0' }}>
+        {/* Back Button */}
+        <div className="modern-back-button">
           <button className="modern-back-btn" onClick={() => nav('/customerdash')}>
             <FaArrowLeft /> Back to Dashboard
           </button>
-          <div className="modern-dashboard-page-title" style={{ margin: '0' }}>
-            <h1 style={{ margin: '0' }}><FaTicketAlt /> Your Approved Tickets</h1>
-          </div>
         </div>
 
-        {/* Event Info Card - Compact version */}
-        <div className="modern-card event-info-card" style={{ padding: '10px', maxHeight: '80px' }}>
-          <div className="event-info-header" style={{ padding: '0 10px' }}>
-            <h2 style={{ margin: '0 0 5px 0', fontSize: '1.2rem' }}>{eventData.eventName}</h2>
-            <div className="event-meta" style={{ fontSize: '0.85rem' }}>
+        {/* Page Title */}
+        <div className="modern-dashboard-page-title">
+          <h1><FaTicketAlt /> Your Approved Tickets</h1>
+          <p>View and manage your approved event tickets</p>
+        </div>
+
+        {/* Event Info Card */}
+        <div className="modern-card event-info-card">
+          <div className="event-info-header">
+            <h2>{eventData.eventName}</h2>
+            <div className="event-meta">
               <span><FaCalendarAlt /> {eventData.eventDate}</span>
               <span><FaEnvelope /> {eventData.eventLocation}</span>
             </div>
           </div>
         </div>
 
-        {/* Search Bar - Compact version */}
-        <div className="modern-card" style={{ padding: '8px' }}>
-          <div className="search-container" style={{ padding: '0' }}>
+        {/* Search Bar */}
+        <div className="modern-card">
+          <div className="search-container">
             <div className="search-input-container">
               <FaSearch className="search-icon" />
               <input
@@ -332,74 +334,65 @@ const ParchasedTicket = () => {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="modern-search-input"
-                style={{ padding: '8px 8px 8px 30px' }}
               />
             </div>
           </div>
         </div>
 
-        {/* Tickets List - Compact version */}
-        <div className="modern-card" style={{ padding: '0' }}>
+        {/* Tickets List */}
+        <div className="modern-card">
           {loading ? (
-            <div className="loading-container" style={{ padding: '10px', textAlign: 'center' }}>
-              <p style={{ color: '#4ca1af', margin: '5px 0' }}>Loading ticket information...</p>
+            <div className="loading-container">
+              <p>Loading ticket information...</p>
             </div>
           ) : error ? (
-            <div className="error-container" style={{ padding: '10px', textAlign: 'center' }}>
-              <p style={{ color: '#e74c3c', margin: '5px 0' }}>{error}</p>
+            <div className="error-container">
+              <p className="error-text">{error}</p>
               <button 
                 className="modern-btn modern-btn-primary" 
                 onClick={() => window.location.reload()}
-                style={{ marginTop: '5px' }}
               >
                 Try Again
               </button>
             </div>
           ) : filteredTickets.length === 0 ? (
-            <div className="no-tickets-container" style={{ padding: '10px', textAlign: 'center' }}>
-              <p style={{ margin: '5px 0' }}>No matching tickets found.</p>
+            <div className="no-tickets-container">
+              <p>No matching tickets found.</p>
             </div>
           ) : (
-            <div style={{ margin: '0' }}>
-              <div className="modern-table-container" style={{ margin: '0' }}>
-                <table className="modern-table" style={{ margin: '0' }}>
+            <div>
+              {/* Ticket count removed */}
+              <div className="modern-table-container">
+                <table className="modern-table">
                   <thead>
                     <tr>
-                      <th style={{ padding: '6px 10px' }}>Name</th>
-                      <th style={{ padding: '6px 10px' }}>Email</th>
-                      <th style={{ padding: '6px 10px' }}>Package</th>
-                      <th style={{ padding: '6px 10px' }}>Amount</th>
-                      <th style={{ padding: '6px 10px' }}>Date</th>
-                      <th style={{ padding: '6px 10px' }}>Actions</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Package</th>
+                      <th>Amount</th>
+                      <th>Date</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredTickets.map(ticket => (
                       <tr key={ticket.id}>
-                        <td style={{ padding: '6px 10px' }}>{ticket.name}</td>
-                        <td style={{ padding: '6px 10px' }}>{ticket.email}</td>
-                        <td style={{ padding: '6px 10px' }}>
-                          <span className="package-badge" style={{ 
-                            backgroundColor: '#e9f7fe', 
-                            color: '#2c3e50',
-                            padding: '3px 6px',
-                            borderRadius: '10px',
-                            fontSize: '0.8rem',
-                            fontWeight: '500'
-                          }}>
+                        <td>{ticket.name}</td>
+                        <td>{ticket.email}</td>
+                        <td>
+                          <span className="package-badge">
                             {ticket.packageName || 'Standard'}
                           </span>
                         </td>
-                        <td style={{ padding: '6px 10px' }}>
-                          <span style={{ fontWeight: '500' }}>
+                        <td>
+                          <span className="amount-text">
                             {ticket.amount ? `R ${parseFloat(ticket.amount).toFixed(2)}` : 'N/A'}
                           </span>
                         </td>
-                        <td style={{ padding: '6px 10px' }}>{ticket.date}</td>
-                        <td style={{ padding: '6px 10px' }}>
+                        <td>{ticket.date}</td>
+                        <td>
                           <button
                             className="modern-btn modern-btn-primary"
-                            style={{ padding: '4px 8px', fontSize: '0.8rem' }}
                             onClick={() => nav("/view-more-details", { 
                               state: { 
                                 ticketId: ticket.id,

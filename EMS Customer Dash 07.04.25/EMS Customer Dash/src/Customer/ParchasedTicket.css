@@ -2,25 +2,21 @@
 
 /* Main content container */
 .modern-dashboard-content {
-  padding: 0 25px 25px;
+  padding: 0 25px 15px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 /* Event info card styling */
 .event-info-card {
-  margin-bottom: 0;
+  margin-bottom: 15px;
   background: linear-gradient(135deg, #2c3e50, #4ca1af);
   color: white;
-  max-height: 100px;
 }
 
 .event-info-header {
-  padding: 20px;
+  padding: 12px 20px;
 }
 
 .event-info-header h2 {

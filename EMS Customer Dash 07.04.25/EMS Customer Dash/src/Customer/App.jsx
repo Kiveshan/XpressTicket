@@ -7,6 +7,7 @@ import NewCustomerDash from "./NewCustomerDash";
 import EventMenu from "./EventMenu";
 import ReviewParchase from "./ReviewParchase";
 import ParchasedTicket from "./ParchasedTicket";
+import CompactTicketPage from "./CompactTicketPage";
 import CustomerViewEvent from "./CustomerViewEvent";
 import EventTicketPackage from "./EventTicketPackage";
 import Conference from "./Conference";
@@ -66,7 +67,7 @@ function App() {
           <Route path= "/customerdash" element={<NewCustomerDash />}/>
           <Route path= "/eventmenu" element={<EventMenu />}/>
           <Route path= "/reviewparchase" element={<ReviewParchase />}/>
-          <Route path= "/parchasedticket" element={<ParchasedTicket />}/>
+          <Route path= "/parchasedticket" element={<CompactTicketPage />}/>
           <Route path= "/view-more-details" element={<ViewMoreDetails />}/>
           <Route path= "/ticketdetails" element={<TicketDetails />}/>
           <Route path= "/customerviewevent/:eventId" element={<CustomerViewEvent />}/>

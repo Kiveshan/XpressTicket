@@ -1,0 +1,279 @@
+/* CompactTicketStyles.css - Completely new CSS file for ParchasedTicket page */
+
+/* Reset some basic elements */
+* {
+  box-sizing: border-box;
+}
+
+/* Container styles */
+.compact-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+/* Header styles */
+.compact-header {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  padding: 8px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.compact-logo {
+  height: 35px;
+}
+
+.compact-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.compact-logout-btn {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.compact-logout-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Main content */
+.compact-content {
+  padding: 0 15px 5px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Back button */
+.compact-back-button {
+  margin: 12px 0;
+}
+
+.compact-back-btn {
+  background: transparent;
+  color: #4ca1af;
+  border: 1px solid #4ca1af;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.compact-back-btn:hover {
+  background-color: #f0f8ff;
+}
+
+/* Page title */
+.compact-page-title {
+  margin: 15px 0;
+}
+
+.compact-page-title h1 {
+  font-size: 1.3rem;
+  color: #2c3e50;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compact-page-title p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+/* Cards */
+.compact-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-bottom: 15px;
+  padding: 0;
+}
+
+/* Event info card */
+.compact-event-card {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  color: white;
+  margin-bottom: 15px;
+}
+
+.compact-event-header {
+  padding: 12px 15px;
+}
+
+.compact-event-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.compact-event-meta {
+  display: flex;
+  gap: 15px;
+  margin-top: 5px;
+  font-size: 0.85rem;
+}
+
+.compact-event-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Search */
+.compact-search-container {
+  padding: 12px 15px;
+}
+
+.compact-search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.compact-search-icon {
+  position: absolute;
+  left: 10px;
+  color: #6c757d;
+}
+
+.compact-search-input {
+  width: 100%;
+  padding: 6px 10px 6px 35px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.compact-search-input:focus {
+  outline: none;
+  border-color: #4ca1af;
+  box-shadow: 0 0 0 2px rgba(76, 161, 175, 0.25);
+}
+
+/* Table styles */
+.compact-table-container {
+  overflow-x: auto;
+}
+
+.compact-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.compact-table th {
+  background-color: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.compact-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e9ecef;
+  color: #495057;
+}
+
+.compact-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Button styles */
+.compact-btn {
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.compact-btn-primary {
+  background-color: #4ca1af;
+  color: white;
+}
+
+.compact-btn-primary:hover {
+  background-color: #3a8a98;
+}
+
+/* Package badge */
+.compact-package-badge {
+  background-color: #e9f7fe;
+  color: #2c3e50;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Amount text */
+.compact-amount-text {
+  font-weight: 500;
+}
+
+/* Loading and error states */
+.compact-loading, .compact-error, .compact-no-tickets {
+  padding: 20px;
+  text-align: center;
+}
+
+.compact-loading p {
+  color: #4ca1af;
+  margin: 0;
+}
+
+.compact-error-text {
+  color: #e74c3c;
+  margin-bottom: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .compact-table-container {
+    margin: 0 -15px;
+  }
+  
+  .compact-event-meta {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .compact-header {
+    padding: 8px 10px;
+  }
+  
+  .compact-content {
+    padding: 0 10px 5px;
+  }
+}
