@@ -300,33 +300,30 @@ const ParchasedTicket = () => {
       </header>
 
       <main className="modern-dashboard-content">
-        {/* Back Button */}
-        <div className="modern-back-button">
+        {/* Back Button & Page Title - Combined for less vertical space */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '5px 0' }}>
           <button className="modern-back-btn" onClick={() => nav('/customerdash')}>
             <FaArrowLeft /> Back to Dashboard
           </button>
+          <div className="modern-dashboard-page-title" style={{ margin: '0' }}>
+            <h1 style={{ margin: '0' }}><FaTicketAlt /> Your Approved Tickets</h1>
+          </div>
         </div>
 
-        {/* Page Title */}
-        <div className="modern-dashboard-page-title">
-          <h1><FaTicketAlt /> Your Approved Tickets</h1>
-          <p>View and manage your approved event tickets</p>
-        </div>
-
-        {/* Event Info Card */}
-        <div className="modern-card event-info-card">
-          <div className="event-info-header">
-            <h2>{eventData.eventName}</h2>
-            <div className="event-meta">
+        {/* Event Info Card - Compact version */}
+        <div className="modern-card event-info-card" style={{ padding: '10px', maxHeight: '80px' }}>
+          <div className="event-info-header" style={{ padding: '0 10px' }}>
+            <h2 style={{ margin: '0 0 5px 0', fontSize: '1.2rem' }}>{eventData.eventName}</h2>
+            <div className="event-meta" style={{ fontSize: '0.85rem' }}>
               <span><FaCalendarAlt /> {eventData.eventDate}</span>
               <span><FaEnvelope /> {eventData.eventLocation}</span>
             </div>
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="modern-card">
-          <div className="search-container">
+        {/* Search Bar - Compact version */}
+        <div className="modern-card" style={{ padding: '8px' }}>
+          <div className="search-container" style={{ padding: '0' }}>
             <div className="search-input-container">
               <FaSearch className="search-icon" />
               <input
@@ -335,73 +332,74 @@ const ParchasedTicket = () => {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="modern-search-input"
+                style={{ padding: '8px 8px 8px 30px' }}
               />
             </div>
           </div>
         </div>
 
-        {/* Tickets List */}
-        <div className="modern-card">
+        {/* Tickets List - Compact version */}
+        <div className="modern-card" style={{ padding: '0' }}>
           {loading ? (
-            <div className="loading-container" style={{ padding: '20px', textAlign: 'center' }}>
-              <p style={{ color: '#4ca1af' }}>Loading ticket information...</p>
+            <div className="loading-container" style={{ padding: '10px', textAlign: 'center' }}>
+              <p style={{ color: '#4ca1af', margin: '5px 0' }}>Loading ticket information...</p>
             </div>
           ) : error ? (
-            <div className="error-container" style={{ padding: '20px', textAlign: 'center' }}>
-              <p style={{ color: '#e74c3c' }}>{error}</p>
+            <div className="error-container" style={{ padding: '10px', textAlign: 'center' }}>
+              <p style={{ color: '#e74c3c', margin: '5px 0' }}>{error}</p>
               <button 
                 className="modern-btn modern-btn-primary" 
                 onClick={() => window.location.reload()}
-                style={{ marginTop: '10px' }}
+                style={{ marginTop: '5px' }}
               >
                 Try Again
               </button>
             </div>
           ) : filteredTickets.length === 0 ? (
-            <div className="no-tickets-container" style={{ padding: '20px', textAlign: 'center' }}>
-              <p>No matching tickets found.</p>
+            <div className="no-tickets-container" style={{ padding: '10px', textAlign: 'center' }}>
+              <p style={{ margin: '5px 0' }}>No matching tickets found.</p>
             </div>
           ) : (
-            <div>
-              {/* Ticket count removed */}
-              <div className="modern-table-container">
-                <table className="modern-table">
+            <div style={{ margin: '0' }}>
+              <div className="modern-table-container" style={{ margin: '0' }}>
+                <table className="modern-table" style={{ margin: '0' }}>
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Package</th>
-                      <th>Amount</th>
-                      <th>Date</th>
-                      <th>Actions</th>
+                      <th style={{ padding: '6px 10px' }}>Name</th>
+                      <th style={{ padding: '6px 10px' }}>Email</th>
+                      <th style={{ padding: '6px 10px' }}>Package</th>
+                      <th style={{ padding: '6px 10px' }}>Amount</th>
+                      <th style={{ padding: '6px 10px' }}>Date</th>
+                      <th style={{ padding: '6px 10px' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredTickets.map(ticket => (
                       <tr key={ticket.id}>
-                        <td>{ticket.name}</td>
-                        <td>{ticket.email}</td>
-                        <td>
+                        <td style={{ padding: '6px 10px' }}>{ticket.name}</td>
+                        <td style={{ padding: '6px 10px' }}>{ticket.email}</td>
+                        <td style={{ padding: '6px 10px' }}>
                           <span className="package-badge" style={{ 
                             backgroundColor: '#e9f7fe', 
                             color: '#2c3e50',
-                            padding: '4px 8px',
-                            borderRadius: '12px',
-                            fontSize: '0.85rem',
+                            padding: '3px 6px',
+                            borderRadius: '10px',
+                            fontSize: '0.8rem',
                             fontWeight: '500'
                           }}>
                             {ticket.packageName || 'Standard'}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ padding: '6px 10px' }}>
                           <span style={{ fontWeight: '500' }}>
                             {ticket.amount ? `R ${parseFloat(ticket.amount).toFixed(2)}` : 'N/A'}
                           </span>
                         </td>
-                        <td>{ticket.date}</td>
-                        <td>
+                        <td style={{ padding: '6px 10px' }}>{ticket.date}</td>
+                        <td style={{ padding: '6px 10px' }}>
                           <button
                             className="modern-btn modern-btn-primary"
+                            style={{ padding: '4px 8px', fontSize: '0.8rem' }}
                             onClick={() => nav("/view-more-details", { 
                               state: { 
                                 ticketId: ticket.id,

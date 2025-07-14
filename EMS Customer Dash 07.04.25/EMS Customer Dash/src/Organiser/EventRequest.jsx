@@ -1,10 +1,10 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
 import "./EventRequest.css"
 import { useNavigate } from "react-router-dom"
 import { ClipLoader } from "react-spinners"
+import logo from "/XPRESS TICKETS LOGO2.png"
 
 const EventRequest = () => {
   const nav = useNavigate()
@@ -14,36 +14,44 @@ const EventRequest = () => {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState("all")
 
-  // Helper function to format date without timezone issues
- const formatDate = (dateString) => {
-  if (!dateString) return "Date not specified";
-
-  try {
-    console.log("Received dateString:", dateString); // Debug log
-    // Split and validate YYYY-MM-DD format
-    const [year, month, day] = dateString.split('-');
-    if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
-      throw new Error("Invalid date format");
-    }
-
-    // Create date without timezone offset
-    const date = new Date(`${year}-${month}-${day}`);
-    if (isNaN(date.getTime())) {
-      throw new Error("Invalid date");
-    }
-
-    // Format without timezone adjustment
-    const options = {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    };
-    return date.toLocaleDateString("en-US", options);
-  } catch (error) {
-    console.error("Date formatting error:", error);
-    return "Date not specified";
+  const handleLogout = () => {
+    sessionStorage.removeItem("token")
+    sessionStorage.removeItem("userId")
+    sessionStorage.removeItem("user")
+    nav("/login")
   }
-};
+
+  // Helper function to format date without timezone issues
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date not specified";
+
+    try {
+      console.log("Received dateString:", dateString); // Debug log
+      // Split and validate YYYY-MM-DD format
+      const [year, month, day] = dateString.split('-');
+      if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
+        throw new Error("Invalid date format");
+      }
+
+      // Create date without timezone offset
+      const date = new Date(`${year}-${month}-${day}`);
+      if (isNaN(date.getTime())) {
+        throw new Error("Invalid date");
+      }
+
+      // Format without timezone adjustment
+      const options = {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      };
+      return date.toLocaleDateString("en-US", options);
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "Date not specified";
+    }
+  };
+
   // Helper function to extract lowest price from packages array
   const extractLowestPrice = (packages) => {
     if (!packages || !Array.isArray(packages) || packages.length === 0) {
@@ -78,121 +86,111 @@ const EventRequest = () => {
     }
   }
 
-  useEffect(() => {
-    let isMounted = true
+  const fetchEvents = async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-    const fetchEvents = async () => {
-      if (!isMounted) return
+      const token = sessionStorage.getItem("token")
+      let userId = sessionStorage.getItem("userId")
 
-      try {
-        setLoading(true)
-        setError(null)
-
-        const token = sessionStorage.getItem("token")
-        let userId = sessionStorage.getItem("userId")
-
-        if (!userId) {
-          const userData = sessionStorage.getItem("user")
-          if (userData) {
-            try {
-              const user = JSON.parse(userData)
-              userId = user.id
-              if (userId) {
-                sessionStorage.setItem("userId", userId)
-              }
-            } catch (e) {
-              console.error("Error parsing user data:", e)
+      if (!userId) {
+        const userData = sessionStorage.getItem("user")
+        if (userData) {
+          try {
+            const user = JSON.parse(userData)
+            userId = user.id
+            if (userId) {
+              sessionStorage.setItem("userId", userId)
             }
+          } catch (e) {
+            console.error("Error parsing user data:", e)
           }
-        }
-
-        if (!token || !userId) {
-          console.warn("Authentication required - No token or user ID found")
-          sessionStorage.removeItem("token")
-          sessionStorage.removeItem("userId")
-          sessionStorage.removeItem("user")
-          nav("/login")
-          return
-        }
-
-        let tokenPayload
-        try {
-          const tokenParts = token.split(".")
-          if (tokenParts.length !== 3) {
-            throw new Error("Invalid token format")
-          }
-          tokenPayload = JSON.parse(atob(tokenParts[1]))
-          const now = Math.floor(Date.now() / 1000)
-          if (tokenPayload.exp && tokenPayload.exp < now) {
-            throw new Error("Token expired")
-          }
-        } catch (tokenError) {
-          console.error("Token validation error:", tokenError)
-          sessionStorage.removeItem("token")
-          sessionStorage.removeItem("userId")
-          sessionStorage.removeItem("user")
-          nav("/login")
-          return
-        }
-
-        const apiUrl = "http://localhost:5000/api/events"
-        const response = await fetch(apiUrl, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          credentials: "include",
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          if (response.status === 401 || response.status === 403) {
-            sessionStorage.removeItem("token")
-            sessionStorage.removeItem("userId")
-            sessionStorage.removeItem("user")
-            nav("/login")
-            return
-          }
-          throw new Error(errorData.message || `Server error: ${response.status} ${response.statusText}`)
-        }
-
-        if (!isMounted) return
-
-        const data = await response.json()
-        const eventsData = Array.isArray(data) ? data : []
-        const eventsWithFormattedData = eventsData.map((event) => ({
-          id: event.id || event.event_id,
-          eventid: event.id || event.event_id,
-          event_name: event.name || "Unnamed Event",
-          location: event.location || "Location not specified",
-          date: event.start_date || "Date not specified", // Use start_date
-          time: event.start_time || "Time not specified", // Use start_time
-          price: extractLowestPrice(event.packages), // Extract lowest price
-          status: (event.status || "Pending").toLowerCase(),
-          file_url: event.coverimage || "/default-event-image.jpg",
-          description: event.description || "No description available",
-        }))
-
-        if (isMounted) {
-          setEvents(eventsWithFormattedData)
-          setFilteredEvents(eventsWithFormattedData)
-          setError(null)
-        }
-      } catch (err) {
-        console.error("Fetch error:", err)
-        if (isMounted) {
-          setError(err.message || "Failed to load events. Please try again later.")
-          setEvents([])
-          setFilteredEvents([])
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
         }
       }
+
+      if (!token || !userId) {
+        console.warn("Authentication required - No token or user ID found")
+        sessionStorage.removeItem("token")
+        sessionStorage.removeItem("userId")
+        sessionStorage.removeItem("user")
+        nav("/login")
+        return
+      }
+
+      let tokenPayload
+      try {
+        const tokenParts = token.split(".")
+        if (tokenParts.length !== 3) {
+          throw new Error("Invalid token format")
+        }
+        tokenPayload = JSON.parse(atob(tokenParts[1]))
+        const now = Math.floor(Date.now() / 1000)
+        if (tokenPayload.exp && tokenPayload.exp < now) {
+          throw new Error("Token expired")
+        }
+      } catch (tokenError) {
+        console.error("Token validation error:", tokenError)
+        sessionStorage.removeItem("token")
+        sessionStorage.removeItem("userId")
+        sessionStorage.removeItem("user")
+        nav("/login")
+        return
+      }
+
+      const apiUrl = "http://localhost:5000/api/events"
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        if (response.status === 401 || response.status === 403) {
+          sessionStorage.removeItem("token")
+          sessionStorage.removeItem("userId")
+          sessionStorage.removeItem("user")
+          nav("/login")
+          return
+        }
+        throw new Error(errorData.message || `Server error: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      const eventsData = Array.isArray(data) ? data : []
+      const eventsWithFormattedData = eventsData.map((event) => ({
+        id: event.id || event.event_id,
+        eventid: event.id || event.event_id,
+        event_name: event.name || "Unnamed Event",
+        location: event.location || "Location not specified",
+        date: event.start_date || "Date not specified",
+        time: event.start_time || "Time not specified",
+        price: extractLowestPrice(event.packages),
+        status: (event.status || "Pending").toLowerCase(),
+        file_url: event.coverimage || "/default-event-image.jpg",
+        description: event.description || "No description available",
+      }))
+
+      setEvents(eventsWithFormattedData)
+      setFilteredEvents(eventsWithFormattedData)
+      setError(null)
+    } catch (err) {
+      console.error("Fetch error:", err)
+      setError(err.message || "Failed to load events. Please try again later.")
+      setEvents([])
+      setFilteredEvents([])
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    let isMounted = true
 
     fetchEvents()
     const interval = setInterval(fetchEvents, 10 * 60 * 1000)
@@ -408,4 +406,3 @@ const EventRequest = () => {
 }
 
 export default EventRequest
-

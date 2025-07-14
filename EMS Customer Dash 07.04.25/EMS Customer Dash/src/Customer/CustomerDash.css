@@ -136,3 +136,34 @@ align-items: center;
 margin-top: -30px;
 width: 100px;
    }
+
+/* Compact card styles with extremely specific selectors to override ModernDashboard.css */
+.modern-dashboard-container .modern-main-content .modern-card-grid .modern-card.compact-card {
+  max-height: 200px !important;
+  height: auto !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden !important;
+}
+
+.modern-dashboard-container .modern-main-content .modern-card-grid .modern-card.compact-card .modern-card-image-container {
+  height: 60px !important;
+  max-height: 60px !important;
+  min-height: 60px !important;
+}
+
+.modern-dashboard-container .modern-main-content .modern-card-grid .modern-card.compact-card .modern-card-content {
+  padding: 8px !important;
+  max-height: 80px !important;
+}
+
+.modern-dashboard-container .modern-main-content .modern-card-grid .modern-card.compact-card .modern-card-title {
+  margin-bottom: 2px !important;
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+}
+
+.modern-dashboard-container .modern-main-content .modern-card-grid .modern-card.compact-card .modern-card-description {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  margin-bottom: 0 !important;
+}

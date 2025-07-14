@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import "./EventMenu.css";
+import "../shared/ModernDashboard.css";
 import { useNavigate } from 'react-router-dom';
-import { FaSearch } from 'react-icons/fa';
+import { FaSearch, FaSignOutAlt, FaArrowLeft } from 'react-icons/fa';
+import EventImage from '../utils/EventImage';
 import { fixS3ImageUrl, DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
 
 function EventMenu() {
@@ -53,7 +55,7 @@ function EventMenu() {
     }
     
     setFilteredEvents(filtered);
-  }, [events, searchQuery, selectedEventType, selectedCity, dateFilter]);
+  }, [events, searchQuery, selectedEventType, dateFilter]);
 
   useEffect(() => {
     // Fetch approved events from the API
@@ -80,8 +82,20 @@ function EventMenu() {
         
         const data = await response.json();
         console.log('Fetched events:', data);
-        setEvents(data);
-        setFilteredEvents(data);
+        
+        // Add debugging for image fields
+        const eventsWithImageInfo = data.map(event => {
+          console.log(`Event ${event.id} (${event.name}) image fields:`, {
+            image: event.image,
+            coverimage: event.coverimage,
+            imageType: typeof event.image,
+            coverimageType: typeof event.coverimage
+          });
+          return event;
+        });
+        
+        setEvents(eventsWithImageInfo);
+        setFilteredEvents(eventsWithImageInfo);
       } catch (err) {
         console.error('Error fetching events:', err);
         setError(err.message);
@@ -112,23 +126,25 @@ function EventMenu() {
   }, []);
 
   return (
-    <div className="dashboard-container">
-      <header className="dashboard-header">
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
-          className="dashboard-logo"
+          className="modern-logo"
         />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={()=> nav('/')}>LogOut </button>
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
       
-    
       {/* Back Button */}
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/customerdash")}>
-          Back
+      <div className="modern-back-button-container">
+        <button className="modern-back-btn" onClick={() => nav("/customerdash")}>
+          <FaArrowLeft /> Back
         </button>
       </div>
 
@@ -238,19 +254,21 @@ function EventMenu() {
                 onClick={() => nav(event.link)}
               >
                 <div className="event-image-container">
-                  <img 
-                    src={fixS3ImageUrl(event.image)}
+                  <EventImage 
+                    image={event.image}
+                    coverimage={event.coverimage}
                     alt={event.name} 
                     className="event-image" 
-                    onError={(e) => {
-                      // Only change source once to prevent infinite loop
-                      if (!e.target.src.includes('data:image')) {
-                        console.log('Image failed to load:', e.target.src);
-                        e.target.onerror = null;
-                        e.target.src = DEFAULT_IMAGE_DATA_URI;
-                      }
-                    }}
                   />
+                  {/* Debug info */}
+                  <div style={{ display: 'none' }}>
+                    {console.log('Event image data:', { 
+                      id: event.id,
+                      name: event.name,
+                      image: event.image, 
+                      coverimage: event.coverimage 
+                    })}
+                  </div>
                 </div>
                 <div className="event-details">
                   <h3 className='eventname' style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>

@@ -2,7 +2,7 @@ import React from 'react';
 import "./Menupage.css"
 import { useNavigate } from 'react-router-dom';
 
-function Manupage (){
+function Menupage (){
  const nav= useNavigate();
     return (
         <div className="dashboard-container">
@@ -17,17 +17,59 @@ function Manupage (){
           </div>
         </header>
        
-        <main className="dashboard-main">
-          <div className="card" onClick={()=> nav("/organiser-dash")} >
-            <img src="/Organiser.jpg" alt="Organiser" />
+        <main className="dashboard-main" style={{ gap: '100px' }}>
+          <div 
+            className="card" 
+            onClick={()=> nav("/organiser-dash")} 
+            style={{
+              height: '200px',
+              width: '200px',
+              padding: '10px',
+              border: '2px solid #20c997',
+              borderRadius: '8px',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+              marginTop: '-110px'
+            }}
+          >
+            <img 
+              src="/Organiser.jpg" 
+              alt="Organiser" 
+              style={{
+                height: '120px',
+                width: '170px',
+                maxWidth: '170px',
+                marginBottom: '3px'
+              }}
+            />
             <p>Organiser</p>
           </div>
-          <div className="card" onClick={()=> nav("/customerdash")}  >
-            <img src="/Customer.jpg" alt="Customer" />
+          <div 
+            className="card" 
+            onClick={()=> nav("/customerdash")}  
+            style={{
+              height: '200px',
+              width: '200px',
+              padding: '10px',
+              border: '2px solid #20c997',
+              borderRadius: '8px',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+              marginTop: '-110px'
+            }}
+          >
+            <img 
+              src="/Customer.jpg" 
+              alt="Customer" 
+              style={{
+                height: '120px',
+                width: '170px',
+                maxWidth: '170px',
+                marginBottom: '3px'
+              }}
+            />
             <p>Customer</p>
           </div>
         </main>
       </div>
     );
   };
-export default Manupage;
+export default Menupage;

@@ -1,79 +1,98 @@
-.tickets-request-container {
-  font-family: Arial, sans-serif;
-  padding: 0px 2px;
-  background-color: #f9f9f9;
-  min-height: 100vh;
-  margin-top: -20px;
-}
- 
-.tickets-request-title {
-  text-align: center;
-  font-size: 24px;
-  font-weight: bold;
+/* Modern card header with flex layout for title and button */
+.modern-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 15px;
   margin-bottom: 20px;
+  border-bottom: 1px solid #e9ecef;
 }
- 
-.tickets-request-table {
-  width: 70%;
-  border-collapse: collapse;
-  background-color: white;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-left: 212px;
+
+/* Action buttons container */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
- 
-.tickets-request-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
+
+/* Button variants */
+.primary-button {
+  background-color: #4ca1af;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
 }
- 
-.tickets-request-table th {
-  background-color: #20c997;
-  color: rgb(0, 0, 0);
-  font-weight: bold;
-  padding: 9px 8px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
+
+.primary-button:hover {
+  background-color: #2c3e50;
+  transform: translateY(-2px);
 }
- 
-.tickets-request-table tr:hover {
-  background-color: #dbeee9;
+
+.info-button {
+  background-color: #17a2b8;
+  color: white;
 }
- 
-.view-proof-button {
-  padding: 8px 12px;
+
+.info-button:hover {
+  background-color: #138496;
+}
+
+.success-button {
   background-color: #28a745;
   color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  margin-right: 8px;
 }
- 
-.view-proof-button:hover {
+
+.success-button:hover {
   background-color: #218838;
 }
- 
-.button-container {
-  margin-bottom: 20px;
-  text-align: center;
-}
- 
-.download-button {
-  padding: 10px 20px;
-  background-color: #007bff;
+
+.danger-button {
+  background-color: #dc3545;
   color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
 }
- 
-.download-button:hover {
-  background-color: #0056b3;
+
+.danger-button:hover {
+  background-color: #c82333;
 }
- 
+
+/* Ticket count badge */
+.modern-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ff9800;
+  color: #000000;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.modern-badge i {
+  color: #000000;
+  margin-right: 8px;
+  font-size: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .modern-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .action-buttons .modern-button {
+    width: 100%;
+    margin-bottom: 5px;
+  }
+}
