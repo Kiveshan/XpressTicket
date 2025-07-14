@@ -7,21 +7,37 @@
   padding: 0;
   display: flex;
   flex-direction: column;
+  padding-top: 70px; /* Added to accommodate the fixed header */
 }
 
-/* Header Styles */
-.dashboard-header1 {
+/* Modern Header with Gradient */
+.modern-header {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  color: white;
+  padding: 15px 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  background: #f8f8f8;
-  border-bottom: 1px solid #ddd;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
 }
 
-.dashboard-logo1 {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* Space between Back button and logo */
+  min-width: 0; /* Prevent overflow issues */
+  flex-wrap: nowrap; /* Ensure items stay in a single line */
+}
+
+.header-logo {
   height: 50px;
-  object-fit: contain;
+  object-fit: contain; /* Ensure the logo fits without distortion */
+  position: relative;
 }
 
 .profile-section {
@@ -57,6 +73,7 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  top: 50px;
 }
 
 .backbutton20:hover {
@@ -397,11 +414,20 @@
     font-size: 20px;
   }
 
-  .dashboard-logo1 {
+  .header-logo {
     height: 40px;
   }
 
   .rehost-form {
     padding: 1rem;
+  }
+
+  .header-left {
+    flex-direction: row; /* Ensure horizontal layout on small screens */
+    gap: 10px; /* Reduced gap for smaller screens */
+  }
+
+  .backbutton20 {
+    padding: 6px 12px; /* Slightly smaller padding for mobile */
   }
 }

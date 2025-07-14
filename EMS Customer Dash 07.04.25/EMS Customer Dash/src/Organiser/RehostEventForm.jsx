@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipLoader } from "react-spinners";
 import './RehostEventForm.css';
- 
+
 const RehostEventForm = () => {
   const navigate = useNavigate();
   const [pastEvents, setPastEvents] = useState([]);
@@ -10,14 +10,14 @@ const RehostEventForm = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
- 
+
   // Helper function to format date without timezone issues
   const formatDate = (dateString) => {
     if (!dateString) {
       console.warn("Date string is empty or null");
       return "Date not specified";
     }
- 
+
     try {
       console.log("Received dateString:", dateString); // Debug log
       // Split and validate YYYY-MM-DD format
@@ -25,13 +25,13 @@ const RehostEventForm = () => {
       if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
         throw new Error("Invalid date format");
       }
- 
+
       // Create date without timezone offset
       const date = new Date(`${year}-${month}-${day}`);
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date");
       }
- 
+
       // Format without timezone adjustment
       const options = {
         year: "numeric",
@@ -44,14 +44,14 @@ const RehostEventForm = () => {
       return "Date not specified";
     }
   };
- 
+
   // Helper function to extract lowest price from packages array
   const extractLowestPrice = (packages) => {
     if (!packages || !Array.isArray(packages) || packages.length === 0) {
       console.warn("No valid packages found");
       return "N/A";
     }
- 
+
     try {
       // Parse packages if they are JSON strings and extract pricing
       const prices = packages
@@ -66,12 +66,12 @@ const RehostEventForm = () => {
           }
         })
         .filter(price => price !== null && !isNaN(price));
- 
+
       if (prices.length === 0) {
         console.warn("No valid prices found in packages");
         return "N/A";
       }
- 
+
       // Find the lowest price
       const lowestPrice = Math.min(...prices);
       return `R ${lowestPrice.toFixed(2)}`;
@@ -80,20 +80,20 @@ const RehostEventForm = () => {
       return "N/A";
     }
   };
- 
+
   useEffect(() => {
     let isMounted = true;
- 
+
     const fetchPastEvents = async () => {
       if (!isMounted) return;
- 
+
       try {
         setLoading(true);
         setError(null);
- 
+
         const token = sessionStorage.getItem('token');
         let userId = sessionStorage.getItem('userId');
- 
+
         if (!userId) {
           const userData = sessionStorage.getItem('user');
           if (userData) {
@@ -108,7 +108,7 @@ const RehostEventForm = () => {
             }
           }
         }
- 
+
         if (!token || !userId) {
           console.warn('Authentication required - No token or user ID found');
           sessionStorage.removeItem('token');
@@ -117,7 +117,7 @@ const RehostEventForm = () => {
           navigate('/login');
           return;
         }
- 
+
         try {
           const tokenParts = token.split('.');
           if (tokenParts.length !== 3) {
@@ -136,7 +136,7 @@ const RehostEventForm = () => {
           navigate('/login');
           return;
         }
- 
+
         const apiUrl = 'http://localhost:5000/api/events-past';
         console.log('Making request to:', apiUrl);
         console.log('Request headers:', {
@@ -153,10 +153,10 @@ const RehostEventForm = () => {
           },
           credentials: 'include',
         });
- 
+
         console.log('Response status:', response.status, response.statusText);
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
- 
+
         if (!response.ok) {
           let errorData = {};
           try {
@@ -179,7 +179,7 @@ const RehostEventForm = () => {
           }
           throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`);
         }
- 
+
         let data = [];
         try {
           data = await response.json();
@@ -188,9 +188,9 @@ const RehostEventForm = () => {
           console.error('Failed to parse response JSON:', e);
           data = [];
         }
- 
+
         const eventsData = Array.isArray(data) ? data : [];
- 
+
         const eventsWithFormattedData = eventsData.map((event) => {
           console.log('Processing event:', event); // Log each event for debugging
           return {
@@ -206,7 +206,7 @@ const RehostEventForm = () => {
             description: event.description || 'No description available',
           };
         });
- 
+
         if (isMounted) {
           setPastEvents(eventsWithFormattedData);
           setFilteredEvents(eventsWithFormattedData);
@@ -225,16 +225,16 @@ const RehostEventForm = () => {
         }
       }
     };
- 
+
     fetchPastEvents();
     const interval = setInterval(fetchPastEvents, 10 * 60 * 1000);
- 
+
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
   }, [navigate]);
- 
+
   useEffect(() => {
     if (statusFilter === 'all') {
       setFilteredEvents(pastEvents);
@@ -242,11 +242,11 @@ const RehostEventForm = () => {
       setFilteredEvents(pastEvents.filter((event) => event.status === statusFilter));
     }
   }, [statusFilter, pastEvents]);
- 
+
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
   };
- 
+
   const handleImageError = (e) => {
     if (e.target.src !== '/default-event-image.jpg') {
       console.warn(`Failed to load image: ${e.target.src}`);
@@ -254,22 +254,19 @@ const RehostEventForm = () => {
       e.target.classList.add('image-error');
     }
   };
- 
+
   if (loading) {
     return (
       <div className="container12">
-        <header className="dashboard-header1">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="dashboard-logo1"
-          />
+        <header className="modern-header">
+          <div className="header-left">
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="header-logo"
+            />
+          </div>
         </header>
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => navigate('/organiser-dash')}>
-            Back
-          </button>
-        </div>
         <div className="loading-container">
           <ClipLoader color="#123abc" loading={loading} size={50} />
           <p className="loading">Loading past events...</p>
@@ -277,18 +274,23 @@ const RehostEventForm = () => {
       </div>
     );
   }
- 
+
   if (error) {
     const isAuthError = error.includes('log in') || error.includes('expired');
- 
+
     return (
       <div className="container12">
-        <header className="dashboard-header1">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="dashboard-logo1"
-          />
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="backbutton20" onClick={() => (isAuthError ? navigate('/login') : navigate('/organiser-dash'))}>
+              {isAuthError ? 'Go to Login' : 'Back'}
+            </button>
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="header-logo"
+            />
+          </div>
           <div className="profile-section">
             {!isAuthError && (
               <button
@@ -346,15 +348,20 @@ const RehostEventForm = () => {
       </div>
     );
   }
- 
+
   return (
     <div className="container12">
-      <header className="dashboard-header1">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-        />
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => navigate('/organiser-dash')}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="header-logo"
+          />
+        </div>
         <div className="profile-section">
           <button
             className="backbutton22"
@@ -369,11 +376,6 @@ const RehostEventForm = () => {
           </button>
         </div>
       </header>
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => navigate('/organiser-dash')}>
-          Back
-        </button>
-      </div>
       <h2 className="title">Past Events</h2>
       <div className="filter-container">
         <label htmlFor="status-filter" className="filter-label">Filter by Status:</label>
@@ -442,6 +444,5 @@ const RehostEventForm = () => {
     </div>
   );
 };
- 
+
 export default RehostEventForm;
- 

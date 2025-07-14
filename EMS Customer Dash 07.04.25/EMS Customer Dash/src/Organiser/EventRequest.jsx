@@ -311,6 +311,8 @@ const EventRequest = () => {
         </button>
       </header>
 
+      <br></br>
+      <br></br>
       <h2 className="title">Event Request</h2>
 
       <div className="filter-container">
