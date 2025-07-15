@@ -21,33 +21,31 @@ const EventRequest = () => {
     nav("/login")
   }
 
-  // Helper function to format date without timezone issues
+  // Helper function to format date as DD/MM/YYYY
   const formatDate = (dateString) => {
     if (!dateString) return "Date not specified";
 
     try {
-      console.log("Received dateString:", dateString); // Debug log
+      console.log("EventRequest formatDate input:", dateString);
       // Split and validate YYYY-MM-DD format
       const [year, month, day] = dateString.split('-');
       if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
         throw new Error("Invalid date format");
       }
 
-      // Create date without timezone offset
+      // Create date in local timezone (SAST)
       const date = new Date(`${year}-${month}-${day}`);
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date");
       }
 
-      // Format without timezone adjustment
-      const options = {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      };
-      return date.toLocaleDateString("en-US", options);
+      // Format as DD/MM/YYYY
+      const dayFormatted = String(date.getDate()).padStart(2, '0');
+      const monthFormatted = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+      const yearFormatted = date.getFullYear();
+      return `${dayFormatted}/${monthFormatted}/${yearFormatted}`;
     } catch (error) {
-      console.error("Date formatting error:", error);
+      console.error("EventRequest date formatting error:", error, "Input:", dateString);
       return "Date not specified";
     }
   };
@@ -59,11 +57,9 @@ const EventRequest = () => {
     }
 
     try {
-      // Parse packages if they are JSON strings and extract pricing
       const prices = packages
         .map(pkg => {
           try {
-            // Handle both JSON string and object cases
             const parsedPkg = typeof pkg === 'string' ? JSON.parse(pkg) : pkg
             return parsedPkg.pricing ? parseFloat(parsedPkg.pricing.replace(/[^0-9.]/g, '')) : null
           } catch (e) {
@@ -77,7 +73,6 @@ const EventRequest = () => {
         return "N/A"
       }
 
-      // Find the lowest price
       const lowestPrice = Math.min(...prices)
       return `R ${lowestPrice.toFixed(2)}`
     } catch (error) {
@@ -162,6 +157,7 @@ const EventRequest = () => {
       }
 
       const data = await response.json()
+      console.log("EventRequest fetched events:", data);
       const eventsData = Array.isArray(data) ? data : []
       const eventsWithFormattedData = eventsData.map((event) => ({
         id: event.id || event.event_id,
@@ -231,7 +227,7 @@ const EventRequest = () => {
             </button>
             <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
-          <h1 className="header-title"></h1> {/* Empty title to maintain layout */}
+          <h1 className="header-title"></h1>
           <button className="modern-button" onClick={handleLogout}>
             <span className="button-icon">↩</span> Logout
           </button>
@@ -255,7 +251,7 @@ const EventRequest = () => {
             </button>
             <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
-          <h1 className="header-title"></h1> {/* Empty title to maintain layout */}
+          <h1 className="header-title"></h1>
           {!isAuthError && (
             <button className="modern-button" onClick={handleLogout}>
               <span className="button-icon">↩</span> Logout
@@ -305,12 +301,13 @@ const EventRequest = () => {
           </button>
           <img src={logo} alt="EventXpress Logo" className="header-logo" />
         </div>
-        <h1 className="header-title"></h1> {/* Empty title to maintain layout */}
+        <h1 className="header-title"></h1>
         <button className="modern-button" onClick={handleLogout}>
           <span className="button-icon">↩</span> Logout
         </button>
       </header>
 
+      <br></br>
       <br></br>
       <br></br>
       <h2 className="title">Event Request</h2>
