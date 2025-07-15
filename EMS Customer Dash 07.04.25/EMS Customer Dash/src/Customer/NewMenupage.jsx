@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Create a new component with inline styles only
 function NewMenupage() {
   const nav = useNavigate();
 
@@ -82,22 +81,17 @@ function NewMenupage() {
 
   return (
     <div style={containerStyle}>
-      <header style={headerStyle}>
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          style={logoStyle}
-        />
-        <div style={profileSectionStyle}>
-          <button 
-            style={logoutButtonStyle} 
-            onClick={() => nav('/')}
-          >
-            LogOut
-          </button>
-        </div>
-      </header>
-      
+      <header className="dashboard-header">
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="dashboard-logo"
+          />
+          <div className="profile-section">
+              <button className="backbutton22" onClick={()=> nav('/')}>LogOut </button>
+          </div>
+        </header>
+
       <main style={mainStyle}>
         <div 
           style={cardStyle} 

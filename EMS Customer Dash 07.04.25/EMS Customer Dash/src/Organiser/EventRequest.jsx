@@ -21,33 +21,31 @@ const EventRequest = () => {
     nav("/login")
   }
 
-  // Helper function to format date without timezone issues
+  // Helper function to format date as DD/MM/YYYY
   const formatDate = (dateString) => {
     if (!dateString) return "Date not specified";
 
     try {
-      console.log("Received dateString:", dateString); // Debug log
+      console.log("EventRequest formatDate input:", dateString);
       // Split and validate YYYY-MM-DD format
       const [year, month, day] = dateString.split('-');
       if (!year || !month || !day || year.length !== 4 || isNaN(Date.parse(`${year}-${month}-${day}`))) {
         throw new Error("Invalid date format");
       }
 
-      // Create date without timezone offset
+      // Create date in local timezone (SAST)
       const date = new Date(`${year}-${month}-${day}`);
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date");
       }
 
-      // Format without timezone adjustment
-      const options = {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      };
-      return date.toLocaleDateString("en-US", options);
+      // Format as DD/MM/YYYY
+      const dayFormatted = String(date.getDate()).padStart(2, '0');
+      const monthFormatted = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+      const yearFormatted = date.getFullYear();
+      return `${dayFormatted}/${monthFormatted}/${yearFormatted}`;
     } catch (error) {
-      console.error("Date formatting error:", error);
+      console.error("EventRequest date formatting error:", error, "Input:", dateString);
       return "Date not specified";
     }
   };
@@ -59,11 +57,9 @@ const EventRequest = () => {
     }
 
     try {
-      // Parse packages if they are JSON strings and extract pricing
       const prices = packages
         .map(pkg => {
           try {
-            // Handle both JSON string and object cases
             const parsedPkg = typeof pkg === 'string' ? JSON.parse(pkg) : pkg
             return parsedPkg.pricing ? parseFloat(parsedPkg.pricing.replace(/[^0-9.]/g, '')) : null
           } catch (e) {
@@ -77,7 +73,6 @@ const EventRequest = () => {
         return "N/A"
       }
 
-      // Find the lowest price
       const lowestPrice = Math.min(...prices)
       return `R ${lowestPrice.toFixed(2)}`
     } catch (error) {
@@ -162,6 +157,7 @@ const EventRequest = () => {
       }
 
       const data = await response.json()
+      console.log("EventRequest fetched events:", data);
       const eventsData = Array.isArray(data) ? data : []
       const eventsWithFormattedData = eventsData.map((event) => ({
         id: event.id || event.event_id,
@@ -223,28 +219,19 @@ const EventRequest = () => {
 
   if (loading) {
     return (
-      <div className="container12">
-        <header className="dashboard-header1">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
-          <div className="profile-section">
-            <button
-              className="backbutton22"
-              onClick={() => {
-                sessionStorage.removeItem("token")
-                sessionStorage.removeItem("userId")
-                sessionStorage.removeItem("user")
-                nav("/login")
-              }}
-            >
-              LogOut
+      <div className="modern-container">
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="modern-button" onClick={() => nav("/requestcard")}>
+              <span className="button-icon">←</span> Back
             </button>
+            <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
-        </header>
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => nav("/requestcard")}>
-            Back
+          <h1 className="header-title"></h1>
+          <button className="modern-button" onClick={handleLogout}>
+            <span className="button-icon">↩</span> Logout
           </button>
-        </div>
+        </header>
         <div className="loading-container">
           <ClipLoader color="#123abc" loading={loading} size={50} />
           <p className="loading">Loading events...</p>
@@ -256,30 +243,21 @@ const EventRequest = () => {
   if (error) {
     const isAuthError = error.includes("log in") || error.includes("expired")
     return (
-      <div className="container12">
-        <header className="dashboard-header1">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
-          <div className="profile-section">
-            {!isAuthError && (
-              <button
-                className="backbutton22"
-                onClick={() => {
-                  sessionStorage.removeItem("token")
-                  sessionStorage.removeItem("userId")
-                  sessionStorage.removeItem("user")
-                  nav("/login")
-                }}
-              >
-                LogOut
-              </button>
-            )}
+      <div className="modern-container">
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="modern-button" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
+              <span className="button-icon">←</span> {isAuthError ? "Go to Login" : "Back"}
+            </button>
+            <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
+          <h1 className="header-title"></h1>
+          {!isAuthError && (
+            <button className="modern-button" onClick={handleLogout}>
+              <span className="button-icon">↩</span> Logout
+            </button>
+          )}
         </header>
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
-            {isAuthError ? "Go to Login" : "Back"}
-          </button>
-        </div>
         <div className="error-container">
           <div className="error-icon">⚠️</div>
           <h3>{isAuthError ? "Authentication Required" : "Error Loading Events"}</h3>
@@ -287,7 +265,7 @@ const EventRequest = () => {
           <div className="action-buttons">
             {isAuthError ? (
               <button
-                className="login-button"
+                className="primary-button"
                 onClick={() => {
                   sessionStorage.clear()
                   nav("/login")
@@ -297,7 +275,7 @@ const EventRequest = () => {
               </button>
             ) : (
               <button
-                className="retry-button"
+                className="primary-button"
                 onClick={() => {
                   setError(null)
                   setLoading(true)
@@ -315,30 +293,23 @@ const EventRequest = () => {
   }
 
   return (
-    <div className="container12">
-      <header className="dashboard-header1">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo1" />
-        <div className="profile-section">
-          <button
-            className="backbutton22"
-            onClick={() => {
-              sessionStorage.removeItem("token")
-              sessionStorage.removeItem("userId")
-              sessionStorage.removeItem("user")
-              nav("/login")
-            }}
-          >
-            LogOut
+    <div className="modern-container">
+      <header className="modern-header">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav("/requestcard")}>
+            <span className="button-icon">←</span> Back
           </button>
+          <img src={logo} alt="EventXpress Logo" className="header-logo" />
         </div>
+        <h1 className="header-title"></h1>
+        <button className="modern-button" onClick={handleLogout}>
+          <span className="button-icon">↩</span> Logout
+        </button>
       </header>
 
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/requestcard")}>
-          Back
-        </button>
-      </div>
-
+      <br></br>
+      <br></br>
+      <br></br>
       <h2 className="title">Event Request</h2>
 
       <div className="filter-container">
@@ -359,7 +330,7 @@ const EventRequest = () => {
             No events found{statusFilter !== "all" ? ` with status "${statusFilter}"` : ""}. Create your first event to
             get started!
           </p>
-          <button className="create-event-button" onClick={() => nav("/create-event")}>
+          <button className="primary-button" onClick={() => nav("/create-event")}>
             Create New Event
           </button>
         </div>

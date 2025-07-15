@@ -31,6 +31,10 @@ const RequestCard = () => {
           <span className="button-icon">↩</span> Logout
         </button>
       </header>
+      <br></br>
+      <br></br>
+      <br></br>
+      <br></br>
 
       {/* Main Content */}
       <main className="modern-main">

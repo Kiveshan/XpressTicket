@@ -48,9 +48,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'XPRESS.FINAL',
-  password: '1234567890',
-  port: 5432,
+  database: 'Xpressfinal',
+  password: '123456',
+  port: 5433,
   timezone: 'UTC', // Ensure PostgreSQL uses UTC
 });
 
@@ -3160,63 +3160,44 @@ app.get('/api/events-past', authenticateToken, async (req, res) => {
   }
 });
 
-//shows single events for user logged in 
-app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
+app.get('/api/events/:eventid', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
-    const { eventId } = req.params;
-    const { userId, role } = req.user;
-
+    const eventId = req.params.eventid;
     const query = `
       SELECT 
-        e.event_id,
-        e.name,
-        e.description,
-        e.terms_and_conditions,
-        e.location,
-        e.startdate AT TIME ZONE 'UTC' as start_date,
-        e.enddate AT TIME ZONE 'UTC' as end_date,
-        e.time as start_time,
-        e.endtime as end_time,
-        e.duration,
-        e.deadlinetime as registration_deadline_time,
-        e.deadlinedate as registration_deadline_date,
-        e.type as event_type,
-        e.capacity,
-        e.attendees,
-        e.coverimage,
-        e.tabs,
-        e.packages,
-        e.status,
-        e.user_id
-      FROM events e
-      WHERE e.event_id = $1 AND (e.user_id = $2 OR $3 = true)
+        event_id,
+        name,
+        description,
+        terms_and_conditions,
+        location,
+        TO_CHAR(startdate, 'YYYY-MM-DD') as start_date,
+        TO_CHAR(enddate, 'YYYY-MM-DD') as end_date,
+        TO_CHAR(deadlinedate, 'YYYY-MM-DD') as registration_deadline_date,
+        time as start_time,
+        endtime as end_time,
+        deadlinetime as registration_deadline_time,
+        type as event_type,
+        capacity,
+        attendees,
+        contactnum,
+        email,
+        coverimage,
+        tabs,
+        packages,
+        status,
+        user_id
+      FROM events
+      WHERE event_id = $1
+        AND user_id = $2
     `;
-
-    const result = await client.query(query, [eventId, userId, role === "Admin"]);
-
+    const result = await client.query(query, [eventId, req.user.userId]);
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Event not found or access denied" });
+      return res.status(404).json({ error: 'Event not found' });
     }
 
     const event = result.rows[0];
-
-    // Format dates as YYYY-MM-DD in UTC
-    event.start_date = event.start_date ? event.start_date.toISOString().split('T')[0] : null;
-    event.end_date = event.end_date ? event.end_date.toISOString().split('T')[0] : null;
-
-    // Ensure attendees is an array
-    event.attendees = Array.isArray(event.attendees)
-      ? event.attendees
-      : typeof event.attendees === 'string' && event.attendees.includes(',')
-        ? event.attendees.split(',').map(item => item.trim())
-        : typeof event.attendees === 'string'
-          ? [event.attendees]
-          : [];
-    console.log('Raw attendees from DB:', event.attendees);
-
-    // Generate presigned URL for cover image
-    let coverImageUrl = '/default-event-image.jpg';
+    let coverImageUrl = '/default-profile-picture.jpg';
     if (event.coverimage) {
       const coverKey = event.coverimage.split('/').slice(3).join('/');
       try {
@@ -3226,48 +3207,71 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
       }
     }
 
-    // Parse tabs
     const parsedTabs = event.tabs
       ? event.tabs.map((tab) => {
-        try {
-          return JSON.parse(tab);
-        } catch (e) {
-          console.warn(`Failed to parse tab: ${tab}`, e);
-          return {};
-        }
-      })
+          try {
+            return JSON.parse(tab);
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e);
+            return {};
+          }
+        })
       : [];
 
-    // Parse packages
     const parsedPackages = event.packages
       ? event.packages.map((pkg) => {
-        try {
-          return JSON.parse(pkg);
-        } catch (e) {
-          console.warn(`Failed to parse package: ${pkg}`, e);
-          return {};
-        }
-      })
+          try {
+            const parsedPkg = JSON.parse(pkg);
+            // Ensure package dates are also formatted
+            return {
+              ...parsedPkg,
+              startDate: parsedPkg.startDate ? formatDate(parsedPkg.startDate) : 'N/A',
+              endDate: parsedPkg.endDate ? formatDate(parsedPkg.endDate) : 'N/A',
+            };
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e);
+            return {};
+          }
+        })
       : [];
 
-    res.json({
+    const responseEvent = {
       ...event,
       coverimage: coverImageUrl,
       tabs: parsedTabs,
       packages: parsedPackages,
-      attendees: event.attendees,
-    });
+      attendees: Array.isArray(event.attendees)
+        ? event.attendees
+        : typeof event.attendees === 'string' && event.attendees.includes(',')
+          ? event.attendees.split(',').map(item => item.trim())
+          : typeof event.attendees === 'string'
+            ? [event.attendees]
+            : [],
+    };
+
+    res.json(responseEvent);
   } catch (error) {
-    console.error("Error fetching event details:", error);
-    res.status(500).json({
-      error: "Failed to fetch event details",
-      details: error.message,
-    });
+    console.error('Error fetching event:', error);
+    res.status(500).json({ error: 'Failed to fetch event', details: error.message });
   } finally {
     client.release();
   }
 });
 
+// Helper function to format dates in backend
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  try {
+    const [year, month, day] = dateString.split('-');
+    if (!year || !month || !day || year.length !== 4) {
+      throw new Error('Invalid date format');
+    }
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  } catch (error) {
+    console.error('Backend date formatting error:', error, 'Input:', dateString);
+    return 'N/A';
+  }
+}
 
 
 // Start the server

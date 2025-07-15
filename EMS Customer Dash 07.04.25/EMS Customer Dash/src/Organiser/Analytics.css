@@ -1,89 +1,67 @@
+/* Analytics Container */
 .analytics-container {
   font-family: Arial, sans-serif;
   padding: 20px;
   background-color: #f9f9f9;
   min-height: 100vh;
+  padding-top: 100px; /* Increased from 70px to 100px for more space below the fixed header */
 }
 
-.header-actions {
-  margin-bottom: 20px;
+/* Modern Header with Gradient */
+.modern-header {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  color: white;
+  padding: 15px 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
 }
 
-.back-button {
-  padding: 10px 20px;
-  background-color: #007bff;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.header-logo {
+  height: 50px;
+}
+
+/* Modern Button Styles */
+.modern-button {
+  background-color: rgba(255, 255, 255, 0.2);
   color: white;
   border: none;
-  border-radius: 5px;
+  padding: 8px 15px;
+  border-radius: 6px;
   cursor: pointer;
-}
-
-.back-button:hover {
-  background-color: #0056b3;
-}
-
-.analytics-content {
+  font-weight: 500;
   display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
 }
 
-.sidebar-filters {
-  width: 20%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.modern-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
-.filter-button {
-  padding: 10px;
-  background-color: #f1f1f1;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  text-align: left;
-  color: black;
-}
-
-.filter-button.active {
-  background-color: #007bff;
-  color: white;
-}
-
-.chart-area {
-  width: 80%;
-  padding: 20px;
-}
-
-.chart-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
-
-.period-filters {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 30px;
-}
-
-.period-button {
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
-  padding: 8px 20px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.period-button:first-child {
-  border-radius: 4px 0 0 4px;
-}
-
-.period-button:last-child {
-  border-radius: 0 4px 4px 0;
-}
-
-.period-button.active {
-  background-color: #4169e1;
-  color: white;
+.button-icon {
+  font-size: 1.1rem;
+  margin-right: 5px;
 }
 
 /* Analytics Content Layout */
@@ -124,7 +102,7 @@
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-top: -20px; /* Adjust to overlap with the sidebar */
+  margin-top: 20px; /* Added margin-top to create more space between navbar and heading */
 }
 
 .chart-title {
@@ -206,6 +184,14 @@
   .sidebar-filters {
     width: 100%;
   }
+
+  .analytics-container {
+    padding-top: 90px; /* Adjusted for smaller screens */
+  }
+
+  .chart-area {
+    margin-top: 15px; /* Reduced margin for smaller screens */
+  }
 }
 
 /* Styling for Date Filters (Month & Year) */
@@ -246,18 +232,20 @@
 .date-filters select.year-select {
   width: 100px; /* Adjust as needed */
 }
+
 .filter-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-    margin-left: 350px;
-  }
-  
-  .filter-dropdown {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 14px;
-    cursor: pointer;
-    width: 200px;
-  }
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  justify-content: center; /* Centralized the filters */
+  margin-left: 0; /* Removed the left margin to center */
+}
+
+.filter-dropdown {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 200px;
+}
