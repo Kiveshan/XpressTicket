@@ -64,10 +64,23 @@ const AdminViewEventRequest = () => {
           return img;
         })(),
         // Use the attendees array from the database if available
-        client_type: data.attendees && Array.isArray(data.attendees) ? 
-          data.attendees : 
-          // Fallback to old format if attendees array is not available
-          data.client_type || [],
+        client_type: (() => {
+          // First check if attendees exists as an array
+          if (data.attendees && Array.isArray(data.attendees)) {
+            return data.attendees;
+          }
+          // Check if attendees exists as a string that can be parsed as JSON
+          if (data.attendees && typeof data.attendees === 'string') {
+            try {
+              const parsed = JSON.parse(data.attendees);
+              if (Array.isArray(parsed)) return parsed;
+            } catch (e) {
+              console.error('Error parsing attendees:', e);
+            }
+          }
+          // Final fallback to client_type or empty array
+          return data.client_type || [];
+        })(),
         // Use the tabs array from the database if available
         tabs: data.tabs && Array.isArray(data.tabs) ? 
           data.tabs.map(tab => {
@@ -494,16 +507,17 @@ const AdminViewEventRequest = () => {
               <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#4a5568' }}>Attendee Types</span>
             </div>
             <div style={{ padding: '5px 8px' }}>
-              {event.client_type && event.client_type.length > 0 ? (
+              {event.client_type && Array.isArray(event.client_type) && event.client_type.length > 0 ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
                   {event.client_type.map((type, index) => (
                     <span key={index} style={{
                       fontSize: '0.65rem',
-                      padding: '1px 5px',
+                      padding: '2px 6px',
                       borderRadius: '10px',
                       background: '#e6f7ff',
                       color: '#0072b1',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      margin: '1px'
                     }}>{type}</span>
                   ))}
                 </div>
@@ -539,75 +553,7 @@ const AdminViewEventRequest = () => {
             </div>
           </div>
 
-          {/* Card 4: Payment */}
-          <div style={{ 
-            background: '#fff', 
-            border: '1px solid #edf2f7', 
-            borderRadius: '4px', 
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', 
-            overflow: 'hidden' 
-          }}>
-            <div style={{ 
-              padding: '4px 8px', 
-              background: '#f9fafb', 
-              borderBottom: '1px solid #edf2f7',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              <FaMoneyBillWave size={10} style={{ color: '#4a5568' }} />
-              <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#4a5568' }}>Payment</span>
-            </div>
-            <div style={{ padding: '5px 8px', fontSize: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Type:</span>
-                <span style={{ 
-                  background: '#e6f7ff', 
-                  padding: '1px 5px', 
-                  borderRadius: '10px',
-                  fontSize: '0.65rem',
-                  color: '#0072b1'
-                }}>{event.payment_type || 'Not specified'}</span>
-              </div>
-              
-              {event.payment_type === 'Sponsor' ? (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                    <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Sponsor:</span>
-                    <span style={{ fontSize: '0.7rem' }}>{event.sponsor?.name || 'N/A'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                    <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Amount:</span>
-                    <span style={{ fontSize: '0.7rem' }}>{event.sponsor?.amount || 'N/A'}</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                    <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Amount:</span>
-                    <span style={{ fontSize: '0.7rem' }}>{event.amount || 'N/A'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Proof:</span>
-                    <button 
-                      onClick={handleViewProofOfPayment}
-                      style={{ 
-                        color: '#4299e1', 
-                        background: 'none', 
-                        border: 'none',
-                        textDecoration: 'underline',
-                        cursor: 'pointer',
-                        padding: '0',
-                        fontSize: '0.7rem'
-                      }}
-                    >
-                      View proof
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+
         </div>
       </div>
 
@@ -700,137 +646,142 @@ const AdminViewEventRequest = () => {
         </div>
       </div>
 
-      {/* Admin Comments - Compact */}
-      <div style={{ marginBottom: '12px' }}>
-        <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Admin Comments</h3>
-        <div style={{
-          background: '#fff',
-          border: '1px solid #edf2f7',
-          borderRadius: '6px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          padding: '8px',
-          overflow: 'hidden'
-        }}>
-          <div style={{ 
-            padding: '6px 10px', 
-            background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', 
-            color: 'white',
-            marginBottom: '8px',
-            borderRadius: '4px',
-            fontSize: '0.8rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px'
-          }}>
-            <FaCommentAlt size={12} /> Add feedback or instructions
-          </div>
-          <textarea
-            style={{
-              width: '100%',
-              minHeight: '60px',
+      {/* Admin Comments and Action Center - only show when event is not Approved */}
+      {event.status !== 'Approved' && (
+        <>
+          {/* Admin Comments - Compact */}
+          <div style={{ marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Admin Comments</h3>
+            <div style={{
+              background: '#fff',
+              border: '1px solid #edf2f7',
+              borderRadius: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
               padding: '8px',
-              borderRadius: '4px',
-              border: '1px solid #e2e8f0',
-              fontSize: '0.75rem',
-              boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
-              resize: 'vertical',
-              fontFamily: 'inherit'
-            }}
-            placeholder="Add your comments here..."
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          ></textarea>
-        </div>
-      </div>
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                padding: '6px 10px', 
+                background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', 
+                color: 'white',
+                marginBottom: '8px',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}>
+                <FaCommentAlt size={12} /> Add feedback or instructions
+              </div>
+              <textarea
+                style={{
+                  width: '100%',
+                  minHeight: '60px',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0',
+                  fontSize: '0.75rem',
+                  boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
+                  resize: 'vertical',
+                  fontFamily: 'inherit'
+                }}
+                placeholder="Add your comments here..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              ></textarea>
+            </div>
+          </div>
 
-      {/* Action Center - Compact */}
-      <div style={{ marginBottom: '12px' }}>
-        <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Action Center</h3>
-        <div style={{
-          background: '#fff',
-          border: '1px solid #edf2f7',
-          borderRadius: '6px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          padding: '8px',
-          overflow: 'hidden'
-        }}>
-          <div style={{ 
-            padding: '6px 10px', 
-            background: 'linear-gradient(to right, #4a5568, #2d3748)', 
-            color: 'white',
-            marginBottom: '8px',
-            borderRadius: '4px',
-            fontSize: '0.8rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px'
-          }}>
-            <FaInfoCircle size={12} /> Select Action
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', padding: '4px' }}>
-            <button
-              style={{ 
-                padding: '6px 12px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px',
-                borderRadius: '4px',
-                background: 'linear-gradient(135deg, #68d391, #38b2ac)',
-                border: 'none',
+          {/* Action Center - Compact */}
+          <div style={{ marginBottom: '12px' }}>
+            <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Action Center</h3>
+            <div style={{
+              background: '#fff',
+              border: '1px solid #edf2f7',
+              borderRadius: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              padding: '8px',
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                padding: '6px 10px', 
+                background: 'linear-gradient(to right, #4a5568, #2d3748)', 
                 color: 'white',
-                fontWeight: '500',
-                fontSize: '0.75rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                cursor: 'pointer'
-              }}
-              onClick={() => handleStatusUpdate('Approved')}
-              disabled={isSubmitting}
-            >
-              <FaCheck size={12} /> Approve
-            </button>
-            <button
-              style={{ 
-                padding: '6px 12px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px',
+                marginBottom: '8px',
                 borderRadius: '4px',
-                background: 'linear-gradient(135deg, #faf089, #f6ad55)',
-                border: 'none',
-                color: '#744210',
-                fontWeight: '500',
-                fontSize: '0.75rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                cursor: 'pointer'
-              }}
-              onClick={() => handleStatusUpdate('Request Edit')}
-              disabled={isSubmitting}
-            >
-              <FaPencilAlt size={12} /> Request Edit
-            </button>
-            <button
-              style={{ 
-                padding: '6px 12px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px',
-                borderRadius: '4px',
-                background: 'linear-gradient(135deg, #fc8181, #e53e3e)',
-                border: 'none',
-                color: 'white',
-                fontWeight: '500',
-                fontSize: '0.75rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                cursor: 'pointer'
-              }}
-              onClick={() => handleStatusUpdate('Rejected')}
-              disabled={isSubmitting}
-            >
-              <FaTimes size={12} /> Reject
-            </button>
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}>
+                <FaInfoCircle size={12} /> Select Action
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', padding: '4px' }}>
+                <button
+                  style={{ 
+                    padding: '6px 12px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '4px',
+                    borderRadius: '4px',
+                    background: 'linear-gradient(135deg, #68d391, #38b2ac)',
+                    border: 'none',
+                    color: 'white',
+                    fontWeight: '500',
+                    fontSize: '0.75rem',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleStatusUpdate('Approved')}
+                  disabled={isSubmitting}
+                >
+                  <FaCheck size={12} /> Approve
+                </button>
+                <button
+                  style={{ 
+                    padding: '6px 12px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '4px',
+                    borderRadius: '4px',
+                    background: 'linear-gradient(135deg, #faf089, #f6ad55)',
+                    border: 'none',
+                    color: '#744210',
+                    fontWeight: '500',
+                    fontSize: '0.75rem',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleStatusUpdate('Request Edit')}
+                  disabled={isSubmitting}
+                >
+                  <FaPencilAlt size={12} /> Request Edit
+                </button>
+                <button
+                  style={{ 
+                    padding: '6px 12px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '4px',
+                    borderRadius: '4px',
+                    background: 'linear-gradient(135deg, #fc8181, #e53e3e)',
+                    border: 'none',
+                    color: 'white',
+                    fontWeight: '500',
+                    fontSize: '0.75rem',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleStatusUpdate('Rejected')}
+                  disabled={isSubmitting}
+                >
+                  <FaTimes size={12} /> Reject
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
       
       {isSubmitting && (
         <div className="modern-loading-overlay" style={{

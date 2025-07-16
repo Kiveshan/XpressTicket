@@ -130,24 +130,26 @@ const CompactEventCard = ({ event }) => {
         </div>
       </div>
 
-      {/* Price info */}
-      <div style={{
-        position: 'absolute',
-        top: '96px',
-        left: '8px',
-        right: '8px',
-        height: '12px',
-      }}>
+      {/* Price info - only show if valid price exists */}
+      {event.price && event.price !== 'N/A' && (
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          fontSize: '0.6rem',
-          color: '#555'
+          position: 'absolute',
+          top: '96px',
+          left: '8px',
+          right: '8px',
+          height: '12px',
         }}>
-          <FaMoneyBillWave style={{width: '8px', height: '8px', marginRight: '3px'}} />
-          <span>{event.price || 'Free'}</span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '0.6rem',
+            color: '#555'
+          }}>
+            <FaMoneyBillWave style={{width: '8px', height: '8px', marginRight: '3px'}} />
+            <span>{event.price}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Status badge and action button - fixed at bottom */}
       <div style={{
