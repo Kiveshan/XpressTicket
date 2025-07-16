@@ -1,0 +1,35 @@
+/* Header text color overrides to ensure white text in all headers */
+
+/* Target all text elements inside modern-header */
+.modern-header *:not(.modern-logout-btn):not(button):not(input) {
+  color: white !important;
+}
+
+/* Specifically target logout buttons text */
+.modern-header button.modern-logout-btn,
+.modern-header .modern-logout-btn {
+  background-color: #4ca1af !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 8px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+/* Ensure consistent header background */
+.modern-header {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af) !important;
+}
+
+/* Apply hover effect */
+.modern-logout-btn:hover {
+  background-color: #3a8a98 !important;
+  color: white !important;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15) !important;
+  transform: translateY(-1px) !important;
+}

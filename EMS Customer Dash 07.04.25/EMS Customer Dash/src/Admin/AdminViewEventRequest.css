@@ -6,6 +6,7 @@
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-start;
+  margin-top: 20px; /* Add space at the top */
   margin-bottom: 12px;
   background: linear-gradient(to right, #ffffff, #f8f9fa);
   border-radius: 8px;

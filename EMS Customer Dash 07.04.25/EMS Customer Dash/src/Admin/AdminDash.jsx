@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../shared/ModernDashboard.css';
-import { FaSignOutAlt, FaUsers, FaCalendarCheck } from 'react-icons/fa';
+import './AdminDash.css';
+import { FaSignOutAlt, FaUsers, FaCalendarCheck, FaArrowLeft } from 'react-icons/fa';
 
 function AdminDash() {
+  const [hoveredCard, setHoveredCard] = useState(null);
   const nav = useNavigate();
   
   // Admin dashboard cards with more details
@@ -47,10 +49,10 @@ function AdminDash() {
         </div>
       </header>
 
-      {/* Back Button - Original Style */}
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/')}>
-          Back
+      {/* Back Button - Modern Style */}
+      <div className="modern-back-button-container">
+        <button className="modern-back-btn" onClick={() => nav('/')}>
+          <FaArrowLeft /> Back
         </button>
       </div>
 
@@ -60,26 +62,79 @@ function AdminDash() {
         
 
         
-        {/* Card Grid */}
-        <div className="modern-card-grid">
+        {/* Square Card Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, 240px)',
+          gap: '30px',
+          marginTop: '30px',
+          justifyContent: 'center',
+          maxWidth: '1080px',
+          margin: '30px auto 0'
+        }}>
           {adminCards.map((card, index) => (
             <div 
               key={index} 
-              className="modern-card" 
               onClick={() => nav(card.path)}
+              onMouseEnter={() => setHoveredCard(index)}
+              onMouseLeave={() => setHoveredCard(null)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                boxShadow: hoveredCard === index ? '0 8px 16px rgba(0,0,0,0.15)' : '0 4px 12px rgba(0,0,0,0.1)',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                transform: hoveredCard === index ? 'translateY(-5px)' : 'translateY(0)',
+                height: '240px',
+                width: '240px',
+                margin: '0'
+              }}
             >
-              <div className="modern-card-image-container">
+              <div style={{
+                width: '100%',
+                height: '130px',
+                overflow: 'hidden'
+              }}>
                 <img 
                   src={card.image} 
-                  alt={card.title} 
-                  className="modern-card-image" 
+                  alt={card.title}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
                 />
               </div>
-              <div className="modern-card-content">
-                <h3 className="modern-card-title">
-                  {card.icon} {card.title}
+              <div style={{
+                padding: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                flex: 1
+              }}>
+                <h3 style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  margin: '0 0 5px 0',
+                  color: '#2c3e50',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}>
+                  <span style={{ color: '#4ca1af' }}>{card.icon}</span> {card.title}
                 </h3>
-                <p className="modern-card-description">{card.description}</p>
+                <p style={{
+                  fontSize: '14px',
+                  margin: '0',
+                  color: '#666',
+                  lineHeight: '1.3'
+                }}>{card.description}</p>
               </div>
             </div>
           ))}

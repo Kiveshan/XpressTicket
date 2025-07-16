@@ -335,149 +335,140 @@ const ConfirmTicketPackage = () => {
         <div className="error">No event data available</div>
       )}
 
-      <h2>Confirm Tickets</h2>
-
-      <table className="package-table">
-        <thead>
-          <tr>
-            <th>Package Details</th>
-            <th>Title</th>
-            <th>Name</th>
-            <th>Gender</th>
-            <th>Email</th>
-            <th>Phone Number</th>
-            <th>Delegation</th>
-            <th>No. of Tickets</th>
-            <th>IEEE Number</th>
-            <th>Day Pass Duration (if applicable)</th>
-            <th>Amount</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {packages.map((pkg, index) => (
-            <tr key={index}>
-              <td>{pkg.packageDetails}</td>
-              <td>
-                <select 
-                  value={pkg.title} 
-                  onChange={(e) => updatePackageDetail(index, 'title', e.target.value)}
-                  style={{ width: '100%', padding: '4px' }}
-                >
-                  <option>Prof</option>
-                  <option>Dr</option>
-                  <option>Mr</option>
-                  <option>Ms</option>
-                </select>
-              </td>
-              <td>
-                <input 
-                  type="text" 
-                  value={pkg.name} 
-                  onChange={(e) => updatePackageDetail(index, 'name', e.target.value)}
-                  style={{ width: '100%', padding: '4px' }}
-                />
-              </td>
-              <td>
-                <select 
-                  value={pkg.gender} 
-                  onChange={(e) => updatePackageDetail(index, 'gender', e.target.value)}
-                  style={{ width: '100%', padding: '4px' }}
-                >
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
-                </select>
-              </td>
-              <td>
-                <input 
-                  type="email" 
-                  value={pkg.email} 
-                  onChange={(e) => updatePackageDetail(index, 'email', e.target.value)}
-                  style={{ width: '100%', padding: '4px' }}
-                />
-              </td>
-              <td>
-                <input 
-                  type="text" 
-                  value={pkg.phone} 
-                  onChange={(e) => updatePackageDetail(index, 'phone', e.target.value)}
-                  style={{ width: '100%', padding: '4px' }}
-                />
-              </td>
-              <td>
-                <input 
-                  type="text" 
-                  value={pkg.delegation} 
-                  onChange={(e) => updatePackageDetail(index, 'delegation', e.target.value)}
-                  style={{ width: '100%', padding: '4px' }}
-                />
-              </td>
-              <td>
-                <input 
-                  type="number" 
-                  min="1"
-                  value={pkg.tickets} 
-                  onChange={(e) => updatePackageDetail(index, 'tickets', e.target.value)}
-                  style={{ width: '100%', padding: '4px' }}
-                />
-              </td>
-              <td>
-                <input 
-                  type="text" 
-                  value={pkg.ieeeNumber} 
-                  onChange={(e) => updatePackageDetail(index, 'ieeeNumber', e.target.value)}
-                  style={{ width: '100%', padding: '4px' }}
-                />
-              </td>
-              <td>{pkg.dayPass}</td>
-              <td className="currency">
-                <div style={{
-                  fontWeight: 'bold',
-                  color: '#28a745',
-                  fontSize: '1.05em',
-                  textAlign: 'right',
-                  padding: '0 10px'
-                }}>
-                  {pkg.amount}
-                </div>
-              </td>
-              <td>
-                <button 
-                  className="remove-package-btn" 
-                  onClick={() => removePackage(index)}
-                  style={{
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '30px',
-                    height: '30px',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                    padding: '0'
-                  }}
-                >
-                  -
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <button className="add-package-btn" onClick={handleAddPackage}>
-        Add Package
-      </button>
-
-      <button className="Submit" onClick={() => nav(`/customerviewevent/${eventId}`)}>
-        Submit
-      </button>
+      <div className="modern-card" style={{ marginTop: '20px', marginBottom: '30px' }}>
+        <div className="modern-card-header">
+          <h2>Confirm Tickets</h2>
+        </div>
+        <div className="modern-card-body">
+          <div className="package-table-container">
+            <table className="package-table">
+              <thead>
+                <tr>
+                  <th>Package Details</th>
+                  <th>Title</th>
+                  <th>Name</th>
+                  <th>Gender</th>
+                  <th>Email</th>
+                  <th>Phone Number</th>
+                  <th>Delegation</th>
+                  <th>Tickets</th>
+                  <th>IEEE Number</th>
+                  <th>Day Pass</th>
+                  <th>Amount</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {packages.map((pkg, index) => (
+                  <tr key={index}>
+                    <td>{pkg.packageDetails}</td>
+                    <td>
+                      <select 
+                        value={pkg.title} 
+                        onChange={(e) => updatePackageDetail(index, 'title', e.target.value)}
+                      >
+                        <option>Prof</option>
+                        <option>Dr</option>
+                        <option>Mr</option>
+                        <option>Ms</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input 
+                        type="text" 
+                        value={pkg.name} 
+                        onChange={(e) => updatePackageDetail(index, 'name', e.target.value)}
+                        placeholder="Full Name"
+                      />
+                    </td>
+                    <td>
+                      <select 
+                        value={pkg.gender} 
+                        onChange={(e) => updatePackageDetail(index, 'gender', e.target.value)}
+                      >
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Other</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input 
+                        type="email" 
+                        value={pkg.email} 
+                        onChange={(e) => updatePackageDetail(index, 'email', e.target.value)}
+                        placeholder="Email Address"
+                      />
+                    </td>
+                    <td>
+                      <input 
+                        type="text" 
+                        value={pkg.phone} 
+                        onChange={(e) => updatePackageDetail(index, 'phone', e.target.value)}
+                        placeholder="Phone Number"
+                      />
+                    </td>
+                    <td>
+                      <input 
+                        type="text" 
+                        value={pkg.delegation} 
+                        onChange={(e) => updatePackageDetail(index, 'delegation', e.target.value)}
+                        placeholder="Delegation"
+                      />
+                    </td>
+                    <td>
+                      <input 
+                        type="number" 
+                        min="1"
+                        value={pkg.tickets} 
+                        onChange={(e) => updatePackageDetail(index, 'tickets', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input 
+                        type="text" 
+                        value={pkg.ieeeNumber} 
+                        onChange={(e) => updatePackageDetail(index, 'ieeeNumber', e.target.value)}
+                        placeholder="IEEE Number"
+                      />
+                    </td>
+                    <td>{pkg.dayPass}</td>
+                    <td className="currency">
+                      <div style={{
+                        fontWeight: '600',
+                        color: '#2c3e50',
+                        fontSize: '1em',
+                        textAlign: 'right',
+                        padding: '0 10px'
+                      }}>
+                        {pkg.amount}
+                      </div>
+                    </td>
+                    <td>
+                      <button 
+                        className="table-action-btn delete" 
+                        onClick={() => removePackage(index)}
+                        title="Remove Package"
+                      >
+                        <span>✕</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+            <button className="add-package-btn" onClick={handleAddPackage}>
+              + Add Package
+            </button>
+            
+            <button className="Submit" onClick={() => nav(`/customerviewevent/${eventId}`)}>
+              Submit
+            </button>
+          </div>
+        </div>
+      </div>
       {showModal && (
         <div className="modal1">
           <div className="modal-content1">

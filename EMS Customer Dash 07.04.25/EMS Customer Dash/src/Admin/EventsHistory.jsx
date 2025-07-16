@@ -175,30 +175,32 @@ const EventsHistory = () => {
   };
 
   return (
-    <div className="modern-container">
-      <header className="modern-dashboard-header">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="modern-dashboard-logo"
-          style={{ maxHeight: '45px', width: 'auto' }}
-          onError={(e) => {
-            console.error('Failed to load logo');
-            e.target.src = '/fallback-logo.png'; // Ensure you have a fallback logo
-          }}
-        />
-        <div className="modern-profile-section">
-          <button className="modern-btn modern-logout-btn" onClick={() => nav('/')}>
-            Log Out
+    <div className="modern-dashboard-container">
+      {/* Header */}
+      <div className="modern-header">
+        <div className="modern-header-logo">
+          <img 
+            src="/XPRESS TICKETS LOGO2.png" 
+            alt="EventXpress Logo" 
+            className="modern-logo" 
+            style={{ maxHeight: '45px', width: 'auto' }}
+            onError={(e) => {
+              console.error('Failed to load logo');
+              e.target.src = '/fallback-logo.png'; // Ensure you have a fallback logo
+            }}
+          />
+          <h1>Events History</h1>
+        </div>
+        <div className="modern-header-actions">
+          <button className="modern-btn modern-btn-outline" onClick={() => nav('/admin-dash')}>
+            <FaArrowLeft /> Back to Dashboard
+          </button>
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            Logout
           </button>
         </div>
-      </header>
-
-      <div className="modern-back-button">
-        <button className="modern-back-btn" onClick={() => nav('/admin-dash')}>
-          <FaArrowLeft /> Back
-        </button>
       </div>
+      
       <h2 className="modern-page-title">Events History</h2>
 
       {error && <div className="modern-error"><p>{error}</p></div>}

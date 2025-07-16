@@ -58,9 +58,10 @@
   font-size: 1.5rem;
   font-weight: 600;
   color: #2c3e50;
-  margin: 1rem 25px 2rem;
+  margin: 1.5rem 25px 2rem; /* Increased top margin */
   position: relative;
   padding-bottom: 10px;
+  padding-top: 10px;
 }
 
 .modern-page-title:after {

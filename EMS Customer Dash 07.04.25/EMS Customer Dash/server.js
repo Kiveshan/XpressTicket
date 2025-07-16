@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const multer = require('multer');
+const { isUint16Array } = require('util/types');
 
 const app = express();
 const port = 5000;
@@ -3284,4 +3285,5 @@ function formatDate(dateString) {
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+ 
 });
