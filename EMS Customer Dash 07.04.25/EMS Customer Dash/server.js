@@ -49,10 +49,13 @@ const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   database: 'Xpressfinal',
   password: '123456',
   port: 5433,
 =======
+=======
+>>>>>>> Stashed changes
   database: 'XPRESS.FINAL',
   password: '1234567890',
   port: 5432,
