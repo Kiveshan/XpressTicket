@@ -99,64 +99,23 @@
   .package-table button:hover {
     background-color: #218838;
   }
-  /* Modern Tab Styles for XpressTicket Design System */
-  .modern-tabs {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-  }
-  
-  .modern-tab-button {
-    padding: 12px 24px;
-    border-radius: 8px;
+  .tab-button {
+    padding: 10px 16px;
+    margin-right: 10px;
+    border-radius: 6px;
     border: none;
     cursor: pointer;
-    background-color: white;
-    color: #2c3e50;
-    font-weight: 500;
-    font-size: 14px;
+    background-color: #f0f0f0;
+    color: #333;
+    font-weight: normal;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-    border: 1px solid #e9ecef;
-    position: relative;
-    overflow: hidden;
   }
   
-  .modern-tab-button::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(135deg, #2c3e50, #4ca1af);
-    transform: scaleX(0);
-    transform-origin: right;
-    transition: transform 0.3s ease;
-  }
-  
-  .modern-tab-button:hover::before {
-    transform: scaleX(1);
-    transform-origin: left;
-  }
-  
-  .modern-tab-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    color: #4ca1af;
-  }
-  
-  .modern-tab-button.active {
-    background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  .tab-button.active {
+    background-color: #007bff;
     color: white;
-    font-weight: 600;
-    transform: translateY(0);
-    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.25);
-  }
-  
-  .modern-tab-button.active::before {
-    transform: scaleX(0);
+    font-weight: bold;
+    box-shadow: 0 0 6px rgba(0, 123, 255, 0.5);
   }
   
   .package-table {
@@ -175,140 +134,3 @@
   .package-table th {
     background-color: #20c997;
   }
-  
-  /* Custom gradient header styles with white text */
-  .modern-table thead tr {
-    background: linear-gradient(135deg, #2c3e50, #4ca1af) !important;
-    color: #ffffff !important;
-  }
-  
-  .modern-table thead th,
-  .modern-table th,
-  .modern-table thead tr th {
-    color: #ffffff !important;
-    font-weight: 600 !important;
-    padding: 12px 16px !important;
-    text-transform: none !important;
-    font-size: 14px !important;
-    background: transparent !important;
-    border-color: rgba(255,255,255,0.2) !important;
-  }
-  
-  /* Force white text in table headers with highest specificity */
-  table.modern-table > thead > tr > th,
-  .modern-dashboard-container .modern-table th,
-  .modern-dashboard-container .modern-table thead th,
-  .modern-dashboard-container table.modern-table thead tr th,
-  .modern-table.modern-white-headers thead th,
-  table.modern-table thead tr th {
-    color: #ffffff !important;
-    background: transparent !important;
-  }
-  
-  /* New dedicated class for white header text */
-  .xpress-white-text-header {
-    color: white !important;
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    padding: 12px 16px !important;
-    background-color: transparent !important;
-    border-color: rgba(255,255,255,0.2) !important;
-  }
-  
-  /* Special thead style for the gradient background */
-  .xpress-gradient-header {
-    background: linear-gradient(135deg, #2c3e50, #4ca1af) !important;
-    border-bottom: 2px solid rgba(255,255,255,0.2) !important;
-  }
-  
-  /* Direct style overrides with maximum specificity */
-  html body .xpress-white-text-header,
-  html body table th.xpress-white-text-header,
-  html body .modern-dashboard-container table th.xpress-white-text-header,
-  html body .modern-dashboard-container .modern-table th.xpress-white-text-header {
-    color: white !important;
-  }
-  
-  /* Specific styling for our custom white header tables */
-  .modern-white-headers thead tr {
-    background: linear-gradient(135deg, #ffffff, #ffffff) !important;
-  }
-  
-  .modern-white-headers thead th {
-    color: #000000 !important;
-    border-bottom: none !important;
-  }
-  
-  /* Add a specific override for the SystemUsers tables */
-  body .modern-dashboard-container .modern-table th,
-  body .modern-dashboard-container .modern-table thead th {
-    color: #ffffff !important;
-    background: transparent !important;
-  }
-  
-  /* Override any modern-white-headers that might still be applied */
-  body .modern-dashboard-container .modern-table.modern-white-headers thead th,
-  body .modern-dashboard-container .modern-table.modern-white-headers th {
-    color: #ffffff !important;
-    background: transparent !important;
-  }
-
-/* Optimized Profile Card Styles with Less Empty Space */
-.modern-profile-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px; /* Reduced from 24px */
-}
-
-.modern-card {
-  margin-bottom: 0; /* Remove any default margin */
-}
-
-.modern-card-header {
-  padding: 12px 16px; /* Reduced from 16px 20px */
-}
-
-.modern-card-header h2 {
-  font-size: 16px; /* Reduced from 18px */
-  margin: 0;
-}
-
-.modern-card-body {
-  padding: 12px 16px; /* Reduced from 20px */
-}
-
-.modern-info-row {
-  margin-bottom: 10px; /* Reduced from 16px */
-  padding-bottom: 10px; /* Reduced from 16px */
-  display: flex;
-  align-items: center;
-}
-
-.modern-info-row:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-/* For ViewingCustomer page specifically */
-.modern-profile-container {
-  margin-top: 12px; /* Reduced from 20px */
-}
-
-/* Make the action buttons more compact */
-.modern-action-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-/* Responsive adjustments for profile cards */
-@media (min-width: 768px) {
-  .modern-profile-section {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-  
-  .modern-card.modern-full-width {
-    grid-column: 1 / -1;
-  }
-}

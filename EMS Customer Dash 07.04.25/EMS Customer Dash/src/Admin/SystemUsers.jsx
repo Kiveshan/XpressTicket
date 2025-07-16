@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../shared/ModernDashboard.css';
@@ -228,15 +228,15 @@ const SystemUsers = () => {
     if (activeTable === 'Organiser') {
       return (
         <div className="modern-table-container">
-          <table className="modern-table" style={{borderCollapse: 'collapse'}}>
-            <thead className="xpress-gradient-header">
+          <table className="modern-table">
+            <thead>
               <tr>
-                <th className="xpress-white-text-header">Organiser Name</th>
-                <th className="xpress-white-text-header">Email</th>
-                <th className="xpress-white-text-header">Event</th>
-                <th className="xpress-white-text-header">Date of Event</th>
-                <th className="xpress-white-text-header">Status</th>
-                <th className="xpress-white-text-header">Actions</th>
+                <th>Organiser Name</th>
+                <th>Email</th>
+                <th>Event</th>
+                <th>Date of Event</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -278,14 +278,14 @@ const SystemUsers = () => {
     } else if (activeTable === 'General Users') {
       return (
         <div className="modern-table-container">
-          <table className="modern-table" style={{borderCollapse: 'collapse'}}>
-            <thead className="xpress-gradient-header">
+          <table className="modern-table">
+            <thead>
               <tr>
-                <th className="xpress-white-text-header">Customer Name</th>
-                <th className="xpress-white-text-header">Email</th>
-                <th className="xpress-white-text-header">Role</th>
-                <th className="xpress-white-text-header">Status</th>
-                <th className="xpress-white-text-header">Actions</th>
+                <th>Customer Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -330,12 +330,12 @@ const SystemUsers = () => {
     } else if (activeTable === 'Payment') {
       return (
         <div className="modern-table-container">
-          <table className="modern-table" style={{borderCollapse: 'collapse'}}>
-            <thead className="xpress-gradient-header">
+          <table className="modern-table">
+            <thead>
               <tr>
-                <th className="xpress-white-text-header">Full Name</th>
-                <th className="xpress-white-text-header">Amount</th>
-                <th className="xpress-white-text-header">Proof of Payment</th>
+                <th>Full Name</th>
+                <th>Amount</th>
+                <th>Proof of Payment</th>
               </tr>
             </thead>
             <tbody>
@@ -402,62 +402,21 @@ const SystemUsers = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          marginBottom: '24px',
-          flexWrap: 'wrap'
-        }}>
+        <div className="modern-tabs">
           <button
-            style={{
-              padding: '12px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeTable === 'Organiser' ? 'transparent' : 'white',
-              color: activeTable === 'Organiser' ? 'white' : '#2c3e50',
-              fontWeight: activeTable === 'Organiser' ? '600' : '500',
-              fontSize: '14px',
-              transition: 'all 0.3s ease',
-              boxShadow: activeTable === 'Organiser' ? '0 4px 12px rgba(44, 62, 80, 0.25)' : '0 2px 5px rgba(0,0,0,0.08)',
-              background: activeTable === 'Organiser' ? 'linear-gradient(135deg, #2c3e50, #4ca1af)' : 'white'
-            }}
+            className={`modern-tab-button ${activeTable === 'Organiser' ? 'active' : ''}`}
             onClick={() => setActiveTable('Organiser')}
           >
-            Events
+            Organiser
           </button>
           <button
-            style={{
-              padding: '12px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeTable === 'General Users' ? 'transparent' : 'white',
-              color: activeTable === 'General Users' ? 'white' : '#2c3e50',
-              fontWeight: activeTable === 'General Users' ? '600' : '500',
-              fontSize: '14px',
-              transition: 'all 0.3s ease',
-              boxShadow: activeTable === 'General Users' ? '0 4px 12px rgba(44, 62, 80, 0.25)' : '0 2px 5px rgba(0,0,0,0.08)',
-              background: activeTable === 'General Users' ? 'linear-gradient(135deg, #2c3e50, #4ca1af)' : 'white'
-            }}
+            className={`modern-tab-button ${activeTable === 'General Users' ? 'active' : ''}`}
             onClick={() => setActiveTable('General Users')}
           >
-            Deligate
+            General Users
           </button>
           <button
-            style={{
-              padding: '12px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: activeTable === 'Payment' ? 'transparent' : 'white',
-              color: activeTable === 'Payment' ? 'white' : '#2c3e50',
-              fontWeight: activeTable === 'Payment' ? '600' : '500',
-              fontSize: '14px',
-              transition: 'all 0.3s ease',
-              boxShadow: activeTable === 'Payment' ? '0 4px 12px rgba(44, 62, 80, 0.25)' : '0 2px 5px rgba(0,0,0,0.08)',
-              background: activeTable === 'Payment' ? 'linear-gradient(135deg, #2c3e50, #4ca1af)' : 'white'
-            }}
+            className={`modern-tab-button ${activeTable === 'Payment' ? 'active' : ''}`}
             onClick={() => setActiveTable('Payment')}
           >
             Payment
