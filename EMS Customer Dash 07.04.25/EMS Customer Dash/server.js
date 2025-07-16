@@ -1679,343 +1679,343 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
 });
 
 
-// Admin routes
-// Get all events for admin (all users' events)
-app.get("/api/admin/events", authenticateToken, async (req, res) => {
-  const client = await pool.connect();
+// // Admin routes
+// // Get all events for admin (all users' events)
+// app.get("/api/admin/events", authenticateToken, async (req, res) => {
+//   const client = await pool.connect();
 
-  try {
-    const { role } = req.user;
+//   try {
+//     const { role } = req.user;
 
-    // Check if user is admin
-    if (role !== "Admin") {
-      return res.status(403).json({
-        error: "Access denied. Admin privileges required.",
-      });
-    }
+//     // Check if user is admin
+//     if (role !== "Admin") {
+//       return res.status(403).json({
+//         error: "Access denied. Admin privileges required.",
+//       });
+//     }
 
-    const query = `
-      SELECT 
-        e.event_id as id,
-        e.name as event_name,
-        e.description,
-        e.terms_and_conditions,
-        e.location,
-        e.startdate as date,
-        e.enddate as end_date,
-        e.time,
-        e.endtime as end_time,
-        e.duration,
-        e.deadlinetime as registration_deadline_time,
-        e.deadlinedate as registration_deadline_date,
-        e.type as event_type,
-        e.capacity,
-        e.attendees,
-        e.contactnum,
-        e.email,
-        e.coverimage,
-        e.tabs,
-        e.packages,
-        e.status,
-        e.admin_comment,
-        e.user_id,
-        p.amount as paid_amount,
-        p.payment_type,
-        p.proof_of_payment as payment_proof_key,
-        up.firstname as organizer_first_name,
-        up.surname as organizer_last_name,
-        up.cellnumber as organizer_phone,
-        up.email as organizer_email
-      FROM events e
-      LEFT JOIN payments p ON e.event_id = p.event_id
-      LEFT JOIN user_profiles up ON e.user_id = up.user_id
-      ORDER BY e.startdate DESC, e.time DESC
-    `;
+//     const query = `
+//       SELECT 
+//         e.event_id as id,
+//         e.name as event_name,
+//         e.description,
+//         e.terms_and_conditions,
+//         e.location,
+//         e.startdate as date,
+//         e.enddate as end_date,
+//         e.time,
+//         e.endtime as end_time,
+//         e.duration,
+//         e.deadlinetime as registration_deadline_time,
+//         e.deadlinedate as registration_deadline_date,
+//         e.type as event_type,
+//         e.capacity,
+//         e.attendees,
+//         e.contactnum,
+//         e.email,
+//         e.coverimage,
+//         e.tabs,
+//         e.packages,
+//         e.status,
+//         e.admin_comment,
+//         e.user_id,
+//         p.amount as paid_amount,
+//         p.payment_type,
+//         p.proof_of_payment as payment_proof_key,
+//         up.firstname as organizer_first_name,
+//         up.surname as organizer_last_name,
+//         up.cellnumber as organizer_phone,
+//         up.email as organizer_email
+//       FROM events e
+//       LEFT JOIN payments p ON e.event_id = p.event_id
+//       LEFT JOIN user_profiles up ON e.user_id = up.user_id
+//       ORDER BY e.startdate DESC, e.time DESC
+//     `;
 
-    console.log("Admin fetching all events");
-    const result = await client.query(query);
+//     console.log("Admin fetching all events");
+//     const result = await client.query(query);
 
-    const eventsWithUrls = await Promise.all(
-      result.rows.map(async (event) => {
-        let coverImageUrl = "/default-profile-picture.jpg";
-        let proofOfPaymentUrl = null;
+//     const eventsWithUrls = await Promise.all(
+//       result.rows.map(async (event) => {
+//         let coverImageUrl = "/default-profile-picture.jpg";
+//         let proofOfPaymentUrl = null;
 
-        if (event.coverimage) {
-          const coverKey = event.coverimage.split("/").slice(3).join("/");
-          try {
-            coverImageUrl = await generatePresignedUrl(coverKey);
-          } catch (e) {
-            console.warn("Failed to generate signed URL for cover image:", e);
-          }
-        }
+//         if (event.coverimage) {
+//           const coverKey = event.coverimage.split("/").slice(3).join("/");
+//           try {
+//             coverImageUrl = await generatePresignedUrl(coverKey);
+//           } catch (e) {
+//             console.warn("Failed to generate signed URL for cover image:", e);
+//           }
+//         }
 
-        if (event.payment_proof_key) {
-          const proofKey = event.payment_proof_key.split("/").slice(3).join("/");
-          try {
-            proofOfPaymentUrl = await generatePresignedUrl(proofKey);
-          } catch (e) {
-            console.warn("Failed to generate signed URL for proof of payment:", e);
-          }
-        }
+//         if (event.payment_proof_key) {
+//           const proofKey = event.payment_proof_key.split("/").slice(3).join("/");
+//           try {
+//             proofOfPaymentUrl = await generatePresignedUrl(proofKey);
+//           } catch (e) {
+//             console.warn("Failed to generate signed URL for proof of payment:", e);
+//           }
+//         }
 
-        const parsedTabs = event.tabs
-          ? event.tabs.map((tab) => {
-            try {
-              return JSON.parse(tab);
-            } catch (e) {
-              console.warn(`Failed to parse tab: ${tab}`, e);
-              return {};
-            }
-          })
-          : [];
+//         const parsedTabs = event.tabs
+//           ? event.tabs.map((tab) => {
+//             try {
+//               return JSON.parse(tab);
+//             } catch (e) {
+//               console.warn(`Failed to parse tab: ${tab}`, e);
+//               return {};
+//             }
+//           })
+//           : [];
 
-        const parsedPackages = event.packages
-          ? event.packages.map((pkg) => {
-            try {
-              return JSON.parse(pkg);
-            } catch (e) {
-              console.warn(`Failed to parse package: ${pkg}`, e);
-              return {};
-            }
-          })
-          : [];
+//         const parsedPackages = event.packages
+//           ? event.packages.map((pkg) => {
+//             try {
+//               return JSON.parse(pkg);
+//             } catch (e) {
+//               console.warn(`Failed to parse package: ${pkg}`, e);
+//               return {};
+//             }
+//           })
+//           : [];
 
-        return {
-          id: event.id,
-          event_name: event.event_name,
-          description: event.description,
-          terms_and_conditions: event.terms_and_conditions,
-          location: event.location,
-          date: event.date,
-          end_date: event.end_date,
-          time: event.time,
-          end_time: event.end_time,
-          duration: event.duration,
-          registration_deadline_time: event.registration_deadline_time,
-          registration_deadline_date: event.registration_deadline_date,
-          event_type: event.event_type,
-          capacity: event.capacity,
-          attendees: event.attendees,
-          contactnum: event.contactnum,
-          email: event.email,
-          status: event.status,
-          admin_comment: event.admin_comment,
-          user_id: event.user_id,
-          paid_amount: event.paid_amount,
-          payment_type: event.payment_type,
-          payment_proof_key: event.payment_proof_key,
-          coverimage: coverImageUrl,
-          file_url: coverImageUrl, // used on frontend
-          payment_proof_url: proofOfPaymentUrl,
-          tabs: parsedTabs,
-          packages: parsedPackages,
-          organizer: {
-            name: `${event.organizer_first_name || ""} ${event.organizer_last_name || ""}`.trim(),
-            phone: event.organizer_phone || "N/A",
-            email: event.organizer_email || "N/A",
-          },
-        };
-      })
-    );
+//         return {
+//           id: event.id,
+//           event_name: event.event_name,
+//           description: event.description,
+//           terms_and_conditions: event.terms_and_conditions,
+//           location: event.location,
+//           date: event.date,
+//           end_date: event.end_date,
+//           time: event.time,
+//           end_time: event.end_time,
+//           duration: event.duration,
+//           registration_deadline_time: event.registration_deadline_time,
+//           registration_deadline_date: event.registration_deadline_date,
+//           event_type: event.event_type,
+//           capacity: event.capacity,
+//           attendees: event.attendees,
+//           contactnum: event.contactnum,
+//           email: event.email,
+//           status: event.status,
+//           admin_comment: event.admin_comment,
+//           user_id: event.user_id,
+//           paid_amount: event.paid_amount,
+//           payment_type: event.payment_type,
+//           payment_proof_key: event.payment_proof_key,
+//           coverimage: coverImageUrl,
+//           file_url: coverImageUrl, // used on frontend
+//           payment_proof_url: proofOfPaymentUrl,
+//           tabs: parsedTabs,
+//           packages: parsedPackages,
+//           organizer: {
+//             name: `${event.organizer_first_name || ""} ${event.organizer_last_name || ""}`.trim(),
+//             phone: event.organizer_phone || "N/A",
+//             email: event.organizer_email || "N/A",
+//           },
+//         };
+//       })
+//     );
 
-    console.log("Admin events fetched:", eventsWithUrls.length, "events");
-    res.json(eventsWithUrls);
-  } catch (error) {
-    console.error("Error fetching admin events:", error);
-    res.status(500).json({
-      error: "Failed to fetch events",
-      details: error.message,
-    });
-  } finally {
-    client.release();
-  }
-});
+//     console.log("Admin events fetched:", eventsWithUrls.length, "events");
+//     res.json(eventsWithUrls);
+//   } catch (error) {
+//     console.error("Error fetching admin events:", error);
+//     res.status(500).json({
+//       error: "Failed to fetch events",
+//       details: error.message,
+//     });
+//   } finally {
+//     client.release();
+//   }
+// });
 
 
-// Get specific event by ID for admin (can access any event)
-app.get("/api/admin/events/:eventId", authenticateToken, async (req, res) => {
-  const client = await pool.connect()
+// // Get specific event by ID for admin (can access any event)
+// app.get("/api/admin/events/:eventId", authenticateToken, async (req, res) => {
+//   const client = await pool.connect()
 
-  try {
-    const { eventId } = req.params
-    const { role } = req.user
+//   try {
+//     const { eventId } = req.params
+//     const { role } = req.user
 
-    // Check if user is admin
-    if (role !== "Admin") {
-      return res.status(403).json({
-        error: "Access denied. Admin privileges required.",
-      })
-    }
+//     // Check if user is admin
+//     if (role !== "Admin") {
+//       return res.status(403).json({
+//         error: "Access denied. Admin privileges required.",
+//       })
+//     }
 
-    const query = `
-      SELECT 
-        e.event_id as id,
-        e.name,
-        e.description,
-        e.location,
-        e.startdate as start_date,
-        e.enddate as end_date,
-        e.time as start_time,
-        e.endtime as end_time,
-        e.duration,
-        e.deadlinetime as registration_deadline_time,
-        e.deadlinedate as registration_deadline_date,
-        e.type as event_type,
-        e.capacity,
-        e.attendees,
-        e.contactnum,
-        e.email,
-        e.coverimage,
-        e.tabs,
-        e.packages,
-        e.terms_and_conditions,
-        e.status,
-        e.admin_comment,
-        e.user_id,
-        p.payment_id,
-        p.amount as paid_amount,
-        p.payment_type,
-        p.proof_of_payment as payment_proof_key,
-        up.firstname as organizer_first_name,
-        up.surname as organizer_last_name,
-        up.cellnumber as organizer_phone,
-        up.email as organizer_email
-      FROM events e
-      LEFT JOIN payments p ON e.event_id = p.event_id
-      LEFT JOIN user_profiles up ON e.user_id = up.user_id
-      WHERE e.event_id = $1
-    `
+//     const query = `
+//       SELECT 
+//         e.event_id as id,
+//         e.name,
+//         e.description,
+//         e.location,
+//         e.startdate as start_date,
+//         e.enddate as end_date,
+//         e.time as start_time,
+//         e.endtime as end_time,
+//         e.duration,
+//         e.deadlinetime as registration_deadline_time,
+//         e.deadlinedate as registration_deadline_date,
+//         e.type as event_type,
+//         e.capacity,
+//         e.attendees,
+//         e.contactnum,
+//         e.email,
+//         e.coverimage,
+//         e.tabs,
+//         e.packages,
+//         e.terms_and_conditions,
+//         e.status,
+//         e.admin_comment,
+//         e.user_id,
+//         p.payment_id,
+//         p.amount as paid_amount,
+//         p.payment_type,
+//         p.proof_of_payment as payment_proof_key,
+//         up.firstname as organizer_first_name,
+//         up.surname as organizer_last_name,
+//         up.cellnumber as organizer_phone,
+//         up.email as organizer_email
+//       FROM events e
+//       LEFT JOIN payments p ON e.event_id = p.event_id
+//       LEFT JOIN user_profiles up ON e.user_id = up.user_id
+//       WHERE e.event_id = $1
+//     `
 
-    console.log("Admin fetching event by ID:", eventId)
-    console.log("Query:", query)
+//     console.log("Admin fetching event by ID:", eventId)
+//     console.log("Query:", query)
 
-    const result = await client.query(query, [eventId])
+//     const result = await client.query(query, [eventId])
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Event not found" })
-    }
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({ message: "Event not found" })
+//     }
 
-    const event = result.rows[0]
+//     const event = result.rows[0]
 
-    // Generate presigned URLs
-    let coverImageUrl = "/default-profile-picture.jpg"
-    let proofOfPaymentUrl = null
+//     // Generate presigned URLs
+//     let coverImageUrl = "/default-profile-picture.jpg"
+//     let proofOfPaymentUrl = null
 
-    if (event.coverimage) {
-      const coverKey = event.coverimage.split("/").slice(3).join("/")
-      if (coverKey) {
-        try {
-          coverImageUrl = await generatePresignedUrl(coverKey)
-        } catch (e) {
-          console.warn("Failed to generate signed URL for cover image:", e)
-        }
-      }
-    }
+//     if (event.coverimage) {
+//       const coverKey = event.coverimage.split("/").slice(3).join("/")
+//       if (coverKey) {
+//         try {
+//           coverImageUrl = await generatePresignedUrl(coverKey)
+//         } catch (e) {
+//           console.warn("Failed to generate signed URL for cover image:", e)
+//         }
+//       }
+//     }
 
-    if (event.payment_proof_key) {
-      const proofKey = event.payment_proof_key.split("/").slice(3).join("/")
-      if (proofKey) {
-        try {
-          proofOfPaymentUrl = await generatePresignedUrl(proofKey)
-        } catch (e) {
-          console.warn("Failed to generate signed URL for proof of payment:", e)
-        }
-      }
-    }
+//     if (event.payment_proof_key) {
+//       const proofKey = event.payment_proof_key.split("/").slice(3).join("/")
+//       if (proofKey) {
+//         try {
+//           proofOfPaymentUrl = await generatePresignedUrl(proofKey)
+//         } catch (e) {
+//           console.warn("Failed to generate signed URL for proof of payment:", e)
+//         }
+//       }
+//     }
 
-    // Parse tabs and packages
-    event.tabs = event.tabs
-      ? event.tabs.map((tab) => {
-        try {
-          return JSON.parse(tab)
-        } catch (e) {
-          console.warn(`Failed to parse tab: ${tab}`, e)
-          return {}
-        }
-      })
-      : []
+//     // Parse tabs and packages
+//     event.tabs = event.tabs
+//       ? event.tabs.map((tab) => {
+//         try {
+//           return JSON.parse(tab)
+//         } catch (e) {
+//           console.warn(`Failed to parse tab: ${tab}`, e)
+//           return {}
+//         }
+//       })
+//       : []
 
-    event.packages = event.packages
-      ? event.packages.map((pkg) => {
-        try {
-          return JSON.parse(pkg)
-        } catch (e) {
-          console.warn(`Failed to parse package: ${pkg}`, e)
-          return {}
-        }
-      })
-      : []
+//     event.packages = event.packages
+//       ? event.packages.map((pkg) => {
+//         try {
+//           return JSON.parse(pkg)
+//         } catch (e) {
+//           console.warn(`Failed to parse package: ${pkg}`, e)
+//           return {}
+//         }
+//       })
+//       : []
 
-    // Format organizer data
-    event.organizer = {
-      name: `${event.organizer_first_name || ""} ${event.organizer_last_name || ""}`.trim(),
-      phone: event.organizer_phone || "N/A",
-      email: event.organizer_email || "N/A",
-      amount:
-        event.payment_type === "Sponsor" && event.paid_amount
-          ? `R ${Number.parseFloat(event.paid_amount).toFixed(2)}`
-          : "",
-    }
+//     // Format organizer data
+//     event.organizer = {
+//       name: `${event.organizer_first_name || ""} ${event.organizer_last_name || ""}`.trim(),
+//       phone: event.organizer_phone || "N/A",
+//       email: event.organizer_email || "N/A",
+//       amount:
+//         event.payment_type === "Sponsor" && event.paid_amount
+//           ? `R ${Number.parseFloat(event.paid_amount).toFixed(2)}`
+//           : "",
+//     }
 
-    res.json({
-      ...event,
-      coverimage: coverImageUrl,
-      payment_proof_url: proofOfPaymentUrl,
-    })
-  } catch (error) {
-    console.error("Error fetching admin event:", error)
-    res.status(500).json({
-      message: "Failed to fetch event",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    })
-  } finally {
-    client.release()
-  }
-})
+//     res.json({
+//       ...event,
+//       coverimage: coverImageUrl,
+//       payment_proof_url: proofOfPaymentUrl,
+//     })
+//   } catch (error) {
+//     console.error("Error fetching admin event:", error)
+//     res.status(500).json({
+//       message: "Failed to fetch event",
+//       error: process.env.NODE_ENV === "development" ? error.message : undefined,
+//     })
+//   } finally {
+//     client.release()
+//   }
+// })
 
-// Delete an event
-app.delete('/api/events/:eventId', authenticateToken, async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { eventId } = req.params;
-    const { userId, role } = req.user;
+// // Delete an event
+// app.delete('/api/events/:eventId', authenticateToken, async (req, res) => {
+//   const client = await pool.connect();
+//   try {
+//     const { eventId } = req.params;
+//     const { userId, role } = req.user;
 
-    // Check if the user is the organizer or an admin
-    const eventCheck = await client.query(
-      'SELECT event_id FROM events WHERE event_id = $1 AND (user_id = $2 OR $3 = true)',
-      [eventId, userId, role === 'Admin']
-    );
+//     // Check if the user is the organizer or an admin
+//     const eventCheck = await client.query(
+//       'SELECT event_id FROM events WHERE event_id = $1 AND (user_id = $2 OR $3 = true)',
+//       [eventId, userId, role === 'Admin']
+//     );
 
-    if (eventCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Event not found or access denied' });
-    }
+//     if (eventCheck.rows.length === 0) {
+//       return res.status(404).json({ error: 'Event not found or access denied' });
+//     }
 
-    await client.query('BEGIN');
+//     await client.query('BEGIN');
 
-    // Delete related records
-    await client.query('DELETE FROM payments WHERE event_id = $1', [eventId]);
+//     // Delete related records
+//     await client.query('DELETE FROM payments WHERE event_id = $1', [eventId]);
 
-    // Delete the event
-    const result = await client.query('DELETE FROM events WHERE event_id = $1 RETURNING *', [eventId]);
+//     // Delete the event
+//     const result = await client.query('DELETE FROM events WHERE event_id = $1 RETURNING *', [eventId]);
 
-    if (result.rows.length === 0) {
-      throw new Error('Event not found after verification');
-    }
+//     if (result.rows.length === 0) {
+//       throw new Error('Event not found after verification');
+//     }
 
-    await client.query('COMMIT');
+//     await client.query('COMMIT');
 
-    res.json({ message: 'Event deleted successfully', event: result.rows[0] });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error deleting event:', error);
-    res.status(500).json({
-      error: 'Failed to delete event',
-      details: error.message
-    });
-  } finally {
-    client.release();
-  }
-});
+//     res.json({ message: 'Event deleted successfully', event: result.rows[0] });
+//   } catch (error) {
+//     await client.query('ROLLBACK');
+//     console.error('Error deleting event:', error);
+//     res.status(500).json({
+//       error: 'Failed to delete event',
+//       details: error.message
+//     });
+//   } finally {
+//     client.release();
+//   }
+// });
 
 // Faculty & Department lookup endpoints
 app.get('/api/faculties', async (req, res) => {
