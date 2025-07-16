@@ -310,18 +310,17 @@
 }
 
 .modern-table thead {
-  background-color: #f8f9fa;
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
 }
 
 .modern-table th {
   padding: 16px 20px;
   text-align: left;
   font-weight: 600;
-  color: #495057;
-  border-bottom: 2px solid #e9ecef;
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.5px;
+  color: #ffffff;
+  border-bottom: 2px solid rgba(255,255,255,0.2);
+  font-size: 14px;
+  letter-spacing: 0.25px;
 }
 
 .modern-table td {
@@ -450,12 +449,12 @@
 }
 
 .modern-table th {
-  background-color: #f8f9fa;
+  background: transparent;
   padding: 16px 20px;
   text-align: left;
   font-weight: 600;
-  color: #555;
-  border-bottom: 1px solid #eee;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
 }
 
 .modern-table td {

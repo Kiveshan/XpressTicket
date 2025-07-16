@@ -1,0 +1,64 @@
+/* EventApproval.override.css - Highest priority styles to fix card height */
+
+/* Force lower height for card images */
+.modern-card-image-container {
+  height: 70px !important;
+  max-height: 70px !important;
+  min-height: 70px !important;
+}
+
+/* Strict card height limits */
+.modern-card {
+  max-height: 200px !important;
+  height: auto !important;
+}
+
+/* Compact body styling */
+.modern-card-body {
+  padding: 3px 8px 4px !important;
+  flex-grow: 0 !important;
+}
+
+/* Compact title */
+.modern-card-title {
+  font-size: 0.8rem !important;
+  margin: 2px 0 0 !important;
+  line-height: 1.1 !important;
+}
+
+/* Extra compact details */
+.modern-card-details {
+  margin-bottom: 0 !important;
+}
+
+.modern-card-details p {
+  margin: 0 !important;
+  line-height: 1 !important;
+  font-size: 0.65rem !important;
+  gap: 2px !important;
+}
+
+.modern-card-details svg {
+  min-width: 10px !important;
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* Compact actions area */
+.modern-card-actions {
+  margin-top: 0 !important;
+  padding-top: 2px !important;
+}
+
+/* Smaller badge */
+.modern-badge {
+  padding: 1px 4px !important;
+  font-size: 0.6rem !important;
+  min-width: auto !important;
+}
+
+/* Smaller button */
+.modern-btn {
+  padding: 4px 8px !important;
+  font-size: 0.65rem !important;
+}
