@@ -9,13 +9,21 @@ const jwt = require('jsonwebtoken');
 const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const multer = require('multer');
+const { isUint16Array } = require('util/types');
 
 const app = express();
 const port = 5000;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: function(origin, callback) {
+    const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -48,9 +56,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'Xpressfinal',
-  password: '123456',
-  port: 5433,
+  database: 'XPRESS.FINAL',
+  password: '1234567890',
+  port: 5432,
   timezone: 'UTC', // Ensure PostgreSQL uses UTC
 });
 
@@ -3277,4 +3285,5 @@ function formatDate(dateString) {
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+ 
 });

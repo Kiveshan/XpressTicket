@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import '../Organiser/EventRequest.css';
+import './EventApproval.css';
+import '../shared/ModernDashboard.css';
 import { useNavigate } from 'react-router-dom';
+import { FaArrowLeft } from 'react-icons/fa';
+// Import our custom card component
+import CompactEventHistoryCard from './CompactEventHistoryCard';
+// Import a custom hook to fix card heights
+import useFixCardHeight from '../hooks/useFixCardHeight';
+// Import override CSS last to ensure it takes precedence
+import './EventApproval.override.css';
 
 const EventsHistory = () => {
   const nav = useNavigate();
   const [events, setEvents] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const eventsPerPage = 6; // Limit number of events per page
+  
+  // Use our custom hook to fix card heights
+  useFixCardHeight();
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -146,90 +160,75 @@ const EventsHistory = () => {
     return () => clearInterval(interval);
   }, [nav]);
 
-  // Function to get appropriate status class
-  const getStatusClass = (status) => {
-    const statusLower = status.toLowerCase();
-    if (statusLower === 'approved' || statusLower === 'active') {
-      return 'status-approved';
-    } else if (statusLower === 'rejected' || statusLower === 'declined') {
-      return 'status-rejected';
-    } else {
-      return 'status-other';
+  // Load more events
+  const loadMoreEvents = () => {
+    if (hasMore) {
+      setPage(prevPage => prevPage + 1);
     }
   };
 
+  // Reset pagination
+  const resetPagination = () => {
+    setPage(1);
+    setEvents([]);
+    setHasMore(true);
+  };
+
   return (
-    <div className="container12">
-      <header className="dashboard-header1">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="dashboard-logo1"
-          onError={(e) => {
-            console.error('Failed to load logo');
-            e.target.src = '/fallback-logo.png'; // Ensure you have a fallback logo
-          }}
-        />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={() => nav('/')}>
-            Log Out
+    <div className="modern-dashboard-container">
+      {/* Header */}
+      <div className="modern-header">
+        <div className="modern-header-logo">
+          <img 
+            src="/XPRESS TICKETS LOGO2.png" 
+            alt="EventXpress Logo" 
+            className="modern-logo" 
+            style={{ maxHeight: '45px', width: 'auto' }}
+            onError={(e) => {
+              console.error('Failed to load logo');
+              e.target.src = '/fallback-logo.png'; // Ensure you have a fallback logo
+            }}
+          />
+          <h1>Events History</h1>
+        </div>
+        <div className="modern-header-actions">
+          <button className="modern-btn modern-btn-outline" onClick={() => nav('/admin-dash')}>
+            <FaArrowLeft /> Back to Dashboard
+          </button>
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            Logout
           </button>
         </div>
-      </header>
-
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/admin-dash')}>
-          Back
-        </button>
       </div>
-      <h2 className="title">Events Approved/Rejected</h2>
+      
+      <h2 className="modern-page-title">Events History</h2>
 
-      {error && <p className="error">{error}</p>}
-      {loading && <p className="loading">Loading events...</p>}
+      {error && <div className="modern-error"><p>{error}</p></div>}
+      {loading && <div className="modern-loading"><div className="modern-spinner"></div><p>Loading events...</p></div>}
 
       {!loading && events.length === 0 && !error && (
-        <p className="no-events">No processed events available.</p>
+        <div className="modern-no-data">
+          <p>No processed events available.</p>
+        </div>
       )}
 
-      <div className="card-grid">
-        {events.map((event) => (
-          <div key={event.id || event.eventid} className="card">
-            <div className="card-image-container">
-              <img
-                src={event.file_url}
-                alt={event.event_name}
-                className="card-image"
-                onError={(e) => {
-                  console.error(`Failed to load image for event ${event.eventid}: ${event.file_url}`);
-                  e.target.onerror = null; // prevent infinite loop
-                  // Use a consistent data URI for the default image
-                  e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZWVlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5OTk5OTkiPkltYWdlIE5vdCBBdmFpbGFibGU8L3RleHQ+PC9zdmc+";
-                }}
-              />
-            </div>
-            <h3 className="card-title">{event.event_name || 'Untitled Event'}</h3>
-            <div className="card-details">
-              <p>
-                📍 {event.location || event.venue || 'N/A'}
-                {' '}📅 {event.date || 'N/A'}
-                {' '}⏰ {event.time || 'N/A'}
-                {' '}💰 {event.price || 'N/A'}
-              </p>
-            </div>
-            <div className="card-footer">
-              <span className={`status ${getStatusClass(event.status)}`}>
-                Status: {event.status}
-              </span>
-              <button
-                className="view-btn"
-                onClick={() => nav('/adminvieweventrequest', { state: { eventid: event.id || event.eventid || event.event_id } })}
-              >
-                View
-              </button>
-            </div>
+      <div className="modern-card-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px'}}>
+        {events.length > 0 ? (
+          events.map((event) => (
+            <CompactEventHistoryCard key={event.eventid || event.id || event.event_id} event={event} />
+          ))
+        ) : !loading && (
+          <div className="modern-no-data">
+            <p>No events found</p>
           </div>
-        ))}
+        )}
       </div>
+      
+      {hasMore && events.length > 0 && (
+        <div className="modern-load-more">
+          <button className="modern-btn" onClick={loadMoreEvents}>Load More</button>
+        </div>
+      )}
     </div>
   );
 };

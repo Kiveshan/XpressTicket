@@ -1,0 +1,42 @@
+/* Admin Dashboard specific styles to override the tall cards */
+.admin-compact-card {
+  max-height: 160px !important;
+  height: auto !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding-bottom: 0 !important;
+}
+
+.admin-compact-card .admin-card-image-container {
+  height: 60px !important;
+  overflow: hidden;
+}
+
+.admin-compact-card .admin-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
+.admin-compact-card .admin-card-content {
+  padding: 8px 12px !important;
+}
+
+.admin-compact-card .admin-card-title {
+  font-size: 14px !important;
+  margin-bottom: 2px !important;
+  margin-top: 0 !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-compact-card .admin-card-description {
+  font-size: 12px !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+  color: #666;
+}
