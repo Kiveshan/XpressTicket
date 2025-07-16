@@ -290,83 +290,147 @@ const AdminViewEventRequest = () => {
       {/* Header */}
       <div className="modern-header">
         <div className="modern-header-logo">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="modern-logo" />
+          <img 
+            src="/XPRESS TICKETS LOGO2.png" 
+            alt="EventXpress Logo" 
+            className="modern-logo" 
+            style={{ maxHeight: '45px', width: 'auto' }}
+            onError={(e) => {
+              console.error('Failed to load logo');
+              e.target.src = '/fallback-logo.png'; // Ensure you have a fallback logo
+            }}
+          />
           <h1>Event Request Review</h1>
         </div>
-        <button className="modern-logout-btn" onClick={() => nav('/login')}>
-          Logout
-        </button>
+        <div className="modern-header-actions">
+          <button className="modern-btn modern-btn-outline" onClick={() => nav('/event-approval')}>
+            <FaArrowLeft /> Back to Events
+          </button>
+          <button className="modern-logout-btn" onClick={() => nav('/login')}>
+            Logout
+          </button>
+        </div>
       </div>
       
-      {/* Back button */}
-      <div className="modern-back-button">
-        <button className="modern-back-btn" onClick={() => nav('/event-approval')}>
-          <FaArrowLeft /> Back to Event Approval
-        </button>
-      </div>
 
-      {/* Event Header */}
-      <div className="modern-card modern-full-width">
-        <div className="modern-card-header">
-          <h2><MdEventAvailable /> {event.event_name || 'Untitled Event'}</h2>
-        </div>
-        <div className="modern-card-body">
-          <div className="modern-event-header">
-            <div className="modern-event-image">
-              <img
-                src={event.file_url || '/default-profile-picture.jpg'}
-                alt="Event"
-                onError={(e) => (e.target.src = '/default-profile-picture.jpg')}
-              />
-            </div>
-            <div className="modern-event-details">
-              <div className="modern-event-info-grid">
-                <div className="modern-event-info-item">
-                  <FaMapMarkerAlt className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Location</span>
-                    <span className="modern-value">{event.location || 'Not specified'}</span>
+
+      {/* Event Header - Compact */}
+      <div style={{ marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Event Overview</h3>
+        <div style={{
+          background: '#fff',
+          border: '1px solid #edf2f7',
+          borderRadius: '6px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          overflow: 'hidden'
+        }}>
+          <div style={{ 
+            padding: '6px 10px', 
+            background: 'linear-gradient(135deg, #4a5568, #2d3748)', 
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <MdEventAvailable size={16} />
+            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{event.event_name || 'Untitled Event'}</span>
+            <span 
+              className={`modern-badge modern-badge-${event.status === 'Approved' ? 'success' : event.status === 'Rejected' ? 'danger' : 'warning'}`}
+              style={{ 
+                marginLeft: 'auto', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px', 
+                fontSize: '0.7rem',
+                padding: '2px 8px' 
+              }}
+            >
+              {event.status === 'Approved' ? <FaCheck size={10} /> : event.status === 'Rejected' ? <FaTimes size={10} /> : <FaPencilAlt size={10} />}
+              {event.status || 'Pending'}
+            </span>
+          </div>
+          <div style={{ padding: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ 
+                flex: '0 0 80px', 
+                height: '80px', 
+                borderRadius: '4px', 
+                overflow: 'hidden' 
+              }}>
+                <img
+                  src={event.file_url}
+                  alt="Event"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    console.warn(`Failed to load image: ${e.target.src}`);
+                    e.target.classList.add('image-error');
+                  }}
+                />
+                {!event.file_url && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f0f0f0',
+                    color: '#999',
+                    fontSize: '0.7rem'
+                  }}>
+                    <span>No Image</span>
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: '1', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  <FaMapMarkerAlt size={10} style={{ marginTop: '3px', color: '#4a5568' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#718096' }}>Location</span>
+                    <span style={{ fontSize: '0.8rem' }}>{event.location || 'Not specified'}</span>
                   </div>
                 </div>
-                <div className="modern-event-info-item">
-                  <FaCalendarAlt className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Date</span>
-                    <span className="modern-value">
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  <FaCalendarAlt size={10} style={{ marginTop: '3px', color: '#4a5568' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#718096' }}>Date</span>
+                    <span style={{ fontSize: '0.8rem' }}>
                       {event.start_date ? new Date(event.start_date).toLocaleDateString() : 'Not set'}
                       {event.end_date && event.end_date !== event.start_date ? 
                         ` - ${new Date(event.end_date).toLocaleDateString()}` : ''}
                     </span>
                   </div>
                 </div>
-                <div className="modern-event-info-item">
-                  <FaClock className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Time</span>
-                    <span className="modern-value">{event.time || 'Not specified'}</span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  <FaClock size={10} style={{ marginTop: '3px', color: '#4a5568' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#718096' }}>Time</span>
+                    <span style={{ fontSize: '0.8rem' }}>{event.time || 'Not specified'}</span>
                   </div>
                 </div>
-                <div className="modern-event-info-item">
-                  <FaCalendarAlt className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Registration Deadline</span>
-                    <span className="modern-value">
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  <FaCalendarAlt size={10} style={{ marginTop: '3px', color: '#4a5568' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#718096' }}>Deadline</span>
+                    <span style={{ fontSize: '0.8rem' }}>
                       {event.deadline ? new Date(event.deadline).toLocaleDateString() : 'Not set'}
                     </span>
                   </div>
                 </div>
-                <div className="modern-event-info-item">
-                  <FaInfoCircle className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Event Type</span>
-                    <span className="modern-value">{event.event_type || 'Not specified'}</span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  <FaInfoCircle size={10} style={{ marginTop: '3px', color: '#4a5568' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#718096' }}>Event Type</span>
+                    <span style={{ fontSize: '0.8rem' }}>{event.event_type || 'Not specified'}</span>
                   </div>
                 </div>
-                <div className="modern-event-info-item">
-                  <FaUsers className="modern-icon" />
-                  <div>
-                    <span className="modern-label">Capacity</span>
-                    <span className="modern-value">{event.capacity || 'Unlimited'}</span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  <FaUsers size={10} style={{ marginTop: '3px', color: '#4a5568' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#718096' }}>Capacity</span>
+                    <span style={{ fontSize: '0.8rem' }}>{event.capacity || 'Unlimited'}</span>
                   </div>
                 </div>
               </div>
@@ -375,98 +439,170 @@ const AdminViewEventRequest = () => {
         </div>
       </div>
 
-      {/* Event Details */}
-      <div className="modern-profile-container">
-        <div className="modern-profile-section">
-          {/* Event Description */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h2><FaInfoCircle /> Event Description</h2>
+      {/* Event Details - Compact 3-Column Grid */}
+      <div style={{ marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Event Details</h3>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+          gap: '8px',
+          width: '100%'
+        }}>
+          {/* Card 1: Description */}
+          <div style={{ 
+            background: '#fff', 
+            border: '1px solid #edf2f7', 
+            borderRadius: '4px', 
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', 
+            overflow: 'hidden' 
+          }}>
+            <div style={{ 
+              padding: '4px 8px', 
+              background: '#f9fafb', 
+              borderBottom: '1px solid #edf2f7',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <FaInfoCircle size={10} style={{ color: '#4a5568' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#4a5568' }}>Description</span>
             </div>
-            <div className="modern-card-body">
-              <p className="modern-description">{event.description || 'No description provided.'}</p>
-            </div>
-          </div>
-
-          {/* Client Types */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h2><FaUsers /> Attendee Types</h2>
-            </div>
-            <div className="modern-card-body">
-              {event.client_type && event.client_type.length > 0 ? (
-                <div className="modern-badge-container">
-                  {event.client_type.map((type, index) => (
-                    <span key={index} className="modern-badge modern-badge-info">{type}</span>
-                  ))}
-                </div>
-              ) : (
-                <p className="modern-no-data">No attendee types specified</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="modern-profile-section">
-          {/* Terms and Conditions */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h2><FaFileAlt /> Terms and Conditions</h2>
-            </div>
-            <div className="modern-card-body">
-              <p className="modern-description">
-                {event.terms_and_conditions || 'No terms and conditions provided.'}
+            <div style={{ padding: '5px 8px' }}>
+              <p style={{ fontSize: '0.75rem', margin: '0', maxHeight: '70px', overflowY: 'auto', color: '#4a5568' }}>
+                {event.description || 'No description provided.'}
               </p>
             </div>
           </div>
 
-          {/* Payment Information */}
-          <div className="modern-card">
-            <div className="modern-card-header">
-              <h2><FaMoneyBillWave /> Payment Information</h2>
+          {/* Card 2: Attendee Types */}
+          <div style={{ 
+            background: '#fff', 
+            border: '1px solid #edf2f7', 
+            borderRadius: '4px', 
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', 
+            overflow: 'hidden' 
+          }}>
+            <div style={{ 
+              padding: '4px 8px', 
+              background: '#f9fafb', 
+              borderBottom: '1px solid #edf2f7',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <FaUsers size={10} style={{ color: '#4a5568' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#4a5568' }}>Attendee Types</span>
             </div>
-            <div className="modern-card-body">
-              <div className="modern-info-row">
-                <div className="modern-info-label">Payment Type</div>
-                <div className="modern-info-value">
-                  <span className="modern-badge modern-badge-primary">
-                    {event.payment_type || 'Not specified'}
-                  </span>
+            <div style={{ padding: '5px 8px' }}>
+              {event.client_type && event.client_type.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                  {event.client_type.map((type, index) => (
+                    <span key={index} style={{
+                      fontSize: '0.65rem',
+                      padding: '1px 5px',
+                      borderRadius: '10px',
+                      background: '#e6f7ff',
+                      color: '#0072b1',
+                      fontWeight: '500'
+                    }}>{type}</span>
+                  ))}
                 </div>
+              ) : (
+                <p style={{ fontSize: '0.75rem', color: '#718096', margin: '0' }}>No attendee types specified</p>
+              )}
+            </div>
+          </div>
+
+          {/* Card 3: Terms */}
+          <div style={{ 
+            background: '#fff', 
+            border: '1px solid #edf2f7', 
+            borderRadius: '4px', 
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', 
+            overflow: 'hidden' 
+          }}>
+            <div style={{ 
+              padding: '4px 8px', 
+              background: '#f9fafb', 
+              borderBottom: '1px solid #edf2f7',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <FaFileAlt size={10} style={{ color: '#4a5568' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#4a5568' }}>Terms</span>
+            </div>
+            <div style={{ padding: '5px 8px' }}>
+              <p style={{ fontSize: '0.75rem', margin: '0', maxHeight: '70px', overflowY: 'auto', color: '#4a5568' }}>
+                {event.terms_and_conditions || 'No terms provided.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: Payment */}
+          <div style={{ 
+            background: '#fff', 
+            border: '1px solid #edf2f7', 
+            borderRadius: '4px', 
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', 
+            overflow: 'hidden' 
+          }}>
+            <div style={{ 
+              padding: '4px 8px', 
+              background: '#f9fafb', 
+              borderBottom: '1px solid #edf2f7',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <FaMoneyBillWave size={10} style={{ color: '#4a5568' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: '500', color: '#4a5568' }}>Payment</span>
+            </div>
+            <div style={{ padding: '5px 8px', fontSize: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Type:</span>
+                <span style={{ 
+                  background: '#e6f7ff', 
+                  padding: '1px 5px', 
+                  borderRadius: '10px',
+                  fontSize: '0.65rem',
+                  color: '#0072b1'
+                }}>{event.payment_type || 'Not specified'}</span>
               </div>
               
               {event.payment_type === 'Sponsor' ? (
                 <>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Sponsor Name</div>
-                    <div className="modern-info-value">{event.sponsor.name || 'Not provided'}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Sponsor:</span>
+                    <span style={{ fontSize: '0.7rem' }}>{event.sponsor?.name || 'N/A'}</span>
                   </div>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Sponsor Phone</div>
-                    <div className="modern-info-value">{event.sponsor.phone || 'Not provided'}</div>
-                  </div>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Sponsor Email</div>
-                    <div className="modern-info-value">{event.sponsor.email || 'Not provided'}</div>
-                  </div>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Amount</div>
-                    <div className="modern-info-value">{event.sponsor.amount || 'Not provided'}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Amount:</span>
+                    <span style={{ fontSize: '0.7rem' }}>{event.sponsor?.amount || 'N/A'}</span>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Amount</div>
-                    <div className="modern-info-value">{event.amount || 'N/A'}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Amount:</span>
+                    <span style={{ fontSize: '0.7rem' }}>{event.amount || 'N/A'}</span>
                   </div>
-                  <div className="modern-info-row">
-                    <div className="modern-info-label">Proof of Payment</div>
-                    <div className="modern-info-value">
-                      <button className="modern-btn modern-btn-sm" onClick={handleViewProofOfPayment}>
-                        View Document
-                      </button>
-                    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#718096', fontWeight: '500', fontSize: '0.7rem' }}>Proof:</span>
+                    <button 
+                      onClick={handleViewProofOfPayment}
+                      style={{ 
+                        color: '#4299e1', 
+                        background: 'none', 
+                        border: 'none',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        padding: '0',
+                        fontSize: '0.7rem'
+                      }}
+                    >
+                      View proof
+                    </button>
                   </div>
                 </>
               )}
@@ -475,37 +611,44 @@ const AdminViewEventRequest = () => {
         </div>
       </div>
 
-      {/* Packages */}
-      <div className="modern-card modern-full-width">
-        <div className="modern-card-header">
-          <h2><FaBox /> Packages</h2>
-        </div>
-        <div className="modern-card-body">
+      {/* Packages - Compact */}
+      <div style={{ marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Packages</h3>
+        <div style={{
+          background: '#fff',
+          border: '1px solid #edf2f7',
+          borderRadius: '6px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          padding: '8px',
+          fontSize: '0.8rem'
+        }}>
           {event.packages && event.packages.length > 0 ? (
-            <div className="modern-table-container">
-              <table className="modern-table">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ 
+                width: '100%', 
+                borderCollapse: 'collapse',
+                fontSize: '0.75rem'
+              }}>
                 <thead>
-                  <tr>
-                    <th>Package Type</th>
-                    <th>Location</th>
-                    <th>Duration</th>
-                    <th>Date Choices</th>
-                    <th>Pricing</th>
-                    <th>Details</th>
+                  <tr style={{ borderBottom: '1px solid #edf2f7' }}>
+                    <th style={{ padding: '6px', textAlign: 'left', fontWeight: '600' }}>Package</th>
+                    <th style={{ padding: '6px', textAlign: 'left', fontWeight: '600' }}>Location</th>
+                    <th style={{ padding: '6px', textAlign: 'left', fontWeight: '600' }}>Duration</th>
+                    <th style={{ padding: '6px', textAlign: 'left', fontWeight: '600' }}>Dates</th>
+                    <th style={{ padding: '6px', textAlign: 'left', fontWeight: '600' }}>Price</th>
+                    <th style={{ padding: '6px', textAlign: 'left', fontWeight: '600' }}>Details</th>
                   </tr>
                 </thead>
                 <tbody>
                   {event.packages.map((pkg, idx) => (
-                    <tr key={idx}>
-                      <td>{pkg.packageType || 'Not specified'}</td>
-                      <td>{pkg.location || 'Not specified'}</td>
-                      <td>{pkg.duration || 'Not specified'}</td>
-                      <td>{pkg.dateChoices || 'Not specified'}</td>
-                      <td>{pkg.pricing || 'N/A'}</td>
-                      <td>
-                        <div className="modern-truncate-text">
-                          {pkg.details || 'No details provided'}
-                        </div>
+                    <tr key={idx} style={{ borderBottom: '1px solid #f7fafc' }}>
+                      <td style={{ padding: '4px 6px' }}>{pkg.packageType || 'N/A'}</td>
+                      <td style={{ padding: '4px 6px' }}>{pkg.location || 'N/A'}</td>
+                      <td style={{ padding: '4px 6px' }}>{pkg.duration || 'N/A'}</td>
+                      <td style={{ padding: '4px 6px' }}>{pkg.dateChoices || 'N/A'}</td>
+                      <td style={{ padding: '4px 6px' }}>{pkg.pricing || 'N/A'}</td>
+                      <td style={{ padding: '4px 6px', maxWidth: '120px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {pkg.details || 'No details'}
                       </td>
                     </tr>
                   ))}
@@ -513,42 +656,86 @@ const AdminViewEventRequest = () => {
               </table>
             </div>
           ) : (
-            <p className="modern-no-data">No packages defined for this event</p>
+            <p style={{ margin: '4px 0', color: '#718096' }}>No packages defined for this event</p>
           )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="modern-card modern-full-width">
-        <div className="modern-card-header">
-          <h2><FaFileAlt /> Additional Tabs</h2>
-        </div>
-        <div className="modern-card-body">
+      {/* Tabs - Compact */}
+      <div style={{ marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Additional Info</h3>
+        <div style={{
+          background: '#fff',
+          border: '1px solid #edf2f7',
+          borderRadius: '6px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          padding: '8px',
+          fontSize: '0.8rem'
+        }}>
           {event.tabs && event.tabs.length > 0 ? (
-            <div className="modern-tabs-container">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {event.tabs.map((tab, idx) => (
-                <div key={idx} className="modern-tab-item">
-                  <div className="modern-tab-header">{tab.name || 'Unnamed Tab'}</div>
-                  <div className="modern-tab-content">
-                    <p>{tab.content || 'No content provided'}</p>
+                <div key={idx} style={{ border: '1px solid #f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ 
+                    padding: '4px 8px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderBottom: '1px solid #f0f0f0',
+                    fontWeight: '500',
+                    fontSize: '0.75rem'
+                  }}>{tab.name || 'Unnamed Tab'}</div>
+                  <div style={{ 
+                    padding: '4px 8px',
+                    fontSize: '0.7rem',
+                    maxHeight: '60px',
+                    overflowY: 'auto'
+                  }}>
+                    {tab.content || 'No content provided for this tab.'}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="modern-no-data">No additional tabs defined for this event</p>
+            <p style={{ margin: '4px 0', color: '#718096' }}>No additional tabs for this event</p>
           )}
         </div>
       </div>
 
-      {/* Admin Comments */}
-      <div className="modern-card modern-full-width">
-        <div className="modern-card-header">
-          <h2><FaCommentAlt /> Admin Comments</h2>
-        </div>
-        <div className="modern-card-body">
+      {/* Admin Comments - Compact */}
+      <div style={{ marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Admin Comments</h3>
+        <div style={{
+          background: '#fff',
+          border: '1px solid #edf2f7',
+          borderRadius: '6px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          padding: '8px',
+          overflow: 'hidden'
+        }}>
+          <div style={{ 
+            padding: '6px 10px', 
+            background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', 
+            color: 'white',
+            marginBottom: '8px',
+            borderRadius: '4px',
+            fontSize: '0.8rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <FaCommentAlt size={12} /> Add feedback or instructions
+          </div>
           <textarea
-            className="modern-textarea"
+            style={{
+              width: '100%',
+              minHeight: '60px',
+              padding: '8px',
+              borderRadius: '4px',
+              border: '1px solid #e2e8f0',
+              fontSize: '0.75rem',
+              boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
+              resize: 'vertical',
+              fontFamily: 'inherit'
+            }}
             placeholder="Add your comments here..."
             value={comment}
             onChange={(e) => setComment(e.target.value)}
@@ -556,35 +743,130 @@ const AdminViewEventRequest = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="modern-action-buttons">
-        <button
-          className="modern-btn modern-btn-success"
-          onClick={() => handleStatusUpdate('Approved')}
-          disabled={isSubmitting}
-        >
-          <FaCheck /> Approve Event
-        </button>
-        <button
-          className="modern-btn modern-btn-warning"
-          onClick={() => handleStatusUpdate('Request Edit')}
-          disabled={isSubmitting}
-        >
-          <FaPencilAlt /> Request Edit
-        </button>
-        <button
-          className="modern-btn modern-btn-danger"
-          onClick={() => handleStatusUpdate('Rejected')}
-          disabled={isSubmitting}
-        >
-          <FaTimes /> Reject Event
-        </button>
+      {/* Action Center - Compact */}
+      <div style={{ marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '0.95rem', margin: '8px 0', color: '#2d3748' }}>Action Center</h3>
+        <div style={{
+          background: '#fff',
+          border: '1px solid #edf2f7',
+          borderRadius: '6px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          padding: '8px',
+          overflow: 'hidden'
+        }}>
+          <div style={{ 
+            padding: '6px 10px', 
+            background: 'linear-gradient(to right, #4a5568, #2d3748)', 
+            color: 'white',
+            marginBottom: '8px',
+            borderRadius: '4px',
+            fontSize: '0.8rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <FaInfoCircle size={12} /> Select Action
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', padding: '4px' }}>
+            <button
+              style={{ 
+                padding: '6px 12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px',
+                borderRadius: '4px',
+                background: 'linear-gradient(135deg, #68d391, #38b2ac)',
+                border: 'none',
+                color: 'white',
+                fontWeight: '500',
+                fontSize: '0.75rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                cursor: 'pointer'
+              }}
+              onClick={() => handleStatusUpdate('Approved')}
+              disabled={isSubmitting}
+            >
+              <FaCheck size={12} /> Approve
+            </button>
+            <button
+              style={{ 
+                padding: '6px 12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px',
+                borderRadius: '4px',
+                background: 'linear-gradient(135deg, #faf089, #f6ad55)',
+                border: 'none',
+                color: '#744210',
+                fontWeight: '500',
+                fontSize: '0.75rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                cursor: 'pointer'
+              }}
+              onClick={() => handleStatusUpdate('Request Edit')}
+              disabled={isSubmitting}
+            >
+              <FaPencilAlt size={12} /> Request Edit
+            </button>
+            <button
+              style={{ 
+                padding: '6px 12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px',
+                borderRadius: '4px',
+                background: 'linear-gradient(135deg, #fc8181, #e53e3e)',
+                border: 'none',
+                color: 'white',
+                fontWeight: '500',
+                fontSize: '0.75rem',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                cursor: 'pointer'
+              }}
+              onClick={() => handleStatusUpdate('Rejected')}
+              disabled={isSubmitting}
+            >
+              <FaTimes size={12} /> Reject
+            </button>
+          </div>
+        </div>
       </div>
       
       {isSubmitting && (
-        <div className="modern-loading-overlay">
-          <div className="modern-spinner"></div>
-          <p>Processing your request...</p>
+        <div className="modern-loading-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(45, 55, 72, 0.7)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            border: '3px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '50%',
+            borderTopColor: '#4ca1af',
+            animation: 'spin 1s ease-in-out infinite'
+          }}></div>
+          <p style={{
+            color: 'white',
+            fontWeight: '500',
+            marginTop: '12px',
+            fontSize: '1rem',
+            textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+          }}>Processing your request...</p>
+          <style jsx>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
         </div>
       )}
     </div>

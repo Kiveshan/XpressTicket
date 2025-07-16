@@ -1,0 +1,6 @@
+/* Image error styling for consistent error display */
+.image-error {
+  opacity: 0.3;
+  background-color: #f8f8f8;
+  border: 1px dashed #ccc;
+}
