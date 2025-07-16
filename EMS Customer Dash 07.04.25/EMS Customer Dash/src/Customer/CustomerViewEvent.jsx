@@ -43,7 +43,61 @@ const CustomerViewEvent = () => {
         
         const data = await response.json();
         console.log('Fetched event details:', data);
-        setEvent(data);
+        
+        // Process date and time from database fields
+        let formattedDate = 'TBA';
+        let formattedTime = 'TBA';
+        
+        // Debug the date fields coming from database
+        console.log('Date fields from DB:', { 
+          startdate: data.startdate, 
+          start_date: data.start_date, 
+          date: data.date 
+        });
+        
+        // Format date from startdate field - handle different possible formats
+        if (data.startdate) {
+          // If startdate is already in YYYY-MM-DD format, use it directly
+          if (typeof data.startdate === 'string' && data.startdate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            formattedDate = data.startdate;
+          } else {
+            // Otherwise try to parse it
+            const dateObj = new Date(data.startdate);
+            if (!isNaN(dateObj)) {
+              formattedDate = dateObj.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+            }
+          }
+        } else if (data.start_date) {
+          // Try alternate field name
+          if (typeof data.start_date === 'string' && data.start_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            formattedDate = data.start_date;
+          } else {
+            const dateObj = new Date(data.start_date);
+            if (!isNaN(dateObj)) {
+              formattedDate = dateObj.toISOString().split('T')[0];
+            }
+          }
+        } else if (data.date) {
+          // Fallback to date field if startdate is not available
+          if (typeof data.date === 'string' && data.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            formattedDate = data.date;
+          } else {
+            const dateObj = new Date(data.date);
+            if (!isNaN(dateObj)) {
+              formattedDate = dateObj.toISOString().split('T')[0];
+            }
+          }
+        }
+        
+        // Use time field directly if available
+        formattedTime = data.time || data.start_time || 'TBA';
+        
+        // Add formatted date and time to event object
+        setEvent({
+          ...data,
+          formattedDate,
+          formattedTime
+        });
         
         // Process packages from the event data
         if (data.packages && Array.isArray(data.packages)) {
@@ -220,7 +274,7 @@ const CustomerViewEvent = () => {
               <h1 className="event-title">{event.name}</h1>
               
               <div className="event-meta">
-                <p><strong>📍 {event.location || 'TBA'} | 📅 {event.date || 'TBA'} | ⏰ {event.time || 'TBA'}</strong></p>
+                <p><strong>📍 {event.location || 'TBA'} | 📅 {event.formattedDate} | ⏰ {event.formattedTime}</strong></p>
               </div>
               
               <nav className="tabs">

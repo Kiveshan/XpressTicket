@@ -92,16 +92,35 @@ const EventApproval = () => {
         });
 
         // Simple mapping for display
-        const displayEvents = pendingEvents.map(event => ({
-          eventid: event.eventid || event.event_id || event.id,
-          event_name: event.event_name || event.name || 'Untitled Event',
-          status: 'Pending',
-          location: event.location || event.venue || 'N/A',
-          date: event.start_date || event.date || 'N/A',
-          time: event.start_time || event.time || 'N/A',
-          price: event.is_free || event.price === 0 ? 'Free' : (event.price ? `R${event.price}` : 'N/A'),
-          file_url: getImageUrl(event)
-        }));
+        const displayEvents = pendingEvents.map(event => {
+          // Format the date properly without timezone information
+          let formattedDate = 'N/A';
+          if (event.start_date || event.date) {
+            const dateObj = new Date(event.start_date || event.date);
+            if (!isNaN(dateObj)) {
+              formattedDate = dateObj.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+            }
+          }
+
+          // Only include price if it's a valid value
+          let price = null;
+          if (event.is_free || event.price === 0) {
+            price = 'Free';
+          } else if (event.price) {
+            price = `R${event.price}`;
+          }
+
+          return {
+            eventid: event.eventid || event.event_id || event.id,
+            event_name: event.event_name || event.name || 'Untitled Event',
+            status: 'Pending',
+            location: event.location || event.venue || 'N/A',
+            date: formattedDate,
+            time: event.start_time || event.time || 'N/A',
+            price: price,
+            file_url: getImageUrl(event)
+          };
+        });
 
         // Apply pagination
         const startIndex = 0;
