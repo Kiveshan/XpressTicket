@@ -50,10 +50,13 @@ const pool = new Pool({
   host: 'localhost',
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   database: 'Xpressfinal',
   password: '123456',
   port: 5433,
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
   database: 'XPRESS.FINAL',
