@@ -15,7 +15,14 @@ const port = 5000;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: function(origin, callback) {
+    const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -48,21 +55,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  database: 'Xpressfinal',
-  password: '123456',
-  port: 5433,
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
   database: 'XPRESS.FINAL',
   password: '1234567890',
   port: 5432,
->>>>>>> Stashed changes
   timezone: 'UTC', // Ensure PostgreSQL uses UTC
 });
 
