@@ -339,35 +339,58 @@ const logRequest = (req) => {
 const urlCache = new Map();
 
 // Helper function to generate presigned URL with caching
-async function generatePresignedUrl(key) {
-  if (!key) return null;
+async function generatePresignedUrl(input) {
+  if (!input) {
+    console.warn('No input provided for presigned URL');
+    return null;
+  }
 
-  // Check if URL is in cache and not expired (cache for 50 minutes to be safe)
-  const cachedItem = urlCache.get(key);
-  if (cachedItem && Date.now() - cachedItem.timestamp < 50 * 60 * 1000) {
-    console.log(`Using cached URL for ${key}`);
-    return cachedItem.url;
+  let s3Key = input;
+  // Handle full S3 URLs
+  if (input.startsWith('https://')) {
+    try {
+      const url = new URL(input);
+      // Extract the path after the bucket name
+      s3Key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+      // Remove bucket name if included in the path
+      if (s3Key.startsWith(`${process.env.S3_BUCKET_NAME}/`)) {
+        s3Key = s3Key.slice(process.env.S3_BUCKET_NAME.length + 1);
+      }
+    } catch (error) {
+      console.error(`Error parsing URL ${input}:`, error);
+      return null;
+    }
+  }
+
+  // Validate key
+  if (!s3Key || s3Key.trim() === '') {
+    console.warn('Invalid or empty S3 key after processing');
+    return null;
+  }
+
+  // Check cache
+  const cached = urlCache.get(s3Key);
+  if (cached && Date.now() - cached.timestamp < 3600 * 1000) {
+    console.log(`Returning cached URL for key: ${s3Key}`);
+    return cached.url;
   }
 
   try {
     const command = new GetObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME,
-      Key: key,
+      Key: s3Key,
     });
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
-
-    // Cache the URL with timestamp
-    urlCache.set(key, {
-      url,
-      timestamp: Date.now(),
-    });
-
+    console.log(`Generating presigned URL for key: ${s3Key}`);
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 86400 }); // 24 hours
+    console.log(`Generated presigned URL: ${url.substring(0, 50)}...`);
+    urlCache.set(s3Key, { url, timestamp: Date.now() });
     return url;
   } catch (error) {
-    console.error('Error generating presigned URL:', error);
+    console.error(`Error generating presigned URL for key ${s3Key}:`, error);
     return null;
   }
 }
+
 
 // Admin endpoint to get all events
 app.get('/api/admin/events', authenticateToken, authenticateAdmin, async (req, res) => {
@@ -384,39 +407,40 @@ app.get('/api/admin/events', authenticateToken, authenticateAdmin, async (req, r
       ORDER BY e.startdate DESC
     `);
 
-    // Process the results to format them for the frontend
     const events = await Promise.all(result.rows.map(async event => {
-      // Format dates for frontend
       if (event.startdate) event.start_date = event.startdate;
       if (event.enddate) event.end_date = event.enddate;
       if (event.deadlinedate) event.deadline = event.deadlinedate;
-
-      // Ensure event_name is set
       event.event_name = event.name;
 
-      // Generate presigned URL for the image if it exists
+      let file_url = null;
       if (event.coverimage && event.coverimage.trim() !== '') {
         try {
-          console.log(`Generating presigned URL for event ${event.event_id}, image key: ${event.coverimage}`);
+          console.log(`Processing coverimage for event ${event.event_id}: ${event.coverimage}`);
           const presignedUrl = await generatePresignedUrl(event.coverimage);
           if (presignedUrl) {
-            console.log(`Successfully generated presigned URL: ${presignedUrl.substring(0, 50)}...`);
-            event.file_url = presignedUrl;
+            file_url = presignedUrl;
+            console.log(`Successfully generated presigned URL for event ${event.event_id}: ${file_url.substring(0, 50)}...`);
           } else {
-            console.log(`Failed to generate presigned URL, using original key: ${event.coverimage}`);
-            event.file_url = event.coverimage;
+            console.warn(`Failed to generate presigned URL for event ${event.event_id}, falling back to default`);
+            file_url = '/default-event-image.png';
           }
         } catch (err) {
           console.error(`Error generating presigned URL for event ${event.event_id}:`, err);
-          event.file_url = event.coverimage;
+          file_url = '/default-event-image.png';
         }
       } else {
-        console.log(`No coverimage found for event ${event.event_id}`);
+        console.log(`No coverimage for event ${event.event_id}`);
+        file_url = '/default-event-image.png';
       }
 
-      return event;
+      return {
+        ...event,
+        file_url
+      };
     }));
 
+    console.log(`Returning ${events.length} events`);
     res.json(events);
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -446,81 +470,69 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
 
     const event = result.rows[0];
 
-    // Format dates for frontend
     if (event.startdate) event.start_date = event.startdate;
     if (event.enddate) event.end_date = event.enddate;
     if (event.deadlinedate) event.deadline = event.deadlinedate;
-
-    // Ensure event_name is set
     event.event_name = event.name;
+    if (event.type) event.event_type = event.type;
 
-    // Format image URL if needed
-    if (event.coverimage) {
-      event.file_url = event.coverimage;
+    let file_url = '/default-event-image.png';
+    if (event.coverimage && event.coverimage.trim() !== '') {
+      try {
+        console.log(`Processing coverimage for event ${event.event_id}: ${event.coverimage}`);
+        const presignedUrl = await generatePresignedUrl(event.coverimage);
+        if (presignedUrl) {
+          file_url = presignedUrl;
+          console.log(`Successfully generated presigned URL for event ${event.event_id}: ${file_url.substring(0, 50)}...`);
+        } else {
+          console.warn(`Failed to generate presigned URL for event ${event.event_id}, falling back to default`);
+        }
+      } catch (err) {
+        console.error(`Error generating presigned URL for event ${event.event_id}:`, err);
+      }
+    } else {
+      console.log(`No coverimage for event ${event.event_id}`);
     }
+    event.file_url = file_url;
 
-    // Set event_type from type field
-    if (event.type) {
-      event.event_type = event.type;
-    }
-
-    // Set client_type from attendees field
     if (event.attendees && Array.isArray(event.attendees)) {
       event.client_type = event.attendees;
     } else if (typeof event.attendees === 'string') {
       try {
-        // Try to parse as JSON if it's a string
         event.client_type = JSON.parse(event.attendees);
       } catch (e) {
-        // If parsing fails, split by commas or create a single-item array
         event.client_type = event.attendees.includes(',') ?
           event.attendees.split(',').map(item => item.trim()) :
           [event.attendees];
       }
     } else {
-      // Default to empty array if attendees is not available
       event.client_type = [];
     }
 
-    // Process tabs array to ensure it contains proper objects
     if (event.tabs && Array.isArray(event.tabs)) {
       console.log('Original tabs:', event.tabs);
-
       event.tabs = event.tabs.map((tab, index) => {
-        // If tab is a string, process it
         if (typeof tab === 'string') {
-          // For the format seen in the database, the tab is just the content
-          // We'll use the content as the tab name too, but capitalized
           const content = tab.trim();
-
-          // If it's a single word like "exhibits" or "schedule", capitalize it for the name
           if (!content.includes(':') && !content.includes('=') && !content.includes(' ')) {
             const name = content.charAt(0).toUpperCase() + content.slice(1);
             return { name, content };
           }
-
-          // If it looks like it might have a name and content separated
           const separators = ['=', ':', '-', '–'];
           for (const separator of separators) {
             if (content.includes(separator)) {
               const parts = content.split(separator);
               const name = parts[0].trim();
               const tabContent = parts.slice(1).join(separator).trim();
-
-              // Only use this if the name part looks like a reasonable tab name
               if (name.length > 0 && name.length < 20) {
                 return {
                   name: name.charAt(0).toUpperCase() + name.slice(1),
-                  content: tabContent || content // Fallback to full content if split resulted in empty content
+                  content: tabContent || content
                 };
               }
             }
           }
-
-          // If we couldn't extract a name, use a generic name based on content
           let name = 'Tab';
-
-          // Try to generate a meaningful name from the content
           if (content.toLowerCase().includes('exhibit')) name = 'Exhibits';
           else if (content.toLowerCase().includes('schedule')) name = 'Schedule';
           else if (content.toLowerCase().includes('speaker')) name = 'Speakers';
@@ -529,177 +541,128 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
           else if (content.toLowerCase().includes('venue')) name = 'Venue';
           else if (content.toLowerCase().includes('contact')) name = 'Contact';
           else name = `Tab ${index + 1}`;
-
           return { name, content };
         }
-
-        // If it's already an object, return it with defaults for missing fields
         if (typeof tab === 'object' && tab !== null) {
           return {
             name: tab.name || `Tab ${index + 1}`,
             content: tab.content || ''
           };
         }
-
-        // Fallback: create a named tab based on index
         return {
           name: `Tab ${index + 1}`,
           content: typeof tab === 'string' ? tab : `Tab ${index + 1} Content`
         };
       });
-
       console.log('Processed tabs:', event.tabs);
     }
 
-    // Process packages array to ensure it contains proper objects
     if (event.packages && Array.isArray(event.packages)) {
       console.log('Original packages:', event.packages);
-
       event.packages = event.packages.map((pkg, index) => {
-        // If package is a string, try to parse it or extract information
         if (typeof pkg === 'string') {
           console.log(`Processing package string: ${pkg}`);
-
-          // First try: Handle PostgreSQL character varying[] format with escaped quotes
-          // This format often looks like: {\"selectType\":\"Full Package\",...}
-          if (pkg.includes('\\"') || pkg.includes('details') || pkg.includes('pricing')) {
-            try {
-              // Clean up the string - PostgreSQL character varying[] format often has escaped quotes
-              let cleanedStr = pkg
-                .replace(/^\{\\"/, '{"')
-                .replace(/\\"\}$/, '"}')
-                .replace(/\\"/g, '"')
-                .replace(/\\\\/g, '\\');
-
-              // Additional cleaning for other common formats
-              if (!cleanedStr.startsWith('{')) {
-                cleanedStr = '{' + cleanedStr;
-              }
-              if (!cleanedStr.endsWith('}')) {
-                cleanedStr = cleanedStr + '}';
-              }
-
-              console.log('Cleaned package string:', cleanedStr);
-
-              try {
-                const parsed = JSON.parse(cleanedStr);
-                console.log('Parsed package:', parsed);
-
-                return {
-                  selectType: parsed.selectType || 'Full Package',
-                  packageType: parsed.packageType || 'Standard',
-                  location: parsed.location || '',
-                  duration: parsed.duration || '',
-                  dateChoices: parsed.dateChoices || '',
-                  pricing: parsed.pricing || 'N/A',
-                  details: parsed.details || '',
-                  typeOptions: Array.isArray(parsed.typeOptions) ? parsed.typeOptions : ['Full Package', 'Day']
-                };
-              } catch (parseError) {
-                console.log('JSON parse failed, trying alternative parsing methods');
-                // Continue to next parsing method
-              }
-            } catch (e) {
-              console.error('Error in initial package cleaning:', e);
-            }
-
-            // Second try: Extract fields using regex patterns
-            try {
-              // More flexible regex patterns that can handle various formats
-              const detailsMatch = pkg.match(/["']?details["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
-                pkg.match(/details\s*[:\=]\s*([^,}]+)/i);
-              const pricingMatch = pkg.match(/["']?pricing["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
-                pkg.match(/pricing\s*[:\=]\s*([^,}]+)/i);
-              const durationMatch = pkg.match(/["']?duration["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
-                pkg.match(/duration\s*[:\=]\s*([^,}]+)/i);
-              const locationMatch = pkg.match(/["']?location["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
-                pkg.match(/location\s*[:\=]\s*([^,}]+)/i);
-              const packageTypeMatch = pkg.match(/["']?packageType["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
-                pkg.match(/packageType\s*[:\=]\s*([^,}]+)/i) ||
-                pkg.match(/package[_\s-]?type\s*[:\=]\s*([^,}]+)/i);
-              const selectTypeMatch = pkg.match(/["']?selectType["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
-                pkg.match(/selectType\s*[:\=]\s*([^,}]+)/i) ||
-                pkg.match(/select[_\s-]?type\s*[:\=]\s*([^,}]+)/i);
-              const dateChoicesMatch = pkg.match(/["']?dateChoices["']?\s*[:\=]\s*["']?([^,}"']+)/i) ||
-                pkg.match(/dateChoices\s*[:\=]\s*([^,}]+)/i) ||
-                pkg.match(/date[_\s-]?choices\s*[:\=]\s*([^,}]+)/i);
-
-              // If we found at least one field using regex, use this approach
-              if (detailsMatch || pricingMatch || durationMatch || locationMatch ||
+          let cleanedStr = pkg
+            .replace(/^\{\\"/, '{"')
+            .replace(/\\"\}$/, '"}')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+          if (!cleanedStr.startsWith('{')) cleanedStr = '{' + cleanedStr;
+          if (!cleanedStr.endsWith('}')) cleanedStr = cleanedStr + '}';
+          console.log('Cleaned package string:', cleanedStr);
+          try {
+            const parsed = JSON.parse(cleanedStr);
+            console.log('Parsed package:', parsed);
+            return {
+              selectType: parsed.selectType || 'Full Package',
+              packageType: parsed.packageType || 'Standard',
+              location: parsed.location || '',
+              duration: parsed.duration || '',
+              dateChoices: parsed.dateChoices || '',
+              pricing: parsed.pricing || 'N/A',
+              details: parsed.details || '',
+              typeOptions: Array.isArray(parsed.typeOptions) ? parsed.typeOptions : ['Full Package', 'Day']
+            };
+          } catch (parseError) {
+            console.log('JSON parse failed, trying alternative parsing methods');
+            const detailsMatch = pkg.match(/["']?details["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
+              pkg.match(/details\s*[:=]\s*([^,}]+)/i);
+            const pricingMatch = pkg.match(/["']?pricing["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
+              pkg.match(/pricing\s*[:=]\s*([^,}]+)/i);
+            const durationMatch = pkg.match(/["']?duration["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
+              pkg.match(/duration\s*[:=]\s*([^,}]+)/i);
+            const locationMatch = pkg.match(/["']?location["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
+              pkg.match(/location\s*[:=]\s*([^,}]+)/i);
+            const packageTypeMatch = pkg.match(/["']?packageType["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
+              pkg.match(/packageType\s*[:=]\s*([^,}]+)/i) ||
+              pkg.match(/package[_\s-]?type\s*[:=]\s*([^,}]+)/i);
+            const selectTypeMatch = pkg.match(/["']?selectType["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
+              pkg.match(/selectType\s*[:=]\s*([^,}]+)/i) ||
+              pkg.match(/select[_\s-]?type\s*[:=]\s*([^,}]+)/i);
+            const dateChoicesMatch = pkg.match(/["']?dateChoices["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
+              pkg.match(/dateChoices\s*[:=]\s*([^,}]+)/i) ||
+              pkg.match(/date[_\s-]?choices\s*[:=]\s*([^,}]+)/i);
+            if (detailsMatch || pricingMatch || durationMatch || locationMatch ||
                 packageTypeMatch || selectTypeMatch || dateChoicesMatch) {
-
-                console.log('Extracted package fields using regex');
-
-                return {
-                  selectType: selectTypeMatch ? selectTypeMatch[1].trim().replace(/["']/g, '') : 'Full Package',
-                  packageType: packageTypeMatch ? packageTypeMatch[1].trim().replace(/["']/g, '') : 'Standard',
-                  location: locationMatch ? locationMatch[1].trim().replace(/["']/g, '') : '',
-                  duration: durationMatch ? durationMatch[1].trim().replace(/["']/g, '') : '',
-                  dateChoices: dateChoicesMatch ? dateChoicesMatch[1].trim().replace(/["']/g, '') : '',
-                  pricing: pricingMatch ? pricingMatch[1].trim().replace(/["']/g, '') : 'N/A',
-                  details: detailsMatch ? detailsMatch[1].trim().replace(/["']/g, '') : pkg,
-                  typeOptions: ['Full Package', 'Day']
-                };
-              }
-            } catch (regexError) {
-              console.error('Error extracting package fields with regex:', regexError);
-            }
-          }
-
-          // Third try: Check if the string is a simple key-value format
-          if (pkg.includes(':') || pkg.includes('=')) {
-            const lines = pkg.split(/[,;\n]/).filter(line => line.trim());
-            const packageData = {};
-
-            lines.forEach(line => {
-              const separators = [':', '='];
-              for (const separator of separators) {
-                if (line.includes(separator)) {
-                  const [key, value] = line.split(separator).map(part => part.trim());
-                  if (key && value) {
-                    const normalizedKey = key.toLowerCase().replace(/[\s-_]/g, '');
-                    if (normalizedKey === 'details' || normalizedKey === 'pricing' ||
-                      normalizedKey === 'duration' || normalizedKey === 'location' ||
-                      normalizedKey === 'packagetype' || normalizedKey === 'selecttype' ||
-                      normalizedKey === 'datechoices') {
-                      packageData[normalizedKey] = value.replace(/["']/g, '');
-                    }
-                  }
-                  break;
-                }
-              }
-            });
-
-            if (Object.keys(packageData).length > 0) {
-              console.log('Extracted package from key-value format:', packageData);
-
+              console.log('Extracted package fields using regex');
               return {
-                selectType: packageData.selecttype || 'Full Package',
-                packageType: packageData.packagetype || 'Standard',
-                location: packageData.location || '',
-                duration: packageData.duration || '',
-                dateChoices: packageData.datechoices || '',
-                pricing: packageData.pricing || 'N/A',
-                details: packageData.details || pkg,
+                selectType: selectTypeMatch ? selectTypeMatch[1].trim().replace(/["']/g, '') : 'Full Package',
+                packageType: packageTypeMatch ? packageTypeMatch[1].trim().replace(/["']/g, '') : 'Standard',
+                location: locationMatch ? locationMatch[1].trim().replace(/["']/g, '') : '',
+                duration: durationMatch ? durationMatch[1].trim().replace(/["']/g, '') : '',
+                dateChoices: dateChoicesMatch ? dateChoicesMatch[1].trim().replace(/["']/g, '') : '',
+                pricing: pricingMatch ? pricingMatch[1].trim().replace(/["']/g, '') : 'N/A',
+                details: detailsMatch ? detailsMatch[1].trim().replace(/["']/g, '') : pkg,
                 typeOptions: ['Full Package', 'Day']
               };
             }
+            if (pkg.includes(':') || pkg.includes('=')) {
+              const lines = pkg.split(/[,;\n]/).filter(line => line.trim());
+              const packageData = {};
+              lines.forEach(line => {
+                const separators = [':', '='];
+                for (const separator of separators) {
+                  if (line.includes(separator)) {
+                    const [key, value] = line.split(separator).map(part => part.trim());
+                    if (key && value) {
+                      const normalizedKey = key.toLowerCase().replace(/[\s-_]/g, '');
+                      if (normalizedKey === 'details' || normalizedKey === 'pricing' ||
+                          normalizedKey === 'duration' || normalizedKey === 'location' ||
+                          normalizedKey === 'packagetype' || normalizedKey === 'selecttype' ||
+                          normalizedKey === 'datechoices') {
+                        packageData[normalizedKey] = value.replace(/["']/g, '');
+                      }
+                    }
+                    break;
+                  }
+                }
+              });
+              if (Object.keys(packageData).length > 0) {
+                console.log('Extracted package from key-value format:', packageData);
+                return {
+                  selectType: packageData.selecttype || 'Full Package',
+                  packageType: packageData.packagetype || 'Standard',
+                  location: packageData.location || '',
+                  duration: packageData.duration || '',
+                  dateChoices: packageData.datechoices || '',
+                  pricing: packageData.pricing || 'N/A',
+                  details: packageData.details || pkg,
+                  typeOptions: ['Full Package', 'Day']
+                };
+              }
+            }
+            return {
+              selectType: 'Full Package',
+              packageType: 'Standard',
+              location: '',
+              duration: '',
+              dateChoices: '',
+              pricing: 'N/A',
+              details: pkg,
+              typeOptions: ['Full Package', 'Day']
+            };
           }
-
-          // If all parsing methods fail, treat the whole string as details
-          return {
-            selectType: 'Full Package',
-            packageType: 'Standard',
-            location: '',
-            duration: '',
-            dateChoices: '',
-            pricing: 'N/A',
-            details: pkg,
-            typeOptions: ['Full Package', 'Day']
-          };
         }
-
-        // If it's already an object, return it with defaults for missing fields
         if (typeof pkg === 'object' && pkg !== null) {
           return {
             selectType: pkg.selectType || 'Full Package',
@@ -712,8 +675,6 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
             typeOptions: Array.isArray(pkg.typeOptions) ? pkg.typeOptions : ['Full Package', 'Day']
           };
         }
-
-        // Fallback: create an empty package
         return {
           selectType: 'Full Package',
           packageType: 'Standard',
@@ -725,7 +686,6 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
           typeOptions: ['Full Package', 'Day']
         };
       });
-
       console.log('Processed packages:', event.packages);
     }
 
