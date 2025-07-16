@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx'; // Library for generating Excel files
 import './TicketsRequest.css';
 import './ModernOrganizerStyles.css';
 
@@ -83,6 +83,7 @@ function TicketsRequest() {
     }
   };
 
+   //excel 
   const handleDownloadCustomers = async () => {
     try {
       const token = sessionStorage.getItem('token');
@@ -91,6 +92,7 @@ function TicketsRequest() {
         nav('/');
         return;
       }
+      // Fetch all ticket requests (regardless of status) from the server
       const response = await fetch(`http://localhost:5000/api/organiser/events/${eventId}/ticket-requests?all=true`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -101,24 +103,26 @@ function TicketsRequest() {
       }
       const data = await response.json();
 
+
+      // Check if data is empty
       if (data.length === 0) {
         alert('No customer data available for download.');
         return;
       }
 
-      // Prepare data for Excel
+      // Prepare data for Excel by mapping requesta to desired columes 
       const excelData = data.map((request) => ({
         'Purchaser Name': request.purchaser_name,
         'Package': request.package,
         'Number of Tickets': request.number_of_tickets,
-        'Amount': `R ${Number(request.amount).toFixed(2)}`,
+        'Amount': `R ${Number(request.amount).toFixed(2)}`,// formating for currency 
       }));
 
-      // Calculate totals
+      // Calculate totals for tickets 
       const totalTickets = data.reduce((sum, request) => sum + request.number_of_tickets, 0);
       const totalAmount = data.reduce((sum, request) => sum + Number(request.amount), 0);
 
-      // Add totals row
+      // Add totals row to the excel data 
       excelData.push({
         'Purchaser Name': 'Total',
         'Package': '',
@@ -126,7 +130,7 @@ function TicketsRequest() {
         'Amount': `R ${totalAmount.toFixed(2)}`,
       });
 
-      // Create worksheet
+      // Create worksheet from prepared data
       const ws = XLSX.utils.json_to_sheet(excelData, {
         header: ['Purchaser Name', 'Package', 'Number of Tickets', 'Amount'],
       });
