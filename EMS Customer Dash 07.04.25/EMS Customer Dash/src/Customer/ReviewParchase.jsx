@@ -3,114 +3,89 @@ import "./ReviewParchase.css";
 import { useNavigate } from 'react-router-dom';
 import '../shared/ModernDashboard.css';
 import { FaSignOutAlt, FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaClock, FaMoneyBillWave } from 'react-icons/fa';
-import EventImage from '../utils/EventImage';
+import { DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
 
 function ReviewParchase() {
-   const nav = useNavigate();
-   const [purchasedEvents, setPurchasedEvents] = useState([]);
-   const [loading, setLoading] = useState(true);
-   const [error, setError] = useState(null);
+  const nav = useNavigate();
+  const [purchasedEvents, setPurchasedEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-   useEffect(() => {
-     // Fetch user's purchased tickets
-     const fetchPurchasedTickets = async () => {
-       try {
-         setLoading(true);
-         
-         // Get the authentication token from session storage
-         const token = sessionStorage.getItem('token');
-         
-         if (!token) {
-           console.warn('No authentication token found in session storage');
-           // Redirect to login if no token is found
-           nav('/login');
-           return;
-         }
-         
-         // Since the /api/tickets/user endpoint doesn't exist, we'll use a workaround
-         // First, let's fetch available events that we can display
-         const timestamp = new Date().getTime(); // Add timestamp to prevent caching
-         const eventsResponse = await fetch(`http://localhost:5000/api/events/available?_=${timestamp}`, {
-           headers: {
-             'Authorization': `Bearer ${token}`,
-             'Content-Type': 'application/json'
-           }
-         });
-         
-         if (!eventsResponse.ok) {
-           throw new Error(`Failed to fetch events: ${eventsResponse.statusText}`);
-         }
-         
-         const eventsData = await eventsResponse.json();
-         console.log('Available events data:', eventsData);
-         
-         // For demonstration purposes, we'll simulate that the user has purchased tickets for some events
-         // In a real implementation, you would need a proper API endpoint to get user's purchased tickets
-         
-         // Get user info from token if possible
-         let userId = 'current-user';
-         try {
-           // Try to extract user ID from JWT token (this is a common pattern)
-           const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-           if (tokenPayload && tokenPayload.id) {
-             userId = tokenPayload.id;
-           }
-         } catch (e) {
-           console.warn('Could not parse token for user ID');
-         }
-         
-         // Simulate purchased tickets by taking a subset of available events
-         // In a real app, this would come from the backend
-         const simulatedPurchasedEvents = eventsData
-           // Take up to 3 events to simulate purchases
-           .slice(0, Math.min(3, eventsData.length))
-           .map((event, index) => {
-             // Determine if this should be an active or past event
-             const isPast = index === eventsData.length - 1;
-             const eventDate = new Date(event.date || Date.now());
-             
-             // Debug image fields
-             console.log(`ReviewParchase - Event ${event.id || event._id} (${event.name}) image fields:`, {
-               image: event.image,
-               coverimage: event.coverimage,
-               imageType: typeof event.image,
-               coverimageType: typeof event.coverimage
-             });
-             
-             // Add ticket-specific information
-             return {
-               ...event,
-               ticketId: `ticket-${event._id || event.id || index}`,
-               ticketType: index % 2 === 0 ? 'Standard' : 'VIP',
-               ticketPrice: (1000 + (index * 500)).toFixed(2),
-               purchaseDate: new Date(Date.now() - (index * 86400000)).toISOString(), // days ago
-               status: isPast || eventDate < new Date() ? 'Past' : 'Active'
-             };
-           });
-         
-         setPurchasedEvents(simulatedPurchasedEvents);
-         
-         // Note for future implementation:
-         // When the backend adds support for user tickets, replace the simulation above with:
-         // const ticketsResponse = await fetch(`http://localhost:5000/api/user/tickets`, {
-         //   headers: { 'Authorization': `Bearer ${token}` }
-         // });
-         // const ticketsData = await ticketsResponse.json();
-         // Then process the real ticket data
-       } catch (err) {
-         console.error('Error fetching purchased tickets:', err);
-         setError(err.message);
-       } finally {
-         setLoading(false);
-       }
-     };
-     
-     fetchPurchasedTickets();
-   }, [nav]);
-   
-   return (
+  useEffect(() => {
+    const fetchPurchasedTickets = async () => {
+      try {
+        setLoading(true);
+        
+        const token = sessionStorage.getItem('token');
+        
+        if (!token) {
+          console.warn('No authentication token found in session storage');
+          nav('/login');
+          return;
+        }
+        
+        const timestamp = new Date().getTime();
+        const eventsResponse = await fetch(`http://localhost:5000/api/events/available?_=${timestamp}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!eventsResponse.ok) {
+          throw new Error(`Failed to fetch events: ${eventsResponse.statusText}`);
+        }
+        
+        const eventsData = await eventsResponse.json();
+        console.log('Available events data:', eventsData);
+        
+        let userId = 'current-user';
+        try {
+          const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+          if (tokenPayload && tokenPayload.id) {
+            userId = tokenPayload.id;
+          }
+        } catch (e) {
+          console.warn('Could not parse token for user ID');
+        }
+        
+        const simulatedPurchasedEvents = eventsData
+          .slice(0, Math.min(3, eventsData.length))
+          .map((event, index) => {
+            const isPast = index === eventsData.length - 1;
+            const eventDate = new Date(event.date || Date.now());
+            
+            console.log(`ReviewParchase - Event ${event.id || event._id} (${event.name}) image fields:`, {
+              file_url: event.file_url,
+              coverimage: event.coverimage,
+              file_urlType: typeof event.file_url,
+              coverimageType: typeof event.coverimage
+            });
+            
+            return {
+              ...event,
+              ticketId: `ticket-${event._id || event.id || index}`,
+              ticketType: index % 2 === 0 ? 'Standard' : 'VIP',
+              ticketPrice: (1000 + (index * 500)).toFixed(2),
+              purchaseDate: new Date(Date.now() - (index * 86400000)).toISOString(),
+              status: isPast || eventDate < new Date() ? 'Past' : 'Active'
+            };
+          });
+        
+        setPurchasedEvents(simulatedPurchasedEvents);
+      } catch (err) {
+        console.error('Error fetching purchased tickets:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPurchasedTickets();
+  }, [nav]);
+  
+  return (
     <div className="modern-dashboard-container">
-      {/* Header with Logo and Logout */}
       <header className="modern-header">
         <img
           src="/XPRESS TICKETS LOGO2.png"
@@ -124,7 +99,6 @@ function ReviewParchase() {
         </div>
       </header>
       
-      {/* Back Button */}
       <div className="modern-back-button">
         <button className="modern-back-btn" onClick={() => nav("/customerdash")}>
           <FaArrowLeft /> Back to Dashboard
@@ -158,11 +132,16 @@ function ReviewParchase() {
                     {event.status}
                   </div>
                   <div className="purchase-event-image-container">
-                    <EventImage 
-                      image={event.image}
-                      coverimage={event.coverimage}
-                      alt={event.name} 
-                      className="purchase-event-image" 
+                    <img
+                      src={event.file_url || DEFAULT_IMAGE_DATA_URI}
+                      alt={event.name}
+                      className="purchase-event-image"
+                      onError={(e) => {
+                        if (e.target.src !== DEFAULT_IMAGE_DATA_URI) {
+                          console.warn(`Failed to load image for event ${event.id || event._id}: ${e.target.src}`);
+                          e.target.src = DEFAULT_IMAGE_DATA_URI;
+                        }
+                      }}
                     />
                   </div>
                   <div className="purchase-event-title-container">
