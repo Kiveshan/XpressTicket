@@ -122,11 +122,12 @@ const OrganiserDash = () => {
           </button>
           <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
         </div>
-        <h1 className="header-title">Organizer Dashboard</h1>
         <button className="modern-button" onClick={() => nav("/")}>
           <i className="fas fa-sign-out-alt"></i> Logout
         </button>
       </header>
+
+<>br</>
 
       {/* Main Page Title */}
       <div className="page-title-container">
