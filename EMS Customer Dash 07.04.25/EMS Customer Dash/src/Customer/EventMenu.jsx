@@ -57,73 +57,61 @@ function EventMenu() {
     setFilteredEvents(filtered);
   }, [events, searchQuery, selectedEventType, dateFilter]);
 
-  useEffect(() => {
-    // Fetch approved events from the API
-    const fetchEvents = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching events from API...');
-        
-        // Add a timestamp to prevent caching
-        const timestamp = new Date().getTime();
-        const response = await fetch(`http://localhost:5000/api/events/available?_=${timestamp}`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-        });
-        
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch events: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fetched events:', data);
-        
-        // Add debugging for image fields
-        const eventsWithImageInfo = data.map(event => {
-          console.log(`Event ${event.id} (${event.name}) image fields:`, {
-            image: event.image,
-            coverimage: event.coverimage,
-            imageType: typeof event.image,
-            coverimageType: typeof event.coverimage
-          });
-          return event;
-        });
-        
-        setEvents(eventsWithImageInfo);
-        setFilteredEvents(eventsWithImageInfo);
-      } catch (err) {
-        console.error('Error fetching events:', err);
-        setError(err.message);
-        
-        // Fallback to sample data if API fails
-        const fallbackEvents = [
-          {
-            id: 999,
-            name: 'Fallback Event (API Error)',
-            location: 'Error Recovery Mode',
-            date: 'Today',
-            time: 'Now',
-            image: '/default-event-image.png',
-            link: '/customerviewevent/999',
-            description: 'This is a fallback event shown because the API request failed.',
-            capacity: 100,
-            event_type: 'Error'
-          }
-        ];
-        setEvents(fallbackEvents);
-        setFilteredEvents(fallbackEvents);
-      } finally {
-        setLoading(false);
+ useEffect(() => {
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching events from API...');
+      const timestamp = new Date().getTime();
+      const response = await fetch(`http://localhost:5000/api/events/available?_=${timestamp}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch events: ${response.statusText}`);
       }
-    };
-
-    fetchEvents();
-  }, []);
+      const data = await response.json();
+      console.log('Fetched events:', data);
+      const eventsWithImageInfo = data.map(event => {
+        console.log(`Event ${event.id} (${event.name}) image fields:`, {
+          file_url: event.file_url,
+          coverimage: event.coverimage
+        });
+        return {
+          ...event,
+          file_url: event.file_url || DEFAULT_IMAGE_DATA_URI
+        };
+      });
+      setEvents(eventsWithImageInfo);
+      setFilteredEvents(eventsWithImageInfo);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+      setError(err.message);
+      const fallbackEvents = [
+        {
+          id: 999,
+          name: 'Fallback Event (API Error)',
+          location: 'Error Recovery Mode',
+          date: 'Today',
+          time: 'Now',
+          file_url: DEFAULT_IMAGE_DATA_URI,
+          link: '/customerviewevent/999',
+          description: 'This is a fallback event shown because the API request failed.',
+          capacity: 100,
+          event_type: 'Error'
+        }
+      ];
+      setEvents(fallbackEvents);
+      setFilteredEvents(fallbackEvents);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchEvents();
+}, []);
 
   return (
     <div className="modern-dashboard-container">
@@ -245,42 +233,37 @@ function EventMenu() {
               <p>No events match your search criteria. Please try different filters.</p>
             </div>
           ) : (
-            <div className="event-grid">
-              {/* Map through filtered events to generate event cards */}
-              {filteredEvents.map((event) => (
-              <div
-                key={event.id}
-                className="event-card"
-                onClick={() => nav(event.link)}
-              >
-                <div className="event-image-container">
-                  <EventImage 
-                    image={event.image}
-                    coverimage={event.coverimage}
-                    alt={event.name} 
-                    className="event-image" 
-                  />
-                  {/* Debug info */}
-                  <div style={{ display: 'none' }}>
-                    {console.log('Event image data:', { 
-                      id: event.id,
-                      name: event.name,
-                      image: event.image, 
-                      coverimage: event.coverimage 
-                    })}
-                  </div>
-                </div>
-                <div className="event-details">
-                  <h3 className='eventname' style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
-                    {event.name}
-                  </h3>
-                  <p className='event-infor'>
-                    📍 {event.location || 'TBA'} | 📅 {event.date || 'TBA'} | ⏰ {event.time || 'TBA'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="event-grid">
+  {filteredEvents.map((event) => (
+    <div
+      key={event.id}
+      className="event-card"
+      onClick={() => nav(event.link)}
+    >
+      <div className="event-image-container">
+        <img
+          src={event.file_url}
+          alt={event.name}
+          className="event-image"
+          onError={(e) => {
+            if (e.target.src !== DEFAULT_IMAGE_DATA_URI) {
+              console.warn(`Failed to load image for event ${event.id}: ${e.target.src}`);
+              e.target.src = DEFAULT_IMAGE_DATA_URI;
+            }
+          }}
+        />
+      </div>
+      <div className="event-details">
+        <h3 className='eventname' style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
+          {event.name}
+        </h3>
+        <p className='event-infor'>
+          📍 {event.location || 'TBA'} | 📅 {event.date || 'TBA'} | ⏰ {event.time || 'TBA'}
+        </p>
+      </div>
+    </div>
+  ))}
+</div>
         )}
       </main>
       </div>

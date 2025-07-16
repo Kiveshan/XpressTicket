@@ -56,9 +56,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
-  database: 'XPRESS.FINAL',
-  password: '1234567890',
-  port: 5432,
+  database: 'Xpressfinal',
+  password: '123456',
+  port: 5433,
   timezone: 'UTC', // Ensure PostgreSQL uses UTC
 });
 
@@ -740,7 +740,6 @@ app.get('/api/admin/events/:eventId', authenticateToken, authenticateAdmin, asyn
 app.get('/api/events/available', async (req, res) => {
   try {
     console.log('Fetching available events');
-
     const result = await pool.query(`
       SELECT 
         event_id as id, 
@@ -756,29 +755,27 @@ app.get('/api/events/available', async (req, res) => {
       WHERE status = 'Approved'
       ORDER BY startdate ASC
     `);
-
-    // Process the results to format them for the frontend
     const events = await Promise.all(result.rows.map(async event => {
-      // Generate a presigned URL for the image if it exists
-      let imageUrl = '/default-event-image.png';
+      let file_url = '/default-event-image.png';
       if (event.coverimage && event.coverimage.trim() !== '') {
         try {
-          const presignedUrl = await generatePresignedUrl(event.coverimage);
+          const coverKey = event.coverimage.startsWith('https://') 
+            ? event.coverimage.split('/').slice(3).join('/')
+            : event.coverimage;
+          const presignedUrl = await generatePresignedUrl(coverKey);
           if (presignedUrl) {
-            imageUrl = presignedUrl;
+            file_url = presignedUrl;
           }
         } catch (err) {
           console.error(`Error generating presigned URL for event ${event.id}:`, err);
         }
       }
-
       return {
         ...event,
-        image: imageUrl,
+        file_url,
         link: `/customerviewevent/${event.id}`
       };
     }));
-
     console.log(`Found ${events.length} available events`);
     res.json(events);
   } catch (error) {

@@ -63,6 +63,7 @@ export default function EventForm() {
   const [selectedClientTypes, setSelectedClientTypes] = useState([])
   const [clientTypeSelection, setClientTypeSelection] = useState("")
   const [customClientType, setCustomClientType] = useState("")
+  const [customEventType, setCustomEventType] = useState("")
   const [packages, setPackages] = useState([
     {
       selectType: "Full Package",
@@ -142,6 +143,7 @@ export default function EventForm() {
     if (!formData.deadlinedate) newErrors.deadlinedate = "Registration deadline date is required";
     if (!formData.deadlinetime) newErrors.deadlinetime = "Registration deadline time is required";
     if (!formData.type.trim()) newErrors.type = "Event type is required";
+    if (formData.type === "Other" && !customEventType.trim()) newErrors.type = "Custom event type is required when 'Other' is selected";
     if (!formData.capacity || formData.capacity <= 0) newErrors.capacity = "Capacity must be greater than 0";
     if (!formData.description.trim()) newErrors.description = "Event details are required";
     if (!formData.terms_and_conditions.trim()) newErrors.terms_and_conditions = "Terms and conditions are required";
@@ -239,6 +241,18 @@ export default function EventForm() {
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
+  }
+
+  const handleEventTypeChange = (e) => {
+    const value = e.target.value
+    setFormData({ ...formData, type: value })
+    if (value !== "Other") {
+      setCustomEventType("")
+    }
+  }
+
+  const handleCustomEventTypeChange = (e) => {
+    setCustomEventType(e.target.value)
   }
 
   const handleDateChange = (e) => {
@@ -344,16 +358,9 @@ export default function EventForm() {
   const handleCoverImageChange = (e) => {
     const file = e.target.files[0]
     if (file && file instanceof File && ["image/png", "image/jpeg"].includes(file.type) && file.size > 0) {
-      console.log("Cover image selected:", {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        lastModified: file.lastModified,
-      })
       setCoverImageFile(file)
       alert(`Cover image selected: ${file.name}`)
     } else {
-      console.error("Invalid cover image:", file ? { type: file.type, size: file.size } : "No file selected")
       alert("Please select a valid PNG or JPEG file for cover image.")
       setCoverImageFile(null)
     }
@@ -365,7 +372,6 @@ export default function EventForm() {
     setIsSubmitting(true)
 
     if (!isFormValid) {
-      console.error("Form validation failed:", errors)
       alert("Please fill in all required fields correctly.")
       setIsSubmitting(false)
       return
@@ -386,7 +392,7 @@ export default function EventForm() {
       formDataToSend.append("endtime", formData.end_time)
       formDataToSend.append("deadlinedate", formData.deadlinedate)
       formDataToSend.append("deadlinetime", formData.deadlinetime)
-      formDataToSend.append("type", formData.type)
+      formDataToSend.append("type", formData.type === "Other" ? customEventType : formData.type)
       formDataToSend.append("capacity", formData.capacity.toString())
       formDataToSend.append("description", formData.description)
       formDataToSend.append("terms_and_conditions", formData.terms_and_conditions)
@@ -396,12 +402,6 @@ export default function EventForm() {
       formDataToSend.append("packages", JSON.stringify(packages))
       if (coverImageFile) {
         formDataToSend.append("cover_image", coverImageFile)
-      }
-
-      console.log("Sending form data to backend...")
-      console.log("Form data contents:")
-      for (const [key, value] of formDataToSend.entries()) {
-        console.log(`${key}:`, value)
       }
 
       const response = await fetch("http://localhost:5000/api/events", {
@@ -418,14 +418,12 @@ export default function EventForm() {
         throw new Error(result.error || result.details || "Failed to create event")
       }
 
-      console.log("✅ Event created successfully:", result)
       setShowSuccess(true)
       setTimeout(() => {
         setShowSuccess(false)
         navigate("/organiser-dash")
       }, 2000)
     } catch (error) {
-      console.error("🚨 Error submitting form:", error)
       setErrorMessage(`Failed to create event: ${error.message}`)
       setIsSubmitting(false)
     }
@@ -437,8 +435,20 @@ export default function EventForm() {
   const showPackagesTabs = () => setCurrentSection("packagesTabs")
   const showTerms = () => setCurrentSection("terms")
 
+  const eventTypeOptions = [
+    "Conference",
+    "Workshop",
+    "Seminar",
+    "Exhibition",
+    "Concert",
+    "Festival",
+    "Corporate Event",
+    "Sports Event",
+    "Other",
+  ]
+
   return (
-    <div className="event-form-container">
+    <div className="event">
       <div className="event-form-header">
         <button className="back-button" onClick={() => navigate("/organiser-dash")}>
           Back
@@ -618,16 +628,35 @@ export default function EventForm() {
                   <label htmlFor="type" className="form-label">
                     Event Type *
                   </label>
-                  <input
-                    type="text"
-                    id="type"
-                    name="type"
-                    className={`form-input ${errors.type ? "error" : ""}`}
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    placeholder="Conference"
-                    required
-                  />
+                  <div className="select-wrapper">
+                    <select
+                      id="type"
+                      name="type"
+                      className={`form-input ${errors.type ? "error" : ""}`}
+                      value={formData.type}
+                      onChange={handleEventTypeChange}
+                      required
+                    >
+                      <option value="">Select Event Type</option>
+                      {eventTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {formData.type === "Other" && (
+                    <div className="custom-event-type mt-2">
+                      <input
+                        type="text"
+                        value={customEventType}
+                        onChange={handleCustomEventTypeChange}
+                        placeholder="Enter custom event type"
+                        className={`form-input ${errors.type ? "error" : ""}`}
+                        required
+                      />
+                    </div>
+                  )}
                   {errors.type && <div className="error-message">{errors.type}</div>}
                 </div>
                 <div className="form-group">
@@ -1072,5 +1101,5 @@ export default function EventForm() {
         )}
       </div>
     </div>
-  )
+  );
 }
