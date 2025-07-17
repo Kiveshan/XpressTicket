@@ -17,9 +17,9 @@ const RequestCard = () => {
       {/* Modern Header with Gradient */}
       <header className="modern-header">
         <div className="header-left">
-          <button className="modern-button" onClick={() => nav("/organiser-dash")}>
-            <span className="button-icon">←</span> Back
-          </button>
+      <button className="modern-button" onClick={() => nav("/organiser-dash")}>
+  <i className="fas fa-arrow-left"></i> Back
+</button>
           <img
             src="/XPRESS TICKETS LOGO2.png"
             alt="EventXpress Logo"

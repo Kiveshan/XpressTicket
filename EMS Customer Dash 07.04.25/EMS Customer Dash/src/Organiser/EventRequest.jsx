@@ -222,8 +222,8 @@ const EventRequest = () => {
       <div className="modern-container">
         <header className="modern-header">
           <div className="header-left">
-            <button className="modern-button" onClick={() => nav("/requestcard")}>
-              <span className="button-icon">←</span> Back
+            <button className="backbutton20" onClick={() => nav("/requestcard")}>
+              <i className="fas fa-arrow-left"></i> Back
             </button>
             <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
@@ -246,8 +246,8 @@ const EventRequest = () => {
       <div className="modern-container">
         <header className="modern-header">
           <div className="header-left">
-            <button className="modern-button" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
-              <span className="button-icon">←</span> {isAuthError ? "Go to Login" : "Back"}
+            <button className="backbutton20" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
+              <i className="fas fa-arrow-left"></i> {isAuthError ? "Go to Login" : "Back"}
             </button>
             <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
@@ -296,8 +296,8 @@ const EventRequest = () => {
     <div className="modern-container">
       <header className="modern-header">
         <div className="header-left">
-          <button className="modern-button" onClick={() => nav("/requestcard")}>
-            <span className="button-icon">←</span> Back
+          <button className="backbutton20" onClick={() => nav("/requestcard")}>
+            <i className="fas fa-arrow-left"></i> Back
           </button>
           <img src={logo} alt="EventXpress Logo" className="header-logo" />
         </div>

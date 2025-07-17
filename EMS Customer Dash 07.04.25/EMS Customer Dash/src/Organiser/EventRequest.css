@@ -109,6 +109,24 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* Back Button Styles */
+.backbutton20 {
+  position: fixed;
+  background-color: #20c997;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 25px;
+  margin-top: -40px; /* Adjusted to move button further upwards */
+  z-index: 1000;
+}
+
+.backbutton20:hover {
+  background-color: #0c553f;
+}
+
 /* Back Button Container */
 .back-button-container1 {
   padding: 1rem 2rem;
