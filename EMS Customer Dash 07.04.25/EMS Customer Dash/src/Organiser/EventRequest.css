@@ -18,6 +18,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .header-left {
@@ -28,6 +31,11 @@
 
 .header-logo {
   height: 50px;
+}
+
+/* Header spacer to prevent content overlap */
+.header-spacer {
+  height: 70px; /* Matches header height for desktop */
 }
 
 /* Modern buttons */
@@ -64,6 +72,43 @@
 .modern-main-content {
   padding: 20px 25px;
   flex-grow: 1;
+  min-height: calc(100vh - 70px); /* Ensures content fills viewport minus header */
+}
+
+/* Filter styles */
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 0 20px;
+}
+
+.filter-label {
+  font-size: 0.95rem;
+  color: #2c3e50;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background-color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #495057;
+  min-width: 150px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #4ca1af;
+  box-shadow: 0 0 0 3px rgba(76, 161, 175, 0.1);
 }
 
 /* Loading state */
@@ -118,42 +163,6 @@
   font-size: 0.8rem;
 }
 
-/* Filter styles */
-.filter-container {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 0 20px;
-}
-
-.filter-label {
-  font-size: 0.95rem;
-  color: #2c3e50;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.filter-select {
-  padding: 8px 12px;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  background-color: #fff;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #495057;
-  min-width: 150px;
-}
-
-.filter-select:focus {
-  outline: none;
-  border-color: #4ca1af;
-  box-shadow: 0 0 0 3px rgba(76, 161, 175, 0.1);
-}
-
 /* Responsive adjustments */
 @media (max-width: 1200px) {
   .modern-main-content > div[style*="grid"] {
@@ -201,5 +210,9 @@
 
   .modern-main-content {
     padding: 15px;
+  }
+
+  .header-spacer {
+    height: 120px; /* Increased for stacked header on mobile */
   }
 }

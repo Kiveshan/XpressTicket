@@ -40,7 +40,9 @@ const TickectPaymentList = () => {
   const nav = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [loading] = useState(false); // Static data, so no loading state needed; included for future async fetching
+  const [loading] = useState(false); // Static data, included for future async
+
+  console.log("TickectPaymentList: Rendering filter section", { searchQuery, filterStatus });
 
   const filteredPayments = paymentData.filter((payment) => {
     const matchesSearch =
@@ -77,6 +79,7 @@ const TickectPaymentList = () => {
             </button>
           </div>
         </header>
+        <div className="header-spacer"></div>
         <div className="modern-loading">
           <div className="modern-spinner"></div>
           <p>Loading payments...</p>
@@ -108,6 +111,7 @@ const TickectPaymentList = () => {
           </button>
         </div>
       </header>
+      <div className="header-spacer"></div>
       <main className="modern-main-content">
         <div className="modern-search-filter">
           <div className="modern-search-input">

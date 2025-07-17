@@ -13,6 +13,8 @@ const EventRequest = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
 
+  console.log("EventRequest: Rendering filter section", { statusFilter });
+
   const handleLogout = () => {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("userId");
@@ -219,6 +221,7 @@ const EventRequest = () => {
             </button>
           </div>
         </header>
+        <div className="header-spacer"></div>
         <div className="modern-loading">
           <div className="modern-spinner"></div>
           <p>Loading events...</p>
@@ -257,6 +260,7 @@ const EventRequest = () => {
             )}
           </div>
         </header>
+        <div className="header-spacer"></div>
         <div className="modern-error">
           <p>{isAuthError ? "Authentication Required" : "Error Loading Events"}</p>
           <p>{error}</p>
@@ -305,6 +309,7 @@ const EventRequest = () => {
           </button>
         </div>
       </header>
+      <div className="header-spacer"></div>
       <main className="modern-main-content">
         <div className="filter-container">
           <label htmlFor="status-filter" className="filter-label">
