@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../shared/ModernDashboard.css';
 import './AdminViewEventRequest.css';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaUsers, FaInfoCircle, FaImage, FaBox, FaFileAlt, FaMoneyBillWave, FaCommentAlt, FaCheck, FaPencilAlt, FaTimes } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaUsers, FaInfoCircle, FaImage, FaBox, FaFileAlt, FaMoneyBillWave, FaCommentAlt, FaCheck, FaPencilAlt, FaTimes } from 'react-icons/fa';
 import { MdEventAvailable } from 'react-icons/md';
 import { DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
 
@@ -257,8 +257,8 @@ const AdminViewEventRequest = () => {
         <div className="modern-error">
           <FaInfoCircle size={24} />
           <p>{error}</p>
-          <button className="modern-btn" onClick={() => nav('/event-approval')}>
-            <FaArrowLeft /> Back to Event Approval
+          <button className="modern-button" onClick={() => nav('/event-approval')}>
+            <i className="fas fa-arrow-left"></i> Back 
           </button>
         </div>
       </div>
@@ -271,8 +271,8 @@ const AdminViewEventRequest = () => {
         <div className="modern-error">
           <FaInfoCircle size={24} />
           <p>No event data available</p>
-          <button className="modern-btn" onClick={() => nav('/event-approval')}>
-            <FaArrowLeft /> Back to Event Approval
+          <button className="modern-button" onClick={() => nav('/event-approval')}>
+            <i className="fas fa-arrow-left"></i> Back 
           </button>
         </div>
       </div>
@@ -282,25 +282,23 @@ const AdminViewEventRequest = () => {
   return (
     <div className="modern-dashboard-container">
       <div className="modern-header">
-        <div className="modern-header-logo">
-          <img 
-            src="/XPRESS TICKETS LOGO2.png" 
-            alt="EventXpress Logo" 
-            className="modern-logo" 
-            style={{ maxHeight: '45px', width: 'auto' }}
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav('/event-approval')}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="header-logo"
             onError={(e) => {
               console.error('Failed to load logo');
               e.target.src = '/fallback-logo.png';
             }}
           />
-          <h1>Event Request Review</h1>
         </div>
         <div className="modern-header-actions">
-          <button className="modern-btn modern-btn-outline" onClick={() => nav('/event-approval')}>
-            <FaArrowLeft /> Back to Events
-          </button>
-          <button className="modern-logout-btn" onClick={() => nav('/login')}>
-            Logout
+          <button className="modern-button" onClick={() => nav('/login')}>
+            <span className="button-icon">↩</span> Logout
           </button>
         </div>
       </div>
@@ -314,9 +312,9 @@ const AdminViewEventRequest = () => {
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
           overflow: 'hidden'
         }}>
-          <div style={{ 
-            padding: '6px 10px', 
-            background: 'linear-gradient(135deg, #4a5568, #2d3748)', 
+          <div style={{
+            padding: '6px 10px',
+            background: 'linear-gradient(135deg, #4a5568, #2d3748)',
             color: 'white',
             display: 'flex',
             alignItems: 'center',
@@ -324,15 +322,15 @@ const AdminViewEventRequest = () => {
           }}>
             <MdEventAvailable size={16} />
             <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{event.event_name || 'Untitled Event'}</span>
-            <span 
+            <span
               className={`modern-badge modern-badge-${event.status === 'Approved' ? 'success' : event.status === 'Rejected' ? 'danger' : 'warning'}`}
-              style={{ 
-                marginLeft: 'auto', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px', 
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
                 fontSize: '0.7rem',
-                padding: '2px 8px' 
+                padding: '2px 8px'
               }}
             >
               {event.status === 'Approved' ? <FaCheck size={10} /> : event.status === 'Rejected' ? <FaTimes size={10} /> : <FaPencilAlt size={10} />}
@@ -341,11 +339,11 @@ const AdminViewEventRequest = () => {
           </div>
           <div style={{ padding: '8px' }}>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <div style={{ 
-                flex: '0 0 80px', 
-                height: '80px', 
-                borderRadius: '4px', 
-                overflow: 'hidden' 
+              <div style={{
+                flex: '0 0 80px',
+                height: '80px',
+                borderRadius: '4px',
+                overflow: 'hidden'
               }}>
                 <img
                   src={event.file_url}
@@ -389,7 +387,7 @@ const AdminViewEventRequest = () => {
                     <span style={{ fontSize: '0.7rem', color: '#718096' }}>Date</span>
                     <span style={{ fontSize: '0.8rem' }}>
                       {event.start_date ? new Date(event.start_date).toLocaleDateString() : 'Not set'}
-                      {event.end_date && event.end_date !== event.start_date ? 
+                      {event.end_date && event.end_date !== event.start_date ?
                         ` - ${new Date(event.end_date).toLocaleDateString()}` : ''}
                     </span>
                   </div>
@@ -438,16 +436,16 @@ const AdminViewEventRequest = () => {
           gap: '8px',
           width: '100%'
         }}>
-          <div style={{ 
-            background: '#fff', 
-            border: '1px solid #edf2f7', 
-            borderRadius: '4px', 
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', 
-            overflow: 'hidden' 
+          <div style={{
+            background: '#fff',
+            border: '1px solid #edf2f7',
+            borderRadius: '4px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            overflow: 'hidden'
           }}>
-            <div style={{ 
-              padding: '4px 8px', 
-              background: '#f9fafb', 
+            <div style={{
+              padding: '4px 8px',
+              background: '#f9fafb',
               borderBottom: '1px solid #edf2f7',
               display: 'flex',
               alignItems: 'center',
@@ -463,16 +461,16 @@ const AdminViewEventRequest = () => {
             </div>
           </div>
 
-          <div style={{ 
-            background: '#fff', 
-            border: '1px solid #edf2f7', 
-            borderRadius: '4px', 
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', 
-            overflow: 'hidden' 
+          <div style={{
+            background: '#fff',
+            border: '1px solid #edf2f7',
+            borderRadius: '4px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            overflow: 'hidden'
           }}>
-            <div style={{ 
-              padding: '4px 8px', 
-              background: '#f9fafb', 
+            <div style={{
+              padding: '4px 8px',
+              background: '#f9fafb',
               borderBottom: '1px solid #edf2f7',
               display: 'flex',
               alignItems: 'center',
@@ -502,16 +500,16 @@ const AdminViewEventRequest = () => {
             </div>
           </div>
 
-          <div style={{ 
-            background: '#fff', 
-            border: '1px solid #edf2f7', 
-            borderRadius: '4px', 
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', 
-            overflow: 'hidden' 
+          <div style={{
+            background: '#fff',
+            border: '1px solid #edf2f7',
+            borderRadius: '4px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            overflow: 'hidden'
           }}>
-            <div style={{ 
-              padding: '4px 8px', 
-              background: '#f9fafb', 
+            <div style={{
+              padding: '4px 8px',
+              background: '#f9fafb',
               borderBottom: '1px solid #edf2f7',
               display: 'flex',
               alignItems: 'center',
@@ -541,8 +539,8 @@ const AdminViewEventRequest = () => {
         }}>
           {event.packages && event.packages.length > 0 ? (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ 
-                width: '100%', 
+              <table style={{
+                width: '100%',
                 borderCollapse: 'collapse',
                 fontSize: '0.75rem'
               }}>
@@ -592,14 +590,14 @@ const AdminViewEventRequest = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {event.tabs.map((tab, idx) => (
                 <div key={idx} style={{ border: '1px solid #f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ 
-                    padding: '4px 8px', 
-                    backgroundColor: '#f8f9fa', 
+                  <div style={{
+                    padding: '4px 8px',
+                    backgroundColor: '#f8f9fa',
                     borderBottom: '1px solid #f0f0f0',
                     fontWeight: '500',
                     fontSize: '0.75rem'
                   }}>{tab.name || 'Unnamed Tab'}</div>
-                  <div style={{ 
+                  <div style={{
                     padding: '4px 8px',
                     fontSize: '0.7rem',
                     maxHeight: '60px',
@@ -628,9 +626,9 @@ const AdminViewEventRequest = () => {
               padding: '8px',
               overflow: 'hidden'
             }}>
-              <div style={{ 
-                padding: '6px 10px', 
-                background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', 
+              <div style={{
+                padding: '6px 10px',
+                background: 'linear-gradient(135deg, #2c3e50, #4ca1af)',
                 color: 'white',
                 marginBottom: '8px',
                 borderRadius: '4px',
@@ -670,9 +668,9 @@ const AdminViewEventRequest = () => {
               padding: '8px',
               overflow: 'hidden'
             }}>
-              <div style={{ 
-                padding: '6px 10px', 
-                background: 'linear-gradient(to right, #4a5568, #2d3748)', 
+              <div style={{
+                padding: '6px 10px',
+                background: 'linear-gradient(to right, #4a5568, #2d3748)',
                 color: 'white',
                 marginBottom: '8px',
                 borderRadius: '4px',
@@ -685,10 +683,10 @@ const AdminViewEventRequest = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', padding: '4px' }}>
                 <button
-                  style={{ 
-                    padding: '6px 12px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  style={{
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
                     gap: '4px',
                     borderRadius: '4px',
                     background: 'linear-gradient(135deg, #68d391, #38b2ac)',
@@ -705,10 +703,10 @@ const AdminViewEventRequest = () => {
                   <FaCheck size={12} /> Approve
                 </button>
                 <button
-                  style={{ 
-                    padding: '6px 12px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  style={{
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
                     gap: '4px',
                     borderRadius: '4px',
                     background: 'linear-gradient(135deg, #fc8181, #e53e3e)',
@@ -729,7 +727,7 @@ const AdminViewEventRequest = () => {
           </div>
         </>
       )}
-      
+
       {isSubmitting && (
         <div className="modern-loading-overlay" style={{
           position: 'fixed',

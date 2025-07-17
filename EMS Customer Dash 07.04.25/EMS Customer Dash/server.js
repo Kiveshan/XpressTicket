@@ -2753,7 +2753,7 @@ app.get("/api/organiser/analytics", authenticateToken, async (req, res) => {
         TO_CHAR(e.startdate, 'Month') AS month,
         TO_CHAR(e.startdate, 'YYYY') AS year
       FROM events e
-      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.request_status = 'Approved'
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.status = 'Approved'
       WHERE e.user_id = $1
       GROUP BY e.event_id, e.name, e.startdate
       ORDER BY e.startdate DESC;

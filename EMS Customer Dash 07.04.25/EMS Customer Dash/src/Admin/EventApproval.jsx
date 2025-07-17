@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './EventApproval.css';
 import '../shared/ModernDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
 import useFixCardHeight from '../hooks/useFixCardHeight';
 import { DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
 import './EventApproval.override.css';
@@ -42,7 +42,7 @@ const EventApproval = () => {
     }
 
     fetch('http://localhost:5000/api/admin/events', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then(response => {
         if (!response.ok) {
@@ -67,7 +67,7 @@ const EventApproval = () => {
             file_url: event.file_url,
             coverimage: event.coverimage,
             file_urlType: typeof event.file_url,
-            coverimageType: typeof event.coverimage
+            coverimageType: typeof event.coverimage,
           });
 
           return {
@@ -78,7 +78,7 @@ const EventApproval = () => {
             date: event.start_date || event.date || 'N/A',
             time: event.start_time || event.time || 'N/A',
             event_type: event.event_type || event.type || 'Standard',
-            file_url: event.file_url || DEFAULT_IMAGE_DATA_URI
+            file_url: event.file_url || DEFAULT_IMAGE_DATA_URI,
           };
         });
 
@@ -100,31 +100,40 @@ const EventApproval = () => {
   return (
     <div className="modern-dashboard-container">
       <header className="modern-header">
-        <div className="modern-header-logo">
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav('/admin-dash')}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
           <img
             src="/XPRESS TICKETS LOGO2.png"
             alt="EventXpress Logo"
-            className="modern-logo"
+            className="header-logo"
             onError={(e) => {
               console.error('Failed to load logo');
               e.target.src = '/fallback-logo.png';
             }}
           />
         </div>
-        <button className="modern-logout-btn" onClick={() => nav('/')}>
-          Log Out
-        </button>
+        <div className="modern-header-actions">
+          <button className="modern-button" onClick={() => nav('/')}>
+            <span className="button-icon">↩</span> Logout
+          </button>
+        </div>
       </header>
 
-      <div className="modern-back-button">
-        <button className="modern-back-btn" onClick={() => nav('/admin-dash')}>
-          <FaArrowLeft /> Back
-        </button>
-      </div>
       <h2 className="modern-page-title">Events Pending Approval</h2>
 
-      {error && <div className="modern-error"><p>{error}</p></div>}
-      {loading && <div className="modern-loading"><div className="modern-spinner"></div><p>Loading events...</p></div>}
+      {error && (
+        <div className="modern-error">
+          <p>{error}</p>
+        </div>
+      )}
+      {loading && (
+        <div className="modern-loading">
+          <div className="modern-spinner"></div>
+          <p>Loading events...</p>
+        </div>
+      )}
 
       {!loading && events.length === 0 && !error && (
         <div className="modern-no-data">
@@ -141,13 +150,14 @@ const EventApproval = () => {
               <div className="event-col event-col-date">Date</div>
               <div className="event-col event-col-location">Location</div>
               <div className="event-col event-col-type">Type</div>
-              <div className="event-col event-col-status" style={{ marginLeft: '10px' }}>Status</div>
+              <div className="event-col event-col-status" style={{ marginLeft: '10px' }}>
+                Status
+              </div>
               <div className="event-col event-col-action">Action</div>
             </div>
-            
+
             <div className="events-table-body">
-              {events.map((event) => {
-                // Format date properly
+              {events.map(event => {
                 let formattedDate = 'N/A';
                 try {
                   if (event.date && event.date !== 'N/A') {
@@ -156,7 +166,7 @@ const EventApproval = () => {
                       formattedDate = dateObj.toLocaleDateString('en-ZA', {
                         day: 'numeric',
                         month: 'short',
-                        year: 'numeric'
+                        year: 'numeric',
                       });
                     }
                   }
@@ -168,7 +178,7 @@ const EventApproval = () => {
                   <div key={event.eventid} className="event-row">
                     <div className="event-col event-col-img">
                       <div className="event-image-container">
-                        <img 
+                        <img
                           src={event.file_url || DEFAULT_IMAGE_DATA_URI}
                           alt={event.event_name}
                           onError={(e) => {
@@ -178,38 +188,36 @@ const EventApproval = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="event-col event-col-name">
                       <div className="event-name">{event.event_name}</div>
                       <div className="event-time">
                         <FaClock className="event-icon" /> {event.time}
                       </div>
                     </div>
-                    
+
                     <div className="event-col event-col-date">
                       <div className="event-date">
                         <FaCalendarAlt className="event-icon" /> {formattedDate}
                       </div>
                     </div>
-                    
+
                     <div className="event-col event-col-location">
                       <div className="event-location">
                         <FaMapMarkerAlt className="event-icon" /> {event.location}
                       </div>
                     </div>
-                    
+
                     <div className="event-col event-col-type">
-                      <div className="event-type">
-                        {event.event_type}
-                      </div>
+                      <div className="event-type">{event.event_type}</div>
                     </div>
-                    
+
                     <div className="event-col event-col-status">
                       <div className="status-badge status-pending">Pending</div>
                     </div>
-                    
+
                     <div className="event-col event-col-action">
-                      <button 
+                      <button
                         className="view-event-btn"
                         onClick={() => nav('/adminvieweventrequest', { state: { eventid: event.eventid } })}
                       >
@@ -221,10 +229,12 @@ const EventApproval = () => {
               })}
             </div>
           </div>
-        ) : !loading && (
-          <div className="modern-no-data">
-            <p>No pending events found</p>
-          </div>
+        ) : (
+          !loading && (
+            <div className="modern-no-data">
+              <p>No pending events found</p>
+            </div>
+          )
         )}
       </div>
     </div>

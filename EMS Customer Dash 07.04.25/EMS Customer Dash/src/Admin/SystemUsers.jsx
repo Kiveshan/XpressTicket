@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../shared/ModernDashboard.css';
-import { FaSignOutAlt, FaArrowLeft, FaEye, FaCheck, FaBan, FaSearch } from 'react-icons/fa';
+import { FaEye, FaCheck, FaBan, FaSearch } from 'react-icons/fa';
 
 const SystemUsers = () => {
   const nav = useNavigate();
@@ -19,23 +20,19 @@ const SystemUsers = () => {
   const [filteredPayments, setFilteredPayments] = useState([]);
 
   useEffect(() => {
-    // Define the API base URL
-    const API_BASE_URL = 'http://localhost:5000'; // Server is running on port 5000
+    const API_BASE_URL = 'http://localhost:5000';
     
-    // Get token from sessionStorage (where it's stored during login)
     const storedToken = sessionStorage.getItem('token');
     if (storedToken) {
       console.log('Token found in sessionStorage');
       setToken(storedToken);
     } else {
       console.log('No token found in sessionStorage');
-      // If no token is found, redirect to login
       alert('Please log in to access this page');
       nav('/');
       return;
     }
     
-    // Fetch organizers with events
     const fetchOrganisers = async () => {
       try {
         const response = await axios.get(
@@ -46,7 +43,6 @@ const SystemUsers = () => {
             }
           }
         );
-        // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setOrganisers(response.data);
         } else {
@@ -59,7 +55,6 @@ const SystemUsers = () => {
       }
     };
 
-    // Fetch general users (users without events)
     const fetchGeneralUsers = async () => {
       try {
         const response = await axios.get(
@@ -70,7 +65,6 @@ const SystemUsers = () => {
             }
           }
         );
-        // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setGeneralUsers(response.data);
         } else {
@@ -83,11 +77,9 @@ const SystemUsers = () => {
       }
     };
 
-    // Fetch payments
     const fetchPayments = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/api/payments-with-user-names`);
-        // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setPayments(response.data);
         } else {
@@ -104,9 +96,8 @@ const SystemUsers = () => {
     fetchGeneralUsers();
     fetchPayments();
     setLoading(false);
-  }, []);
-  
-  // Effect to filter data based on search term
+  }, [nav]);
+
   useEffect(() => {
     if (organisers.length > 0) {
       const filtered = organisers.filter(organiser => {
@@ -149,13 +140,11 @@ const SystemUsers = () => {
     }
   }, [searchTerm, organisers, generalUsers, payments]);
 
-  // Function to toggle user's disabled status
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       setLoading(true);
       const API_BASE_URL = 'http://localhost:5000';
       
-      // Get the token from sessionStorage where it's stored during login
       const currentToken = sessionStorage.getItem('token');
       
       if (!currentToken) {
@@ -176,7 +165,6 @@ const SystemUsers = () => {
         }
       );
       
-      // Refresh user lists after toggling status
       const fetchOrganisers = async () => {
         try {
           const response = await axios.get(`${API_BASE_URL}/api/users-with-events`);
@@ -207,7 +195,6 @@ const SystemUsers = () => {
     } catch (error) {
       console.error('Error toggling user status:', error);
       
-      // Check if it's an authentication error
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         alert('Your session has expired. Please log in again.');
         sessionStorage.removeItem('token');
@@ -222,7 +209,12 @@ const SystemUsers = () => {
 
   const renderTable = () => {
     if (loading) {
-      return <div className="modern-loading">Loading...</div>;
+      return (
+        <div className="modern-loading">
+          <div className="modern-spinner"></div>
+          <p>Loading...</p>
+        </div>
+      );
     }
 
     if (activeTable === 'Organiser') {
@@ -363,32 +355,29 @@ const SystemUsers = () => {
 
   return (
     <div className="modern-dashboard-container">
-      {/* Modern Header */}
       <header className="modern-header">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="modern-logo"
-        />
+        <div className="header-left">
+          <button className="modern-button" onClick={() => nav('/admin-dash')}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="header-logo"
+            onError={(e) => {
+              console.error('Failed to load logo');
+              e.target.src = '/fallback-logo.png';
+            }}
+          />
+        </div>
         <div className="modern-header-actions">
-          <button className="modern-logout-btn" onClick={() => nav('/')}>
-            <FaSignOutAlt /> Logout
+          <button className="modern-button" onClick={() => nav('/')}>
+            <span className="button-icon">↩</span> Logout
           </button>
         </div>
       </header>
 
-      {/* Back Button - Original Style */}
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/admin-dash")}>
-          Back
-        </button>
-      </div>
-
-      {/* Main Content */}
       <main className="modern-main-content">
-        <h1 className="modern-page-title">System Users</h1>
-        
-        {/* Search Input */}
         <div className="modern-search-filter">
           <div className="modern-search-input">
             <input 
@@ -401,7 +390,6 @@ const SystemUsers = () => {
           </div>
         </div>
 
-        {/* Tab Navigation */}
         <div style={{
           display: 'flex',
           gap: '12px',
@@ -442,7 +430,7 @@ const SystemUsers = () => {
             }}
             onClick={() => setActiveTable('General Users')}
           >
-            Deligate
+            Delegate
           </button>
           <button
             style={{
