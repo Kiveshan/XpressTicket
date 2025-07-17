@@ -5,6 +5,29 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { FaSignOutAlt, FaArrowLeft } from 'react-icons/fa';
 import EventImage from '../utils/EventImage';
 
+// Helper function for consistent price formatting
+const formatPrice = (price) => {
+  // Convert to number if it's a string
+  let numericPrice;
+  if (typeof price === 'string') {
+    // Remove 'R' and any spaces or commas
+    numericPrice = parseFloat(price.replace(/[R\s,]/g, ''));
+  } else {
+    numericPrice = price;
+  }
+  
+  // Check if it's a valid number
+  if (isNaN(numericPrice)) {
+    return 'R 0.00';
+  }
+  
+  // Format with thousand separator and 2 decimal places
+  return `R ${numericPrice.toLocaleString('en-ZA', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+};
+
 const ConfirmTicketPackage = () => {
   const nav = useNavigate();
   const { eventId, packageIndex } = useParams();
@@ -17,25 +40,47 @@ const ConfirmTicketPackage = () => {
   
   // Get delegates from location state, session storage, or use empty array as fallback
   const [packages, setPackages] = useState(() => {
+    let initialPackages = [];
+    
     // First check if we have delegates in location state (coming from ticket details page)
     if (location.state?.delegates) {
-      return location.state.delegates;
-    }
-    
-    // Then check if we have stored packages in session storage (coming back from adding a package)
-    const storedPackages = sessionStorage.getItem('currentPackages');
-    if (storedPackages) {
-      // Clear the session storage to avoid using it again unintentionally
-      sessionStorage.removeItem('currentPackages');
-      try {
-        return JSON.parse(storedPackages);
-      } catch (e) {
-        console.error('Error parsing stored packages:', e);
+      initialPackages = location.state.delegates;
+    } else {
+      // Then check if we have stored packages in session storage (coming back from adding a package)
+      const storedPackages = sessionStorage.getItem('currentPackages');
+      if (storedPackages) {
+        // Clear the session storage to avoid using it again unintentionally
+        sessionStorage.removeItem('currentPackages');
+        try {
+          initialPackages = JSON.parse(storedPackages);
+        } catch (e) {
+          console.error('Error parsing stored packages:', e);
+        }
       }
     }
     
-    // Fallback to empty array
-    return [];
+    // Format all package amounts consistently
+    if (initialPackages.length > 0) {
+      initialPackages = initialPackages.map(pkg => {
+        // First ensure unitPrice is properly stored for future calculations
+        if (pkg.amount && !pkg.unitPrice) {
+          // Extract numeric price from amount
+          const priceValue = parseFloat(pkg.amount.replace(/[R\s,]/g, ''));
+          // Store as unitPrice if we need it for calculations later
+          pkg.unitPrice = priceValue.toString();
+        }
+        
+        // Format amount consistently
+        if (pkg.amount) {
+          pkg.amount = formatPrice(pkg.amount);
+        }
+        
+        return pkg;
+      });
+    }
+    
+    // Return the packages with formatted amounts
+    return initialPackages;
   });
 
   // Function to remove a package from the list
@@ -62,15 +107,8 @@ const ConfirmTicketPackage = () => {
       // Calculate the new total amount by multiplying base price by ticket count
       const totalAmount = basePrice * safeTicketCount;
       
-      // Format the amount for better readability
-      // Use South African formatting (space as thousand separator)
-      const formattedAmount = totalAmount.toLocaleString('en-ZA', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-      
-      // Update the amount field
-      updatedPackages[index].amount = `R ${formattedAmount}`;
+      // Use the helper function for consistent formatting
+      updatedPackages[index].amount = formatPrice(totalAmount);
       
       // Ensure the tickets field is also updated with the safe value
       if (safeTicketCount !== ticketCount) {
@@ -208,14 +246,10 @@ const ConfirmTicketPackage = () => {
       // Extract the base price from pkg.price (remove 'R ' prefix)
       const basePrice = pkg.price.replace('R ', '');
       // Clean up any commas in the price
-      const cleanBasePrice = basePrice.replace(',', '');
+      const cleanBasePrice = basePrice.replace(/,/g, '');
       
-      // Format the initial price for better readability
+      // Format the initial price using our helper function
       const initialPrice = parseFloat(cleanBasePrice);
-      const formattedInitialPrice = initialPrice.toLocaleString('en-ZA', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
       
       // Create a new package entry with default values
       const newPackage = {
@@ -229,7 +263,7 @@ const ConfirmTicketPackage = () => {
         tickets: '1',
         ieeeNumber: '',
         dayPass: parsedPackage.Duration || '',
-        amount: `R ${formattedInitialPrice}`,
+        amount: formatPrice(initialPrice),
         unitPrice: cleanBasePrice // Store the clean unit price for future calculations
       };
       
@@ -281,7 +315,7 @@ const ConfirmTicketPackage = () => {
         
         return {
           name: parsedPackage.name || parsedPackage.selectType || `Package ${idx + 1}`,
-          price: `R ${parsedPackage.price || parsedPackage.pricing || '0.00'}`,
+          price: formatPrice(parsedPackage.price || parsedPackage.pricing || '0.00'),
           path: `/customerticketdetails1/${eventId}/${idx}`
         };
       });
@@ -463,7 +497,14 @@ const ConfirmTicketPackage = () => {
               + Add Package
             </button>
             
-            <button className="Submit" onClick={() => nav(`/customerviewevent/${eventId}`)}>
+            <button className="Submit" onClick={() => nav(`/receipt`, {
+              state: {
+                purchaseData: {
+                  event,
+                  packages
+                }
+              }
+            })}>
               Submit
             </button>
           </div>

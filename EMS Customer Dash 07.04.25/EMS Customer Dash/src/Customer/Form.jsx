@@ -92,6 +92,9 @@ function Form() {
   return (
     <div className="auth-container">
       <div className="left-side">
+        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="logo" />
+      </div>
+      <div className="right-side">
         <div className="form-card">
           {isLogin ? (
             <>
@@ -162,9 +165,6 @@ function Form() {
             </>
           )}
         </div>
-      </div>
-      <div className="right-side">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="logo" />
       </div>
     </div>
   );
