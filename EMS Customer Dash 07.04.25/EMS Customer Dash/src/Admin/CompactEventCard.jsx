@@ -1,19 +1,16 @@
 import React from 'react';
 import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
 
 const CompactEventCard = ({ event }) => {
   const nav = useNavigate();
 
   const handleImageError = (e) => {
-    console.warn(`Failed to load image: ${e.target.src}`);
+    console.warn(`Failed to load image for event ${event.eventid}: ${e.target.src}`);
+    e.target.src = DEFAULT_IMAGE_DATA_URI;
     e.target.classList.add('image-error');
   };
-  
-  const getImageUrl = () => {
-    return event.file_url;
-  };
-  
 
   return (
     <div style={{
@@ -28,7 +25,6 @@ const CompactEventCard = ({ event }) => {
       margin: '5px',
       boxSizing: 'border-box'
     }}>
-    
       <div style={{
         position: 'absolute',
         top: 0,
@@ -38,7 +34,7 @@ const CompactEventCard = ({ event }) => {
         overflow: 'hidden'
       }}>
         <img 
-          src={event.file_url}  
+          src={event.file_url || DEFAULT_IMAGE_DATA_URI}  
           alt={event.event_name || 'Event'}
           style={{
             width: '100%', 
@@ -66,7 +62,6 @@ const CompactEventCard = ({ event }) => {
         )}
       </div>
 
-      {/* Title - absolute positioned below image */}
       <div style={{
         position: 'absolute',
         top: '52px',
@@ -88,7 +83,6 @@ const CompactEventCard = ({ event }) => {
         </h3>
       </div>
 
-      {/* Location info */}
       <div style={{
         position: 'absolute',
         top: '68px',
@@ -109,7 +103,6 @@ const CompactEventCard = ({ event }) => {
         </div>
       </div>
 
-      {/* Date/Time info */}
       <div style={{
         position: 'absolute',
         top: '82px',
@@ -130,7 +123,6 @@ const CompactEventCard = ({ event }) => {
         </div>
       </div>
 
-      {/* Price info - only show if valid price exists */}
       {event.price && event.price !== 'N/A' && (
         <div style={{
           position: 'absolute',
@@ -151,7 +143,6 @@ const CompactEventCard = ({ event }) => {
         </div>
       )}
 
-      {/* Status badge and action button - fixed at bottom */}
       <div style={{
         position: 'absolute',
         bottom: '8px',
