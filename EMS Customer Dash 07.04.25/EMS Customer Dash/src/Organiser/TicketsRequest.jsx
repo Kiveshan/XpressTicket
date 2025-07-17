@@ -177,11 +177,7 @@ function TicketsRequest() {
         </button>
       </header>
  
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav('/tickets-event-list')}>
-          Back
-        </button>
-      </div>
+      
  
       <h2 className="tickets-request-title">Ticket Requests for {eventName}</h2>
  

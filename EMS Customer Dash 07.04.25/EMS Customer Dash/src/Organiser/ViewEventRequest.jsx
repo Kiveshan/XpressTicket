@@ -35,40 +35,41 @@ const ViewEventRequest = () => {
   const [imageError, setImageError] = useState(false)
   const [currentSection, setCurrentSection] = useState("eventInfo")
 
- const formatDate = (dateString) => {
-  if (!dateString) return "Date not specified";
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date not specified";
 
-  try {
-    console.log("ViewEventRequest formatDate input:", dateString);
-    
-    // Handle both ISO timestamp and YYYY-MM-DD format
-    if (dateString.includes('T')) {
-      // If it's an ISO string, extract just the YYYY-MM-DD part
-      dateString = dateString.split('T')[0];
-    }
-
-    // Handle cases where dateString might already be in DD/MM/YYYY format
-    if (dateString.includes('/')) {
-      const [day, month, year] = dateString.split('/');
-      if (day && month && year) {
-        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+    try {
+      console.log("ViewEventRequest formatDate input:", dateString);
+      
+      // Handle both ISO timestamp and YYYY-MM-DD format
+      if (dateString.includes('T')) {
+        // If it's an ISO string, extract just the YYYY-MM-DD part
+        dateString = dateString.split('T')[0];
       }
-    }
 
-    // Directly split the YYYY-MM-DD string (same as EventRequest.jsx)
-    const [year, month, day] = dateString.split('-');
-    
-    if (!year || !month || !day || year.length !== 4) {
-      throw new Error("Invalid date format");
-    }
+      // Handle cases where dateString might already be in DD/MM/YYYY format
+      if (dateString.includes('/')) {
+        const [day, month, year] = dateString.split('/');
+        if (day && month && year) {
+          return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+        }
+      }
 
-    // Format as DD/MM/YYYY without creating a Date object
-    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
-  } catch (error) {
-    console.error("ViewEventRequest date formatting error:", error, "Input:", dateString);
-    return "Date not specified";
-  }
-};
+      // Directly split the YYYY-MM-DD string (same as EventRequest.jsx)
+      const [year, month, day] = dateString.split('-');
+      
+      if (!year || !month || !day || year.length !== 4) {
+        throw new Error("Invalid date format");
+      }
+
+      // Format as DD/MM/YYYY without creating a Date object
+      return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+    } catch (error) {
+      console.error("ViewEventRequest date formatting error:", error, "Input:", dateString);
+      return "Date not specified";
+    }
+  };
+
   useEffect(() => {
     console.log("Event ID:", eventid)
 
@@ -179,8 +180,8 @@ const ViewEventRequest = () => {
     <div className="view-event-container">
       <div className="view-event-card">
         <div className="view-event-header">
-          <button className="view-back-button" onClick={() => navigate("/event-request")}>
-            ← Back to Events
+          <button className="backbutton20" onClick={() => navigate("/event-request")}>
+            <i className="fas fa-arrow-left"></i> Back to Events
           </button>
           <div className="view-section-nav">
             <button
@@ -397,19 +398,19 @@ const ViewEventRequest = () => {
                               <div className="view-package-item view-package-dates">
                                 <div className="view-package-item-label">Date Choices</div>
                                 <div className="view-package-date-range">
-  <div className="view-package-date-item">
-    <span className="view-package-date-label">Start Date:</span>
-    <span className="view-package-date-value">
-      {pkg.startDate ? formatDate(pkg.startDate) : "N/A"}
-    </span>
-  </div>
-  <div className="view-package-date-item">
-    <span className="view-package-date-label">End Date:</span>
-    <span className="view-package-date-value">
-      {pkg.endDate ? formatDate(pkg.endDate) : "N/A"}
-    </span>
-  </div>
-</div>
+                                  <div className="view-package-date-item">
+                                    <span className="view-package-date-label">Start Date:</span>
+                                    <span className="view-package-date-value">
+                                      {pkg.startDate ? formatDate(pkg.startDate) : "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="view-package-date-item">
+                                    <span className="view-package-date-label">End Date:</span>
+                                    <span className="view-package-date-value">
+                                      {pkg.endDate ? formatDate(pkg.endDate) : "N/A"}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                               <div className="view-package-item">
                                 <div className="view-package-item-label">Pricing</div>

@@ -182,7 +182,7 @@ export default function Analytics() {
       <header className="modern-header">
         <div className="header-left">
           <button className="modern-button" onClick={handleBack}>
-            <span className="button-icon">←</span> Back
+            <span className="button-icon"></span> Back
           </button>
           <img
             src="/XPRESS TICKETS LOGO2.png"

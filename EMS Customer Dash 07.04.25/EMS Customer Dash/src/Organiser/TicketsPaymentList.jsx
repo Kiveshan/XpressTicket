@@ -4,12 +4,12 @@ import { useNavigate } from "react-router-dom";
 import "../shared/ModernDashboard.css";
 import {
   FaSignOutAlt,
-  FaArrowLeft,
   FaSearch,
   FaFilter,
   FaEye,
   FaDownload,
 } from "react-icons/fa";
+
 // Enhanced sample data with more fields and entries
 const paymentData = [
   {
@@ -43,10 +43,12 @@ const paymentData = [
     status: "Verified",
   },
 ];
+
 const TickectPaymentList = () => {
   const nav = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+
   // Filter payments based on search query and status filter
   const filteredPayments = paymentData.filter((payment) => {
     const matchesSearch =
@@ -65,26 +67,25 @@ const TickectPaymentList = () => {
     <div className="modern-dashboard-container">
       {/* Modern Header */}
       <header className="modern-header">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="modern-logo"
-        />
+        <div className="header-left">
+          <button
+            className="backbutton20"
+            onClick={() => nav("/organiser-dash")}
+          >
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="modern-logo"
+          />
+        </div>
         <div className="modern-header-actions">
           <button className="modern-logout-btn" onClick={() => nav("/")}>
             <FaSignOutAlt /> Logout
           </button>
         </div>
       </header>
-      {/* Back Button */}
-      <div className="modern-back-button">
-        <button
-          className="modern-back-btn"
-          onClick={() => nav("/organiser-dash")}
-        >
-          <FaArrowLeft /> Back to Dashboard
-        </button>
-      </div>
 
       {/* Main Content */}
       <main className="modern-main-content">
