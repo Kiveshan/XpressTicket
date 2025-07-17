@@ -247,19 +247,27 @@
   }
   
   .event-image-container {
-    width: 100%;
+    width: 100% !important;
     height: 100px;
     overflow: hidden;
     position: relative;
     background-color: #f0f0f0;
-    margin-bottom: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 10px 10px 0 0;
   }
 
   .event-image {
-    width: 100%;
+    width: 100% !important;
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s ease;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 10px 10px 0 0;
+    left: 0 !important;
+    right: 0 !important;
   }
   
   .event-card:hover .event-image {

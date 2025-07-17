@@ -24,6 +24,7 @@ import VieWInvoice from "./VieWInvoice";
 import CustomerUploadPOP from "./CustomerUploadPOP";
 import ConfirmTicketPackage from "./ConfirmTicketPackage";
 import CustomerFillinTicketPack1 from "./CustomerFillinTicketPack1";
+import Receipt from "./Receipt";
 
 
 // Organiser
@@ -85,6 +86,7 @@ function App() {
           <Route path= "/viewinvoice" element={<VieWInvoice />} />
           <Route path= "/uploadpop" element={<CustomerUploadPOP />} />
           <Route path="/confirm-ticket-package/:eventId/:packageIndex" element={<ConfirmTicketPackage />} />
+          <Route path="/receipt" element={<Receipt />} />
 
 
           {/* Organiser */}
