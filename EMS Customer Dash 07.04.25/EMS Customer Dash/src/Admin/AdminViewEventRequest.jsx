@@ -711,26 +711,6 @@ const AdminViewEventRequest = () => {
                     alignItems: 'center', 
                     gap: '4px',
                     borderRadius: '4px',
-                    background: 'linear-gradient(135deg, #faf089, #f6ad55)',
-                    border: 'none',
-                    color: '#744210',
-                    fontWeight: '500',
-                    fontSize: '0.75rem',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => handleStatusUpdate('Request Edit')}
-                  disabled={isSubmitting}
-                >
-                  <FaPencilAlt size={12} /> Request Edit
-                </button>
-                <button
-                  style={{ 
-                    padding: '6px 12px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '4px',
-                    borderRadius: '4px',
                     background: 'linear-gradient(135deg, #fc8181, #e53e3e)',
                     border: 'none',
                     color: 'white',

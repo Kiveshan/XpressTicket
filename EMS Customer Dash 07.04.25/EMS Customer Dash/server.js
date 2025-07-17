@@ -1485,7 +1485,8 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
         } else if (attendees.startsWith('[') && attendees.endsWith(']')) {
           parsedAttendees = JSON.parse(attendees).map(item => item.trim()).filter(item => item);
         } else {
-          parsedAttendees = attendees.split(',').map(item => item.trim()).filter(item => item);
+          // Handle plain string case
+          parsedAttendees = [attendees.trim()];
         }
       } else if (Array.isArray(attendees)) {
         parsedAttendees = attendees.map(item => item.trim()).filter(item => item);
@@ -1496,11 +1497,14 @@ app.put('/api/events/:eventId', authenticateToken, upload.fields([{ name: 'cover
       if (parsedAttendees.length === 0) {
         return res.status(400).json({ error: 'At least one valid attendee type is required' });
       }
+
+
       // Parse tabs
       parsedTabs = tabs ? JSON.parse(tabs).map(tab => JSON.stringify(tab)) : null;
       // Parse and validate packages
       parsedPackages = packages ? JSON.parse(packages).map((pkg, index) => {
         console.log(`Processing package ${index}:`, pkg);
+// ... (rest of the code remains the same)
         if (!pkg.startDate || !pkg.endDate) {
           throw new Error(`Package ${index + 1} is missing startDate or endDate`);
         }
@@ -3238,9 +3242,171 @@ function formatDate(dateString) {
   }
 }
 
+// API endpoint for saving ticket purchases
+app.post('/api/ticket-purchases', authenticateToken, async (req, res) => {
+try {
+  // Extract data from the request body
+  const { event_id, user_id, number_of_tickets, package: packageDetails, amount, delegate_details } = req.body;
+  
+  // Validate required fields
+  if (!event_id || !user_id || !number_of_tickets || !packageDetails || amount === undefined) {
+    return res.status(400).json({ error: 'Missing required fields for ticket purchase' });
+  }
+  
+  console.log('Received ticket purchase request:', {
+    event_id,
+    user_id,
+    number_of_tickets,
+    packageDetails,
+    amount,
+    delegate_details
+  });
+
+  // For PostgreSQL JSONB column, we need to ensure delegate_details is properly formatted
+  let delegateDetailsForDB;
+  
+  try {
+    if (!delegate_details) {
+      // If no delegate details provided, use empty object
+      delegateDetailsForDB = '{}';
+    } else if (typeof delegate_details === 'object') {
+      // Convert object to JSON string for PostgreSQL JSONB
+      delegateDetailsForDB = delegate_details;
+    } else if (typeof delegate_details === 'string') {
+      // If it's already a string, ensure it's valid JSON
+      try {
+        // Try to parse it to validate JSON format
+        delegateDetailsForDB = JSON.parse(delegate_details);
+      } catch (e) {
+        // Not valid JSON, create a simple object with the string
+        delegateDetailsForDB = { value: delegate_details };
+      }
+    } else {
+      // Fallback for any other type
+      delegateDetailsForDB = { value: String(delegate_details) };
+    }
+    
+    console.log('Delegate details formatted for DB:', delegateDetailsForDB);
+  } catch (error) {
+    console.error('Error formatting delegate details:', error);
+    return res.status(400).json({ error: 'Invalid delegate details format' });
+  }
+  
+  // Insert ticket purchase into database with default status 'pending'
+  const query = `
+    INSERT INTO ticket_purchases (event_id, user_id, number_of_tickets, package, amount, delegate_details, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *
+  `;
+  
+  // Make sure package is a string - PostgreSQL will store as character varying
+  const packageForDB = typeof packageDetails === 'object' ? 
+    JSON.stringify(packageDetails) : String(packageDetails);
+  
+  // Format amount as numeric for PostgreSQL
+  const numericAmount = typeof amount === 'string' ? 
+    parseFloat(amount.replace(/[^0-9.-]+/g, '')) : parseFloat(amount);
+    
+  if (isNaN(numericAmount)) {
+    return res.status(400).json({ error: 'Invalid amount format' });
+  }
+  
+  const values = [
+    parseInt(event_id),
+    parseInt(user_id),
+    parseInt(number_of_tickets),
+    packageForDB,
+    numericAmount,
+    delegateDetailsForDB, // This is properly formatted for JSONB now
+    'pending' // Default status
+  ];
+  
+  // Log values in a controlled way to avoid timing information being included
+  console.log('Executing SQL with values:', [
+    parseInt(event_id),
+    parseInt(user_id),
+    parseInt(number_of_tickets),
+    packageForDB,
+    numericAmount,
+    '(delegate_details object)',
+    'pending'
+  ]);
+  
+  try {
+    const result = await pool.query(query, values);
+    
+    console.log('Ticket purchase created successfully:', result.rows[0]);
+    
+    // Return success response with the created ticket purchase details
+    res.status(201).json({
+      message: 'Ticket purchase created successfully',
+      purchase: result.rows[0]
+    });
+  } catch (dbError) {
+    console.error('Database error during ticket purchase insertion:', dbError);
+    res.status(500).json({ 
+      error: 'Database error during ticket purchase', 
+      details: dbError.message,
+      hint: dbError.hint,
+      code: dbError.code
+    });
+  }
+} catch (error) {
+  console.error('Error creating ticket purchase. Full error:', error);
+  console.error('Error stack trace:', error.stack);
+  console.error('Request body received:', req.body);
+  res.status(500).json({ 
+    error: 'Failed to create ticket purchase: ' + error.message,
+    details: error.detail || 'No additional details available'
+  });
+}
+});
+
+// API endpoint for updating ticket status (for payment processing)
+app.post('/api/update-ticket-status', authenticateToken, async (req, res) => {
+try {
+  // Extract data from the request body
+  const { user_id, event_id, status } = req.body;
+  
+  // Validate required fields
+  if (!user_id || !event_id || !status) {
+    return res.status(400).json({ error: 'Missing required fields for updating ticket status' });
+  }
+  
+  // Update ticket status in database
+  const query = `
+    UPDATE ticket_purchases
+    SET status = $1, updated_at = $2
+    WHERE user_id = $3 AND event_id = $4 AND status = 'pending'
+    RETURNING id
+  `;
+  
+  const values = [
+    status,
+    new Date(), // Current date/time for updated_at
+    user_id,
+    event_id
+  ];
+  
+  const result = await pool.query(query, values);
+  
+  // Check if any rows were affected
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: 'No pending tickets found for this user and event' });
+  }
+  
+  // Return success response with the updated ticket IDs
+  res.status(200).json({
+    message: `Ticket status updated to '${status}' successfully`,
+    ticketIds: result.rows.map(row => row.id)
+  });
+} catch (error) {
+  console.error('Error updating ticket status:', error);
+  res.status(500).json({ error: 'Failed to update ticket status' });
+}
+});
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
- 
+console.log(`Server running on port ${port}`);
 });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaSignOutAlt, FaArrowLeft, FaDownload } from 'react-icons/fa';
+import { FaSignOutAlt, FaArrowLeft, FaDownload, FaCreditCard, FaCheck } from 'react-icons/fa';
 import '../shared/ModernDashboard.css';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -11,9 +11,73 @@ const Receipt = () => {
   const receiptRef = useRef(null);
   // Track downloading state for each package separately
   const [isDownloading, setIsDownloading] = useState({});
+  // Track payment status
+  const [isPaid, setIsPaid] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentSuccessMessage, setPaymentSuccessMessage] = useState('');
+  const [ticketIds, setTicketIds] = useState([]); // Store ticket IDs from the backend
   
   // Initialize purchase data from location state
   const [purchaseData, setPurchaseData] = useState({ event: {}, packages: [] });
+  
+  // Handle payment process
+  const handlePayNow = async () => {
+    if (!purchaseData || !purchaseData.packages || purchaseData.packages.length === 0) {
+      alert('No ticket information available');
+      return;
+    }
+    
+    try {
+      setIsProcessingPayment(true);
+      
+      // Get token from session storage
+      const token = sessionStorage.getItem('token');
+      const userId = sessionStorage.getItem('userId');
+      
+      if (!token || !userId) {
+        alert('Authentication required. Please log in again.');
+        nav('/login');
+        return;
+      }
+      
+      // Extract ticket IDs from the purchase data
+      const ticketIdsToUpdate = purchaseData.packages.map(pkg => pkg.ticketId).filter(id => id);
+      
+      // Call the API to update ticket status to 'Approved'
+      const response = await fetch('http://localhost:5000/api/update-ticket-status', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_id: parseInt(userId),
+          event_id: parseInt(purchaseData.event.event_id),
+          status: 'Approved'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Payment failed: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      // Set the ticket IDs from the response if available
+      if (result.ticketIds) {
+        setTicketIds(result.ticketIds);
+      }
+      
+      // Show success message and reveal receipt
+      setPaymentSuccessMessage('Payment successful! Your tickets are now approved.');
+      setIsPaid(true);
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert(`Payment process failed: ${error.message}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
   
   // Redirect if no data is present
   useEffect(() => {
@@ -409,52 +473,44 @@ const Receipt = () => {
   const receiptNumber = `XPT-${Date.now().toString().slice(-8)}`;
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column',
-      minHeight: '100vh',
-      backgroundColor: '#f8f9fa'
-    }}>
-      {/* Modern Header */}
-      <header className="modern-header">
-        <img
-          src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
-          className="modern-logo"
-        />
-        <div className="modern-header-actions">
-          <button className="modern-logout-btn" onClick={() => nav('/')}>
-            <FaSignOutAlt /> Logout
+    <div className="modern-dashboard-container" style={{ overflowX: 'hidden' }}>
+      {/* Header Section */}
+      <header className="modern-dashboard-header">
+        <div className="header-content">
+          <h1>{isPaid ? 'Receipt' : 'Complete Your Purchase'}</h1>
+          <button 
+            className="logout-button" 
+            onClick={() => {
+              sessionStorage.removeItem('token');
+              sessionStorage.removeItem('userId');
+              sessionStorage.removeItem('userType');
+              nav('/login');
+            }}
+          >
+            <FaSignOutAlt style={{ marginRight: '8px' }} /> Logout
           </button>
         </div>
       </header>
-      
-      {/* Back Button - Modern Style */}
-      <div className="modern-back-button-container">
-        <button className="modern-back-btn" onClick={() => nav('/customerdash')}>
-          <FaArrowLeft /> Back to Dashboard
+
+      {/* Back Button */}
+      <div className="back-button-container">
+        <button className="back-button" onClick={() => nav('/customerdash')}>
+          <FaArrowLeft style={{ marginRight: '8px' }} /> Back to Dashboard
         </button>
       </div>
-
-      {/* Main Content */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '20px',
-        flex: 1
-      }}>
-        {/* Receipt Card - Simplified Checkout Style */}
-        <div ref={receiptRef} style={{
-          width: '100%',
-          maxWidth: '500px',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          padding: '30px',
-          marginBottom: '20px'
-        }}>
-          {/* Receipt Header with Company */}
+      
+      {!isPaid ? (
+        // Payment section - shown when isPaid is false
+        <div className="content-container">
+          <div className="payment-container" style={{ 
+            textAlign: 'center',
+            padding: '40px 20px',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+            maxWidth: '600px',
+            margin: '40px auto'
+          }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -649,129 +705,72 @@ const Receipt = () => {
           }}>
             <p style={{ margin: '0' }}>Questions? Contact us at <span style={{ color: '#4ca1af', cursor: 'pointer' }}>support@xpressticket.com</span></p>
           </div>
-        </div>
-
-        {/* Ticket List with Download Buttons */}
-        <div className="ticket-list-container" style={{ marginTop: '30px', marginBottom: '30px' }}>
-          <h3 style={{ fontSize: '18px', margin: '0 0 15px', color: '#2c3e50', textAlign: 'center' }}>Your Tickets</h3>
           
-          {purchaseData.packages && purchaseData.packages.length > 0 ? (
-            <div className="ticket-list">
-              {purchaseData.packages.map((pkg, index) => {
-                // Determine the person name from the package data
-                // First check if delegate info exists
-                let personName = '';
-                if (pkg.delegateInfo) {
-                  try {
-                    // Try to parse delegate info if it's a string
-                    const delegateData = typeof pkg.delegateInfo === 'string' 
-                      ? JSON.parse(pkg.delegateInfo) 
-                      : pkg.delegateInfo;
-                    
-                    if (delegateData && delegateData.length > 0 && delegateData[0].name) {
-                      personName = delegateData[0].name;
-                    }
-                  } catch (e) {
-                    console.error('Error parsing delegate info:', e);
-                  }
-                }
-                
-                // Fall back to ticket holder name if available
-                if (!personName && pkg.ticketHolder) {
-                  personName = pkg.ticketHolder;
-                }
-                
-                // If still no name, fall back to the package name
-                if (!personName) {
-                  personName = pkg.packageName || pkg.package || `Ticket ${index + 1}`;
-                }
-                
-                // Get the package details
-                const packageName = pkg.packageName || pkg.package || 'Standard Package';
-                
-                // Get ticket count - check multiple possible field names
-                const ticketCount = pkg.ticketCount || pkg.quantity || pkg.count || pkg.tickets || 1;
-                const amount = pkg.amount || formatCurrency(totals.total / purchaseData.packages.length);
-                
-                return (
-                  <div 
-                    key={index} 
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '15px',
-                      marginBottom: '10px',
-                      backgroundColor: '#f8f9fa',
-                      borderRadius: '8px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                      flexWrap: 'nowrap' // Prevent wrapping on smaller screens
-                    }}
-                  >
-                    {/* Ticket Details (Left Side) */}
-                    <div className="ticket-details" style={{ flex: '1', paddingRight: '15px' }}>
-                      <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#2c3e50', marginBottom: '4px' }}>
-                        {personName}
-                      </div>
-                      <div style={{ fontSize: '14px', color: '#495057' }}>
-                        Package: {packageName}
-                      </div>
-                      <div style={{ fontSize: '14px', color: '#495057', display: 'flex', gap: '15px' }}>
-                        <span>Tickets: {ticketCount}</span>
-                        <span>Amount: {amount}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Download Button (Right Side) */}
-                    <div className="ticket-action" style={{ minWidth: '140px', display: 'flex', justifyContent: 'flex-end' }}>
-                      <button
-                        className="download-btn"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '8px 15px',
-                          backgroundColor: isDownloading[index] ? '#cccccc' : '#4ca1af',
-                          background: isDownloading[index] ? '#cccccc' : 'linear-gradient(135deg, #2c3e50, #4ca1af)',
-                          border: 'none',
-                          borderRadius: '6px',
-                          color: '#fff',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          cursor: isDownloading[index] ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.3s ease',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                          whiteSpace: 'nowrap',
-                          minWidth: '125px'
-                        }}
-                        onClick={() => handleDownload(pkg, index)}
-                        disabled={isDownloading[index]}
-                      >
-                        {isDownloading[index] ? (
-                          <span>Generating...</span>
-                        ) : (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '8px' }}>
-                              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                            </svg>
-                            {personName.length > 15 ? 
-                              `Download Ticket` : 
-                              `Download for ${personName}`
-                            }
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p style={{ textAlign: 'center' }}>No tickets available for download.</p>
-          )}
+          {/* Pay Now Button */}
+          <div style={{ marginTop: '30px' }}>
+            <button
+              className="pay-now-btn"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '12px 30px',
+                backgroundColor: isProcessingPayment ? '#cccccc' : '#4ca1af',
+                background: isProcessingPayment ? '#cccccc' : 'linear-gradient(135deg, #2c3e50, #4ca1af)',
+                border: 'none',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: isProcessingPayment ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 3px 6px rgba(0,0,0,0.15)',
+                minWidth: '200px'
+              }}
+              onClick={handlePayNow}
+              disabled={isProcessingPayment}
+            >
+              {isProcessingPayment ? (
+                <span>Processing...</span>
+              ) : (
+                <>
+                  <FaCreditCard style={{ marginRight: '10px' }} />
+                  Pay Now
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+      ) : (
+        <div className="content-container">
+          {paymentSuccessMessage && (
+            <div style={{
+              backgroundColor: '#d4edda',
+              color: '#155724',
+              padding: '15px 20px',
+              borderRadius: '6px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+              <FaCheck style={{ marginRight: '10px' }} />
+              {paymentSuccessMessage}
+            </div>
+          )}
+          <div ref={receiptRef} className="receipt-container" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            padding: '20px',
+            marginBottom: '30px'
+          }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Purchase Confirmation</h2>
+            <p style={{ textAlign: 'center', marginBottom: '30px' }}>Your payment has been processed successfully!</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

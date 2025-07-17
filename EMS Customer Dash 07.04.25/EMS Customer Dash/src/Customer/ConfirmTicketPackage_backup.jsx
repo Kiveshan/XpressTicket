@@ -235,13 +235,8 @@ const ConfirmTicketPackage = () => {
       
       // Process packages to create ticket purchase records
       for (const pkg of packages) {
-        // Extract numeric amount from formatted string (remove R, spaces, commas)
+        // Extract numeric amount from formatted price (remove 'R ' and commas)
         const numericAmount = parseFloat(pkg.amount.replace(/[R\s,]/g, ''));
-        
-        // Debug logging
-        console.log('Package amount before conversion:', pkg.amount);
-        console.log('Package amount after conversion:', numericAmount);
-        console.log('Package details structure:', pkg.packageDetails);
         
         // Prepare delegate details as a JSON object
         const delegateDetails = {
@@ -266,8 +261,7 @@ const ConfirmTicketPackage = () => {
             event_id: parseInt(eventId),
             user_id: parseInt(userId),
             number_of_tickets: parseInt(pkg.tickets),
-            package: typeof pkg.packageDetails === 'object' ? JSON.stringify(pkg.packageDetails) : 
-                   pkg.packageDetails ? String(pkg.packageDetails) : pkg.name || 'Standard Package',
+            package: pkg.packageDetails,
             amount: numericAmount,
             delegate_details: delegateDetails
             // status will default to 'pending' in the database
@@ -424,7 +418,7 @@ const ConfirmTicketPackage = () => {
       <header className="modern-header">
         <img
           src="/XPRESS TICKETS LOGO2.png"
-          alt="EventXpress Logo"
+          alt="XpressTicket Logo"
           className="modern-logo"
         />
         <div className="modern-header-actions">
@@ -463,11 +457,12 @@ const ConfirmTicketPackage = () => {
         <div className="error">No event data available</div>
       )}
 
-      <div className="modern-card" style={{ marginTop: '20px', marginBottom: '30px' }}>
-        <div className="modern-card-header">
-          <h2>Confirm Tickets</h2>
-        </div>
-        <div className="modern-card-body">
+      <div className="confirm-tickets-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+        <div className="modern-card" style={{ marginTop: '20px', marginBottom: '30px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', borderRadius: '8px', overflow: 'hidden' }}>
+          <div className="modern-card-header" style={{ background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '15px 20px', color: 'white' }}>
+            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Confirm Tickets</h2>
+          </div>
+          <div className="modern-card-body" style={{ padding: '20px' }}>
           <div className="package-table-container">
             <table className="package-table">
               <thead>

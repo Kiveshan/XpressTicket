@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './EventApproval.css';
 import '../shared/ModernDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft } from 'react-icons/fa';
-// Import our custom card component
-import CompactEventHistoryCard from './CompactEventHistoryCard';
+import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
 // Import a custom hook to fix card heights
 import useFixCardHeight from '../hooks/useFixCardHeight';
+import { DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
 // Import override CSS last to ensure it takes precedence
 import './EventApproval.override.css';
 
@@ -176,31 +175,28 @@ const EventsHistory = () => {
 
   return (
     <div className="modern-dashboard-container">
-      {/* Header */}
-      <div className="modern-header">
+      <header className="modern-header">
         <div className="modern-header-logo">
-          <img 
-            src="/XPRESS TICKETS LOGO2.png" 
-            alt="EventXpress Logo" 
-            className="modern-logo" 
-            style={{ maxHeight: '45px', width: 'auto' }}
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="modern-logo"
             onError={(e) => {
               console.error('Failed to load logo');
-              e.target.src = '/fallback-logo.png'; // Ensure you have a fallback logo
+              e.target.src = '/fallback-logo.png';
             }}
           />
-          <h1>Events History</h1>
         </div>
-        <div className="modern-header-actions">
-          <button className="modern-btn modern-btn-outline" onClick={() => nav('/admin-dash')}>
-            <FaArrowLeft /> Back to Dashboard
-          </button>
-          <button className="modern-logout-btn" onClick={() => nav('/')}>
-            Logout
-          </button>
-        </div>
+        <button className="modern-logout-btn" onClick={() => nav('/')}>
+          Log Out
+        </button>
+      </header>
+
+      <div className="modern-back-button">
+        <button className="modern-back-btn" onClick={() => nav('/admin-dash')}>
+          <FaArrowLeft /> Back
+        </button>
       </div>
-      
       <h2 className="modern-page-title">Events History</h2>
 
       {error && <div className="modern-error"><p>{error}</p></div>}
@@ -212,11 +208,107 @@ const EventsHistory = () => {
         </div>
       )}
 
-      <div className="modern-card-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px'}}>
+      <div className="modern-events-list">
         {events.length > 0 ? (
-          events.map((event) => (
-            <CompactEventHistoryCard key={event.eventid || event.id || event.event_id} event={event} />
-          ))
+          <div className="events-table">
+            <div className="events-table-header">
+              <div className="event-col event-col-img">Image</div>
+              <div className="event-col event-col-name">Event Name</div>
+              <div className="event-col event-col-date">Date</div>
+              <div className="event-col event-col-location">Location</div>
+              <div className="event-col event-col-type">Type</div>
+              <div className="event-col event-col-status" style={{ marginLeft: '10px' }}>Status</div>
+              <div className="event-col event-col-action">Action</div>
+            </div>
+            
+            <div className="events-table-body">
+              {events.map((event) => {
+                // Format date properly
+                let formattedDate = 'N/A';
+                try {
+                  if (event.date && event.date !== 'N/A') {
+                    const dateObj = new Date(event.date);
+                    if (!isNaN(dateObj.getTime())) {
+                      formattedDate = dateObj.toLocaleDateString('en-ZA', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      });
+                    }
+                  }
+                } catch (e) {
+                  console.error('Date formatting error:', e);
+                }
+                
+                // Get status class
+                const getStatusClass = (status) => {
+                  const statusLower = (status || '').toLowerCase();
+                  if (statusLower === 'approved' || statusLower === 'active') {
+                    return 'status-approved';
+                  } else if (statusLower === 'rejected' || statusLower === 'declined') {
+                    return 'status-rejected';
+                  } else {
+                    return 'status-pending';
+                  }
+                };
+
+                return (
+                  <div key={event.eventid} className="event-row">
+                    <div className="event-col event-col-img">
+                      <div className="event-image-container">
+                        <img 
+                          src={event.file_url || DEFAULT_IMAGE_DATA_URI}
+                          alt={event.event_name}
+                          onError={(e) => {
+                            e.target.src = DEFAULT_IMAGE_DATA_URI;
+                            e.target.classList.add('image-error');
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="event-col event-col-name">
+                      <div className="event-name">{event.event_name}</div>
+                      <div className="event-time">
+                        <FaClock className="event-icon" /> {event.time || 'N/A'}
+                      </div>
+                    </div>
+                    
+                    <div className="event-col event-col-date">
+                      <div className="event-date">
+                        <FaCalendarAlt className="event-icon" /> {formattedDate}
+                      </div>
+                    </div>
+                    
+                    <div className="event-col event-col-location">
+                      <div className="event-location">
+                        <FaMapMarkerAlt className="event-icon" /> {event.location || 'N/A'}
+                      </div>
+                    </div>
+                    
+                    <div className="event-col event-col-type">
+                      <div className="event-type">
+                        {event.event_type || event.type || 'Standard'}
+                      </div>
+                    </div>
+                    
+                    <div className="event-col event-col-status">
+                      <div className={`status-badge ${getStatusClass(event.status)}`}>{event.status || 'Unknown'}</div>
+                    </div>
+                    
+                    <div className="event-col event-col-action">
+                      <button 
+                        className="view-event-btn"
+                        onClick={() => nav('/adminvieweventrequest', { state: { eventid: event.eventid } })}
+                      >
+                        View
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         ) : !loading && (
           <div className="modern-no-data">
             <p>No events found</p>

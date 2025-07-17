@@ -1,0 +1,596 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FaSignOutAlt, FaArrowLeft, FaDownload, FaCreditCard, FaCheck } from 'react-icons/fa';
+import '../shared/ModernDashboard.css';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+
+const Receipt = () => {
+  const nav = useNavigate();
+  const location = useLocation();
+  const receiptRef = useRef(null);
+  
+  // State management
+  const [isDownloading, setIsDownloading] = useState({});
+  const [isPaid, setIsPaid] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentSuccessMessage, setPaymentSuccessMessage] = useState('');
+  const [purchaseData, setPurchaseData] = useState({ event: {}, packages: [] });
+  const [ticketIds, setTicketIds] = useState([]);
+  
+  // Calculate totals
+  const [totals, setTotals] = useState({
+    subtotal: 0,
+    tax: 0,
+    total: 0,
+  });
+  
+  // Redirect if no data is present
+  useEffect(() => {
+    if (location.state?.purchaseData) {
+      console.log('Receipt data received:', location.state.purchaseData);
+      setPurchaseData(location.state.purchaseData);
+    } else {
+      console.log('No purchase data found, redirecting...');
+      setTimeout(() => {
+        nav('/customerdash');
+      }, 1000);
+    }
+  }, [location, nav]);
+
+  // Calculate totals from packages
+  useEffect(() => {
+    if (purchaseData.packages && purchaseData.packages.length > 0) {
+      let subtotal = 0;
+      
+      purchaseData.packages.forEach(pkg => {
+        // Extract numeric price from amount (remove R, spaces, commas)
+        const priceStr = pkg.amount.replace(/[R\\s,]/g, '');
+        const price = parseFloat(priceStr);
+        if (!isNaN(price)) {
+          subtotal += price;
+        }
+      });
+      
+      // Calculate tax (15% VAT for South Africa)
+      const tax = subtotal * 0.15;
+      const total = subtotal + tax;
+      
+      setTotals({
+        subtotal,
+        tax,
+        total
+      });
+    }
+  }, [purchaseData]);
+
+  // Format currency consistently
+  const formatCurrency = (amount) => {
+    return `R ${amount.toLocaleString('en-ZA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+  };
+  
+  // Handle payment process
+  const handlePayNow = async () => {
+    if (!purchaseData || !purchaseData.packages || purchaseData.packages.length === 0) {
+      alert('No ticket information available');
+      return;
+    }
+    
+    try {
+      setIsProcessingPayment(true);
+      
+      // Get token from session storage
+      const token = sessionStorage.getItem('token');
+      const userId = sessionStorage.getItem('userId');
+      
+      if (!token || !userId) {
+        alert('Authentication required. Please log in again.');
+        nav('/login');
+        return;
+      }
+      
+      // Call the API to update ticket status to 'Approved'
+      const response = await fetch('http://localhost:5000/api/update-ticket-status', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_id: parseInt(userId),
+          event_id: parseInt(purchaseData.event.id || purchaseData.event.event_id),
+          status: 'Approved'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Payment failed: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      // Set the ticket IDs from the response if available
+      if (result.ticketIds) {
+        setTicketIds(result.ticketIds);
+      }
+      
+      // Show success message and reveal receipt
+      setPaymentSuccessMessage('Payment successful! Your tickets are now approved.');
+      setIsPaid(true);
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert(`Payment process failed: ${error.message}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  // Handle download ticket
+  const handleDownload = async (pkg, index) => {
+    if (!purchaseData || !purchaseData.packages || purchaseData.packages.length === 0) {
+      alert('No ticket information available');
+      return;
+    }
+    
+    try {
+      // Set downloading state for this specific package
+      setIsDownloading(prev => ({ ...prev, [index]: true }));
+      
+      // Get event details from the purchase data
+      const { event } = purchaseData;
+      
+      // Set up ticket info
+      const eventName = event?.name || 'Event';
+      const eventDate = event?.event_date || event?.date || 'TBD';
+      const eventLocation = event?.location || 'Venue TBD';
+      const eventDescription = event?.description || 'No description available';
+      
+      // Extract package details
+      const packageName = pkg.packageDetails || pkg.packageType || pkg.package || 'Standard Package';
+      const personName = pkg.name || 'Attendee';
+      const ticketCount = pkg.tickets || pkg.quantity || pkg.count || 1;
+      
+      // Generate a unique ticket ID if not provided
+      const ticketId = ticketIds[index] || pkg.ticketId || `TKT-${Date.now().toString().slice(-6)}-${index}`;
+      
+      // Set up PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // PDF page dimensions
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Set up fonts and colors
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(24);
+      doc.setTextColor(44, 62, 80); // #2c3e50 - dark blue from design system
+      
+      // Add header with gradient background (simulated with rectangle)
+      doc.setFillColor(76, 161, 175); // #4ca1af - teal from design system
+      doc.rect(0, 0, pageWidth, 30, 'F');
+      
+      // Add white text for header
+      doc.setTextColor(255, 255, 255);
+      doc.text('E-TICKET', pageWidth / 2, 15, { align: 'center' });
+      
+      // Add XpressTicket branding
+      doc.setFontSize(10);
+      doc.text('XpressTicket', 10, 8);
+      
+      // Set text color back to dark for content
+      doc.setTextColor(44, 62, 80);
+      
+      // Add event details section
+      const startY = 40;
+      const lineHeight = 8;
+      
+      // Event name
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(eventName, pageWidth / 2, startY, { align: 'center' });
+      
+      // Ticket ID 
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Ticket #: ${ticketId}`, pageWidth / 2, startY + 8, { align: 'center' });
+      
+      // Event details in two columns
+      const leftCol = 20;
+      const rightCol = pageWidth / 2 + 10;
+      
+      // Left column - Event details
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EVENT DETAILS', leftCol, startY + lineHeight * 3);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Date:', leftCol, startY + lineHeight * 4);
+      doc.setFont('helvetica', 'normal');
+      doc.text(eventDate, leftCol + 20, startY + lineHeight * 4);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Location:', leftCol, startY + lineHeight * 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(eventLocation, leftCol + 20, startY + lineHeight * 5);
+      
+      // Right column - Ticket details
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TICKET DETAILS', rightCol, startY + lineHeight * 3);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Attendee:', rightCol, startY + lineHeight * 4);
+      doc.setFont('helvetica', 'normal');
+      doc.text(personName, rightCol + 25, startY + lineHeight * 4);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Package:', rightCol, startY + lineHeight * 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(packageName, rightCol + 25, startY + lineHeight * 5);
+      
+      // Generate filename and save the PDF
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const sanitizedEvent = eventName.replace(/[^a-z0-9]/gi, '-');
+      const filename = `${sanitizedEvent}_ticket_${dateStr}.pdf`;
+      
+      // Save the PDF
+      doc.save(filename);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to download ticket. Please try again.');
+    } finally {
+      // Reset downloading state for this specific package
+      setIsDownloading(prev => ({ ...prev, [index]: false }));
+    }
+  };
+  
+  // For display in the receipt
+  const receiptNumber = `XPT-${Date.now().toString().slice(-8)}`;
+  
+  return (
+    <div className="modern-dashboard-container">
+      {/* Header Section */}
+      <header className="modern-dashboard-header">
+        <div className="header-content">
+          <h1>{isPaid ? 'Receipt' : 'Complete Your Purchase'}</h1>
+          <button 
+            className="logout-button" 
+            onClick={() => {
+              sessionStorage.removeItem('token');
+              sessionStorage.removeItem('userId');
+              sessionStorage.removeItem('userType');
+              nav('/login');
+            }}
+          >
+            <FaSignOutAlt style={{ marginRight: '8px' }} /> Logout
+          </button>
+        </div>
+      </header>
+
+      {/* Back Button */}
+      <div className="back-button-container">
+        <button className="back-button" onClick={() => nav('/customerdash')}>
+          <FaArrowLeft style={{ marginRight: '8px' }} /> Back to Dashboard
+        </button>
+      </div>
+      
+      {!isPaid ? (
+        // Payment section - shown when isPaid is false
+        <div className="content-container">
+          <div style={{ 
+            textAlign: 'center',
+            padding: '40px 20px',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+            maxWidth: '600px',
+            margin: '40px auto'
+          }}>
+            <h2 style={{ fontSize: '1.8rem', color: '#2c3e50', margin: '0 0 20px 0' }}>
+              Complete Your Purchase
+            </h2>
+            <p style={{ fontSize: '1.1rem', color: '#495057', margin: '0 0 30px 0' }}>
+              Click the button below to pay for your ticket(s) and receive your receipt.
+            </p>
+            <div style={{ 
+              padding: '20px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px',
+              marginBottom: '30px'
+            }}>
+              <h3 style={{ fontSize: '1.3rem', color: '#2c3e50', marginBottom: '15px' }}>Purchase Summary</h3>
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '10px 0',
+                borderBottom: '1px solid #dee2e6'
+              }}>
+                <span>Subtotal:</span>
+                <span>{formatCurrency(totals.subtotal)}</span>
+              </div>
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '10px 0',
+                borderBottom: '1px solid #dee2e6'
+              }}>
+                <span>VAT (15%):</span>
+                <span>{formatCurrency(totals.tax)}</span>
+              </div>
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '15px 0',
+                fontWeight: 'bold',
+                fontSize: '1.1rem'
+              }}>
+                <span>Total Amount:</span>
+                <span>{formatCurrency(totals.total)}</span>
+              </div>
+            </div>
+            <button
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '12px 24px',
+                backgroundColor: isProcessingPayment ? '#cccccc' : '#4ca1af',
+                background: isProcessingPayment ? '#cccccc' : 'linear-gradient(135deg, #2c3e50, #4ca1af)',
+                border: 'none',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: isProcessingPayment ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
+              }}
+              onClick={handlePayNow}
+              disabled={isProcessingPayment}
+            >
+              {isProcessingPayment ? (
+                <span>Processing Payment...</span>
+              ) : (
+                <>
+                  <FaCreditCard style={{ marginRight: '10px' }} />
+                  Pay Now
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      ) : (
+        // Receipt Container - shown only after payment
+        <div className="content-container">
+          {paymentSuccessMessage && (
+            <div style={{
+              backgroundColor: '#d4edda',
+              color: '#155724',
+              padding: '15px 20px',
+              borderRadius: '6px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+              <FaCheck style={{ marginRight: '10px' }} />
+              {paymentSuccessMessage}
+            </div>
+          )}
+          
+          <div ref={receiptRef} className="receipt-container" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            padding: '20px',
+            marginBottom: '30px'
+          }}>
+            {/* Receipt Header */}
+            <div style={{ 
+              textAlign: 'center',
+              padding: '20px',
+              borderBottom: '2px solid #eaeaea',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ fontSize: '1.8rem', color: '#2c3e50', margin: '0 0 10px 0' }}>
+                Purchase Confirmation
+              </h2>
+              <p style={{ fontSize: '1rem', color: '#6c757d', margin: '0' }}>
+                Thank you for your purchase!
+              </p>
+            </div>
+
+            {/* Purchase Details */}
+            <div style={{ padding: '0 20px' }}>
+              {/* Purchase Info */}
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid #eaeaea',
+                paddingBottom: '15px',
+                marginBottom: '15px'
+              }}>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', color: '#2c3e50', marginBottom: '8px' }}>
+                    Receipt #{receiptNumber}
+                  </h3>
+                  <p style={{ fontSize: '0.9rem', color: '#6c757d', margin: '0' }}>
+                    Date: {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <h3 style={{ fontSize: '1.2rem', color: '#2c3e50', marginBottom: '8px' }}>
+                    Status
+                  </h3>
+                  <p style={{ 
+                    fontSize: '0.9rem',
+                    backgroundColor: '#4ca1af',
+                    color: 'white',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    display: 'inline-block'
+                  }}>
+                    Paid
+                  </p>
+                </div>
+              </div>
+
+              {/* Event Details */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '1.2rem', color: '#2c3e50', marginBottom: '10px' }}>
+                  Event Details
+                </h3>
+                <div style={{
+                  padding: '15px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  marginBottom: '20px'
+                }}>
+                  <h4 style={{ fontSize: '1.1rem', margin: '0 0 10px 0' }}>
+                    {purchaseData.event?.name || 'Event Name'}
+                  </h4>
+                  <p style={{ fontSize: '0.9rem', color: '#495057', margin: '0 0 5px 0' }}>
+                    Date: {purchaseData.event?.event_date || purchaseData.event?.date || 'TBD'}
+                  </p>
+                  <p style={{ fontSize: '0.9rem', color: '#495057', margin: '0 0 5px 0' }}>
+                    Location: {purchaseData.event?.location || 'Venue TBD'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Packages/Tickets List */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '1.2rem', color: '#2c3e50', marginBottom: '10px' }}>
+                  Your Tickets
+                </h3>
+                {purchaseData.packages && purchaseData.packages.length > 0 ? (
+                  <div className="tickets-list">
+                    {purchaseData.packages.map((pkg, index) => {
+                      const personName = pkg.name || 'Attendee';
+                      const packageName = pkg.packageDetails || pkg.packageType || pkg.package || 'Standard Package';
+                      const ticketCount = pkg.tickets || pkg.quantity || pkg.count || 1;
+                      const amount = pkg.amount || formatCurrency(totals.total);
+
+                      return (
+                        <div 
+                          key={index} 
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '15px',
+                            marginBottom: '10px',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '8px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                            flexWrap: 'nowrap'
+                          }}
+                        >
+                          {/* Ticket Details (Left Side) */}
+                          <div style={{ flex: '1', paddingRight: '15px' }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#2c3e50', marginBottom: '4px' }}>
+                              {personName}
+                            </div>
+                            <div style={{ fontSize: '14px', color: '#495057' }}>
+                              Package: {packageName}
+                            </div>
+                            <div style={{ fontSize: '14px', color: '#495057', display: 'flex', gap: '15px' }}>
+                              <span>Tickets: {ticketCount}</span>
+                              <span>Amount: {amount}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Download Button (Right Side) */}
+                          <div style={{ minWidth: '140px', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '8px 15px',
+                                backgroundColor: isDownloading[index] ? '#cccccc' : '#4ca1af',
+                                background: isDownloading[index] ? '#cccccc' : 'linear-gradient(135deg, #2c3e50, #4ca1af)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: '#fff',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                cursor: isDownloading[index] ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.3s ease',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                whiteSpace: 'nowrap',
+                                minWidth: '125px'
+                              }}
+                              onClick={() => handleDownload(pkg, index)}
+                              disabled={isDownloading[index]}
+                            >
+                              {isDownloading[index] ? (
+                                <span>Generating...</span>
+                              ) : (
+                                <>
+                                  <FaDownload style={{ marginRight: '8px' }} />
+                                  Download Ticket
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p style={{ textAlign: 'center' }}>No tickets available for download.</p>
+                )}
+              </div>
+
+              {/* Price Summary */}
+              <div style={{ 
+                borderTop: '1px solid #eaeaea', 
+                paddingTop: '20px',
+                marginTop: '20px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '10px'
+                }}>
+                  <span style={{ fontSize: '1rem', color: '#495057' }}>Subtotal:</span>
+                  <span style={{ fontSize: '1rem' }}>{formatCurrency(totals.subtotal)}</span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '10px'
+                }}>
+                  <span style={{ fontSize: '1rem', color: '#495057' }}>VAT (15%):</span>
+                  <span style={{ fontSize: '1rem' }}>{formatCurrency(totals.tax)}</span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '15px',
+                  paddingTop: '15px',
+                  borderTop: '1px dashed #eaeaea'
+                }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#2c3e50' }}>Total:</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#2c3e50' }}>{formatCurrency(totals.total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Receipt;

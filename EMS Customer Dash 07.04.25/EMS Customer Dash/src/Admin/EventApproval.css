@@ -189,6 +189,18 @@
   border: none;
 }
 
+.status-approved {
+  background-color: #38a169;
+  color: white;
+  border: none;
+}
+
+.status-rejected {
+  background-color: #e53e3e;
+  color: white;
+  border: none;
+}
+
 /* Responsive adjustments */
 @media (max-width: 992px) {
   .event-col-location {
