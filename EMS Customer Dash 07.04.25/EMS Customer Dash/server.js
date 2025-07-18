@@ -174,7 +174,6 @@ async function initializeLookupTables() {
       );
     `)
 
-  
     // Seed sample data if no faculties present
     const { rows } = await client.query("SELECT COUNT(*)::int AS count FROM faculties")
     if (rows[0].count === 0) {
