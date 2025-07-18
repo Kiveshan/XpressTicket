@@ -63,6 +63,59 @@ const pool = new Pool({
   timezone: "UTC", // Ensure PostgreSQL uses UTC
 })
 
+// Function to ensure events table has required columns
+async function ensureEventsTableColumns() {
+  const client = await pool.connect();
+  try {
+    const alterTableQuery = `
+      DO $$
+      BEGIN
+          -- Add status column if it doesn't exist
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                         WHERE table_name = 'events' AND column_name = 'status') THEN
+              ALTER TABLE events 
+              ADD COLUMN status VARCHAR(20) DEFAULT 'pending' NOT NULL;
+              
+              RAISE NOTICE 'Added status column to events table';
+          END IF;
+          
+          -- Add admin_comment column if it doesn't exist
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                         WHERE table_name = 'events' AND column_name = 'admin_comment') THEN
+              ALTER TABLE events 
+              ADD COLUMN admin_comment TEXT;
+              
+              RAISE NOTICE 'Added admin_comment column to events table';
+          END IF;
+          
+          -- Add approved_by column if it doesn't exist
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                         WHERE table_name = 'events' AND column_name = 'approved_by') THEN
+              
+              IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_profiles') THEN
+                  ALTER TABLE events 
+                  ADD COLUMN approved_by INTEGER REFERENCES user_profiles(user_id);
+              ELSE
+                  ALTER TABLE events 
+                  ADD COLUMN approved_by INTEGER;
+              END IF;
+              
+              RAISE NOTICE 'Added approved_by column to events table';
+          END IF;
+      END $$;
+    `;
+
+    await client.query(alterTableQuery);
+
+    console.log("✅ Verified events table structure");
+  } catch (error) {
+    console.error("❌ Error ensuring events table columns:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 // Test database connection
 pool.connect((err, client, release) => {
   if (err) {
@@ -75,6 +128,9 @@ pool.connect((err, client, release) => {
   } else {
     console.log("✅ Connected to ExpressTicket database")
     initializeLookupTables()
+      .then(() => ensureEventsTableColumns())
+      .then(() => console.log("✅ Database initialization complete"))
+      .catch(err => console.error("❌ Database initialization failed:", err));
     release()
   }
 })
@@ -85,94 +141,21 @@ async function initializeLookupTables() {
   try {
     await client.query("BEGIN")
 
-    // Create faculties table
+    // Add is_disabled column if it doesn't exist (for existing tables)
     await client.query(`
-      CREATE TABLE IF NOT EXISTS public.faculties (
-        faculty_id character varying NOT NULL,
-        faculty_name character varying NOT NULL,
-        CONSTRAINT faculties_pkey PRIMARY KEY (faculty_id)
-      );
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name = 'user_profiles' AND column_name = 'is_disabled') THEN
+          ALTER TABLE user_profiles 
+          ADD COLUMN is_disabled INTEGER NOT NULL DEFAULT 0;
+          
+          RAISE NOTICE 'Added is_disabled column to user_profiles table';
+        END IF;
+      END $$;
     `)
 
-    // Create departments table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS public.departments (
-        department_id character varying NOT NULL,
-        department_name character varying NOT NULL,
-        faculty_id character varying NOT NULL,
-        CONSTRAINT departments_pkey PRIMARY KEY (department_id),
-        CONSTRAINT departments_faculty_id_fkey FOREIGN KEY (faculty_id)
-          REFERENCES public.faculties (faculty_id) MATCH SIMPLE
-          ON UPDATE NO ACTION
-          ON DELETE NO ACTION
-          NOT VALID
-      );
-    `)
 
-    // Create user_profiles table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS public.user_profiles (
-        user_id SERIAL NOT NULL,
-        firstname character varying NOT NULL,
-        surname character varying NOT NULL,
-        role character varying NOT NULL DEFAULT 'user',
-        email character varying NOT NULL,
-        cellnumber character varying NOT NULL,
-        institution character varying,
-        faculty_id character varying,
-        department_id character varying,
-        ieee_no integer,
-        vat_no integer,
-        password character varying NOT NULL,
-        CONSTRAINT user_profiles_pkey PRIMARY KEY (user_id),
-        CONSTRAINT user_profiles_department_id_fkey FOREIGN KEY (department_id)
-          REFERENCES public.departments (department_id) MATCH SIMPLE
-          ON UPDATE NO ACTION
-          ON DELETE NO ACTION
-          NOT VALID,
-        CONSTRAINT user_profiles_faculty_id_fkey FOREIGN KEY (faculty_id)
-          REFERENCES public.faculties (faculty_id) MATCH SIMPLE
-          ON UPDATE NO ACTION
-          ON DELETE NO ACTION
-          NOT VALID,
-        CONSTRAINT user_profiles_email_unique UNIQUE (email)
-      );
-    `)
-
-    // Create events table with user_id and status
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS public.events (
-        event_id SERIAL NOT NULL,
-        name character varying NOT NULL,
-        location character varying NOT NULL,
-        startdate timestamptz NOT NULL,
-        enddate timestamptz NOT NULL,
-        time time without time zone NOT NULL,
-        endtime time without time zone,
-        duration character varying NOT NULL,
-        deadlinetime time without time zone NOT NULL,
-        deadlinedate timestamptz NOT NULL,
-        type character varying NOT NULL,
-        capacity integer NOT NULL,
-        attendees character varying[] NOT NULL,
-        contactnum character varying NOT NULL,
-        email character varying NOT NULL,
-        coverimage character varying NOT NULL,
-        tabs character varying[] NOT NULL,
-        packages character varying[] NOT NULL,
-        description character varying,
-        terms_and_conditions character varying,
-        user_id integer NOT NULL,
-        status character varying NOT NULL DEFAULT 'pending',
-        admin_comment character varying,
-        CONSTRAINT events_pkey PRIMARY KEY (event_id),
-        CONSTRAINT events_user_id_fkey FOREIGN KEY (user_id)
-          REFERENCES public.user_profiles (user_id) MATCH SIMPLE
-          ON UPDATE NO ACTION
-          ON DELETE NO ACTION
-          NOT VALID
-      );
-    `)
 
     // Seed sample data if no faculties present
     const { rows } = await client.query("SELECT COUNT(*)::int AS count FROM faculties")
@@ -383,12 +366,10 @@ app.get("/api/admin/events", authenticateToken, authenticateAdmin, async (req, r
 
     const result = await pool.query(`
       SELECT e.*, 
-             u.firstname, u.surname, u.email as user_email, u.cellnumber,
-             p.amount, p.payment_type, p.proof_of_payment
+             u.firstname, u.surname, u.email as user_email, u.cellnumber
       FROM events e
-      LEFT JOIN user_profiles u ON e.user_id = u.user_id
-      LEFT JOIN payments p ON e.event_id = p.event_id
-      ORDER BY e.startdate DESC
+       JOIN user_profiles u ON e.user_id = u.user_id
+       ORDER BY e.startdate DESC
     `)
 
     const events = await Promise.all(
@@ -445,11 +426,9 @@ app.get("/api/admin/events/:eventId", authenticateToken, authenticateAdmin, asyn
     const result = await pool.query(
       `
       SELECT e.*, 
-             u.firstname, u.surname, u.email, u.cellnumber,
-             p.amount, p.payment_type, p.proof_of_payment
+             u.firstname, u.surname, u.email, u.cellnumber
       FROM events e
-      LEFT JOIN user_profiles u ON e.user_id = u.user_id
-      LEFT JOIN payments p ON e.event_id = p.event_id
+      JOIN user_profiles u ON e.user_id = u.user_id
       WHERE e.event_id = $1
     `,
       [eventId],
@@ -704,6 +683,126 @@ app.get("/api/admin/events/:eventId", authenticateToken, authenticateAdmin, asyn
   }
 })
 
+// Endpoint to update event status (approve/reject)
+app.put("/api/admin/event/:eventId/status", authenticateToken, authenticateAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { eventId } = req.params;
+    const { status, comment } = req.body;
+    const userId = req.user.userId; // Admin user ID
+
+    // Convert status to lowercase to match database schema
+    const lowerStatus = status.toLowerCase();
+    console.log('Status update request received:', { eventId, status: lowerStatus, comment, userId });
+
+    if (!['approved', 'rejected'].includes(lowerStatus)) {
+      return res.status(400).json({ error: "Invalid status. Must be 'approved' or 'rejected'" });
+    }
+
+    // First, verify the event exists and check its current status
+    let eventCheck;
+    try {
+      // First, check if the status column exists and its possible values
+      const statusCheck = await client.query(`
+        SELECT column_name, data_type, column_default, is_nullable 
+        FROM information_schema.columns 
+        WHERE table_name = 'events' AND column_name = 'status'
+      `);
+
+      console.log('Status column info:', statusCheck.rows[0] || 'Status column not found');
+
+      // Get distinct status values from the events table
+      const statusValues = await client.query(`
+        SELECT DISTINCT status FROM events WHERE status IS NOT NULL
+      `);
+      console.log('Existing status values:', statusValues.rows.map(r => r.status));
+
+      // Now get the specific event
+      eventCheck = await client.query(
+        'SELECT event_id, user_id, status FROM events WHERE event_id = $1',
+        [eventId]
+      );
+
+      console.log('Event check result:', eventCheck.rows[0]);
+
+      if (eventCheck.rows.length > 0) {
+        console.log('Current event status:', eventCheck.rows[0].status);
+      }
+    } catch (queryError) {
+      console.error('Error checking event status:', queryError);
+      throw new Error(`Database query failed: ${queryError.message}`);
+    }
+
+    if (eventCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const currentStatus = eventCheck.rows[0].status;
+    console.log('Current event status:', currentStatus);
+
+    if (currentStatus !== 'pending') {
+      return res.status(400).json({
+        error: `Event is not in pending status. Current status: ${currentStatus}`
+      });
+    }
+
+    // Begin transaction
+    await client.query('BEGIN');
+
+    try {
+      // First, check the current structure of the events table
+      const tableInfo = await client.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'events'
+      `);
+      console.log('Events table columns:', tableInfo.rows);
+
+      // Update the event status and add admin comment
+      const updateQuery = `
+        UPDATE events 
+        SET status = $1 
+        WHERE event_id = $2
+        RETURNING *
+      `;
+
+      console.log('Executing update query:', updateQuery, [lowerStatus, comment, userId, eventId]);
+
+      const result = await client.query(updateQuery, [lowerStatus, eventId]);
+
+      if (result.rows.length === 0) {
+        throw new Error('No rows were updated - event might not exist');
+      }
+
+      // Commit the transaction
+      await client.query('COMMIT');
+
+      // Get the updated event data
+      const updatedEvent = result.rows[0];
+      console.log('Successfully updated event:', updatedEvent);
+
+      res.json({
+        message: `Event ${status.toLowerCase()} successfully`,
+        event: updatedEvent
+      });
+    } catch (updateError) {
+      // Rollback the transaction on error
+      await client.query('ROLLBACK');
+      console.error('Error in transaction:', updateError);
+      throw updateError;
+    }
+  } catch (error) {
+    console.error('Error updating event status:', error);
+    res.status(500).json({
+      error: 'Failed to update event status',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // Endpoint to fetch available (approved) events for public display
 app.get("/api/events/available", async (req, res) => {
   try {
@@ -783,30 +882,30 @@ app.put("/api/admin/event/:eventId/status", authenticateToken, authenticateAdmin
 })
 
 // Admin endpoint to get proof of payment for an event
-app.get("/api/admin/event/:eventId/proof-of-payment", authenticateToken, authenticateAdmin, async (req, res) => {
-  try {
-    const { eventId } = req.params
+// app.get("/api/admin/event/:eventId/proof-of-payment", authenticateToken, authenticateAdmin, async (req, res) => {
+//   try {
+//     const { eventId } = req.params
 
-    const result = await pool.query("SELECT proof_of_payment FROM payments WHERE event_id = $1", [eventId])
+//     const result = await pool.query("SELECT proof_of_payment FROM payments WHERE event_id = $1", [eventId])
 
-    if (result.rows.length === 0 || !result.rows[0].proof_of_payment) {
-      return res.status(404).json({ error: "Proof of payment not found" })
-    }
+//     if (result.rows.length === 0 || !result.rows[0].proof_of_payment) {
+//       return res.status(404).json({ error: "Proof of payment not found" })
+//     }
 
-    // Generate a presigned URL for the proof of payment
-    const proofOfPaymentKey = result.rows[0].proof_of_payment
-    const url = await generatePresignedUrl(proofOfPaymentKey)
+//     // Generate a presigned URL for the proof of payment
+//     const proofOfPaymentKey = result.rows[0].proof_of_payment
+//     const url = await generatePresignedUrl(proofOfPaymentKey)
 
-    if (!url) {
-      return res.status(500).json({ error: "Failed to generate URL for proof of payment" })
-    }
+//     if (!url) {
+//       return res.status(500).json({ error: "Failed to generate URL for proof of payment" })
+//     }
 
-    res.json({ url })
-  } catch (error) {
-    console.error("Error fetching proof of payment:", error)
-    res.status(500).json({ error: "Failed to fetch proof of payment" })
-  }
-})
+//     res.json({ url })
+//   } catch (error) {
+//     console.error("Error fetching proof of payment:", error)
+//     res.status(500).json({ error: "Failed to fetch proof of payment" })
+//   }
+// })
 
 // Public endpoint to get approved events that haven't passed their deadline
 // No authentication required for this endpoint
@@ -1165,24 +1264,24 @@ app.get("/api/events", authenticateToken, async (req, res) => {
 
         const parsedTabs = event.tabs
           ? event.tabs.map((tab) => {
-              try {
-                return JSON.parse(tab)
-              } catch (e) {
-                console.warn(`Failed to parse tab: ${tab}`, e)
-                return {}
-              }
-            })
+            try {
+              return JSON.parse(tab)
+            } catch (e) {
+              console.warn(`Failed to parse tab: ${tab}`, e)
+              return {}
+            }
+          })
           : []
 
         const parsedPackages = event.packages
           ? event.packages.map((pkg) => {
-              try {
-                return JSON.parse(pkg)
-              } catch (e) {
-                console.warn(`Failed to parse package: ${pkg}`, e)
-                return {}
-              }
-            })
+            try {
+              return JSON.parse(pkg)
+            } catch (e) {
+              console.warn(`Failed to parse package: ${pkg}`, e)
+              return {}
+            }
+          })
           : []
 
         return {
@@ -1283,9 +1382,9 @@ app.post("/api/events", authenticateToken, upload.fields([{ name: "cover_image",
     try {
       parsedAttendees = attendees.startsWith("{")
         ? attendees
-            .slice(1, -1)
-            .split(",")
-            .filter((item) => item.trim())
+          .slice(1, -1)
+          .split(",")
+          .filter((item) => item.trim())
         : JSON.parse(attendees || "[]")
       parsedTabs = JSON.parse(tabs || "[]").map((tab) => JSON.stringify(tab))
       parsedPackages = JSON.parse(packages || "[]").map((pkg, index) => {
@@ -1521,43 +1620,43 @@ app.put(
         // Parse and validate packages
         parsedPackages = packages
           ? JSON.parse(packages).map((pkg, index) => {
-              console.log(`Processing package ${index}:`, pkg)
-              // ... (rest of the code remains the same)
-              if (!pkg.startDate || !pkg.endDate) {
-                throw new Error(`Package ${index + 1} is missing startDate or endDate`)
+            console.log(`Processing package ${index}:`, pkg)
+            // ... (rest of the code remains the same)
+            if (!pkg.startDate || !pkg.endDate) {
+              throw new Error(`Package ${index + 1} is missing startDate or endDate`)
+            }
+            if (isNaN(new Date(pkg.startDate).getTime()) || isNaN(new Date(pkg.endDate).getTime())) {
+              throw new Error(`Invalid date format in package ${index + 1}`)
+            }
+            if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
+              throw new Error(`End date before start date in package ${index + 1}`)
+            }
+            // Validate package start date (at least one week before registration deadline)
+            if (deadlinedate) {
+              const packageStartDate = new Date(pkg.startDate)
+              const packageEndDate = new Date(pkg.endDate)
+              const deadlineDateObj = new Date(deadlinedate)
+              const minPackageDate = new Date(deadlineDateObj)
+              minPackageDate.setDate(deadlineDateObj.getDate() - 7)
+              if (packageStartDate > minPackageDate) {
+                throw new Error(
+                  `Package ${index + 1} start date must be at least one week before registration deadline`,
+                )
               }
-              if (isNaN(new Date(pkg.startDate).getTime()) || isNaN(new Date(pkg.endDate).getTime())) {
-                throw new Error(`Invalid date format in package ${index + 1}`)
+              // Validate package end date (before registration deadline)
+              if (packageEndDate >= deadlineDateObj) {
+                throw new Error(`Package ${index + 1} end date must be before registration deadline`)
               }
-              if (new Date(pkg.endDate) < new Date(pkg.startDate)) {
-                throw new Error(`End date before start date in package ${index + 1}`)
-              }
-              // Validate package start date (at least one week before registration deadline)
-              if (deadlinedate) {
-                const packageStartDate = new Date(pkg.startDate)
-                const packageEndDate = new Date(pkg.endDate)
-                const deadlineDateObj = new Date(deadlinedate)
-                const minPackageDate = new Date(deadlineDateObj)
-                minPackageDate.setDate(deadlineDateObj.getDate() - 7)
-                if (packageStartDate > minPackageDate) {
-                  throw new Error(
-                    `Package ${index + 1} start date must be at least one week before registration deadline`,
-                  )
-                }
-                // Validate package end date (before registration deadline)
-                if (packageEndDate >= deadlineDateObj) {
-                  throw new Error(`Package ${index + 1} end date must be before registration deadline`)
-                }
-              }
-              // Validate pricing
-              if (!pkg.pricing || !/^\d+(\.\d{1,2})?$/.test(pkg.pricing)) {
-                throw new Error(`Package ${index + 1} pricing must be a valid number (e.g., 123.45)`)
-              }
-              if (Number.parseFloat(pkg.pricing) <= 0) {
-                throw new Error(`Package ${index + 1} pricing must be greater than 0`)
-              }
-              return JSON.stringify(pkg)
-            })
+            }
+            // Validate pricing
+            if (!pkg.pricing || !/^\d+(\.\d{1,2})?$/.test(pkg.pricing)) {
+              throw new Error(`Package ${index + 1} pricing must be a valid number (e.g., 123.45)`)
+            }
+            if (Number.parseFloat(pkg.pricing) <= 0) {
+              throw new Error(`Package ${index + 1} pricing must be greater than 0`)
+            }
+            return JSON.stringify(pkg)
+          })
           : null
         console.log("Parsed packages:", parsedPackages)
       } catch (e) {
@@ -2070,67 +2169,214 @@ app.get("/api/departments", async (req, res) => {
 })
 
 // Admin endpoint to get proof of payment for an event
-app.get("/api/admin/event/:eventId/proof-of-payment", authenticateToken, authenticateAdmin, async (req, res) => {
-  const client = await pool.connect()
-  try {
-    const { eventId } = req.params
-    const result = await client.query("SELECT proof_of_payment FROM payments WHERE event_id = $1", [eventId])
+// app.get("/api/admin/event/:eventId/proof-of-payment", authenticateToken, authenticateAdmin, async (req, res) => {
+//   const client = await pool.connect()
+//   try {
+//     const { eventId } = req.params
+//     const result = await client.query("SELECT proof_of_payment FROM payments WHERE event_id = $1", [eventId])
 
-    if (result.rows.length === 0 || !result.rows[0].proof_of_payment) {
-      return res.status(404).json({ error: "Proof of payment not found" })
-    }
+//     if (result.rows.length === 0 || !result.rows[0].proof_of_payment) {
+//       return res.status(404).json({ error: "Proof of payment not found" })
+//     }
 
-    res.status(200).json({ url: result.rows[0].proof_of_payment })
-  } catch (err) {
-    console.error("Error fetching proof of payment:", err)
-    res.status(500).json({ error: "Failed to fetch proof of payment", details: err.message })
-  } finally {
-    client.release()
-  }
-})
+//     res.status(200).json({ url: result.rows[0].proof_of_payment })
+//   } catch (err) {
+//     console.error("Error fetching proof of payment:", err)
+//     res.status(500).json({ error: "Failed to fetch proof of payment", details: err.message })
+//   } finally {
+//     client.release()
+//   }
+// })
 
 // Admin endpoint to update event status
 app.put("/api/admin/event/:eventId/status", authenticateToken, authenticateAdmin, async (req, res) => {
   const client = await pool.connect()
   try {
-    const { eventId } = req.params
-    const { status, comment } = req.body
+    console.log('Received status update request:', {
+      params: req.params,
+      body: req.body,
+      user: req.user
+    });
 
-    if (!eventId) {
-      return res.status(400).json({ error: "Event ID is required" })
+    const { eventId } = req.params;
+    const { status, comment } = req.body;
+    const userId = req.user.userId;
+
+    // Log database schema for events table and its constraints
+    try {
+      // Get table schema
+      const schemaQuery = `
+        SELECT column_name, data_type, column_default, is_nullable 
+        FROM information_schema.columns 
+        WHERE table_name = 'events';
+      `;
+      const schemaResult = await client.query(schemaQuery);
+      console.log('Events table schema:', schemaResult.rows);
+
+      // Get foreign key constraints
+      const fkQuery = `
+        SELECT
+          tc.table_schema, 
+          tc.constraint_name, 
+          tc.table_name, 
+          kcu.column_name, 
+          ccu.table_schema AS foreign_table_schema,
+          ccu.table_name AS foreign_table_name,
+          ccu.column_name AS foreign_column_name 
+        FROM 
+          information_schema.table_constraints AS tc 
+          JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+          JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+            AND ccu.table_schema = tc.table_schema
+        WHERE 
+          tc.constraint_type = 'FOREIGN KEY' 
+          AND tc.table_name = 'events';
+      `;
+      const fkResult = await client.query(fkQuery);
+      console.log('Foreign key constraints for events table:', fkResult.rows);
+
+      // Check if user_id exists in user_profiles
+      if (userId) {
+        const userCheck = await client.query(
+          'SELECT user_id FROM user_profiles WHERE user_id = $1',
+          [userId]
+        );
+        console.log('User exists check:', {
+          userId,
+          userExists: userCheck.rows.length > 0
+        });
+      }
+    } catch (schemaError) {
+      console.error('Error fetching schema:', schemaError);
     }
 
-    if (!status || !["Approved", "Rejected", "Request Edit", "pending"].includes(status)) {
-      return res.status(400).json({ error: "Valid status is required (Approved, Rejected, Request Edit, or pending)" })
+    // Log current event data
+    try {
+      const eventData = await client.query(
+        'SELECT * FROM events WHERE event_id = $1',
+        [eventId]
+      );
+      console.log('Current event data:', eventData.rows[0]);
+    } catch (eventError) {
+      console.error('Error fetching current event data:', eventError);
     }
 
-    await client.query("BEGIN")
+    // Validate status
+    const validStatuses = ['approved', 'rejected'];
+    const statusLower = status ? status.toLowerCase() : '';
 
-    // Update the event status in the database
-    const updateResult = await client.query(
-      "UPDATE events SET status = $1, admin_comment = $2 WHERE event_id = $3 RETURNING *",
-      [status, comment || null, eventId],
-    )
+    if (!validStatuses.includes(statusLower)) {
+      console.error('Invalid status provided:', status);
+      return res.status(400).json({ error: 'Invalid status. Must be either "approved" or "rejected"' });
+    }
+
+    // Start transaction
+    await client.query('BEGIN');
+
+    // Get current event status first
+    const eventResult = await client.query(
+      'SELECT status FROM events WHERE event_id = $1',
+      [eventId]
+    );
+
+    if (eventResult.rows.length === 0) {
+      console.error('Event not found:', eventId);
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const currentStatus = eventResult.rows[0].status;
+    console.log('Current event status:', currentStatus);
+
+    if (currentStatus !== 'pending') {
+      console.error(`Event is already ${currentStatus}, cannot update to ${statusLower}`);
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        error: `Event is already ${currentStatus}. Cannot update status.`
+      });
+    }
+
+    // First check if the admin user exists in user_profiles
+    const adminCheck = await client.query(
+      'SELECT user_id FROM user_profiles WHERE user_id = $1',
+      [userId]
+    );
+
+    if (adminCheck.rows.length === 0) {
+      console.error(`Admin user ${userId} not found in user_profiles`);
+      // If admin not in user_profiles, we'll set approved_by to null
+      // or find another way to handle this case
+      console.log('Proceeding without approved_by to avoid foreign key violation');
+    }
+
+    // Update event status
+    const updateQuery = `
+      UPDATE events 
+      SET status = $1, 
+          admin_comment = $2,
+          ${adminCheck.rows.length > 0 ? 'approved_by = $3,' : ''}
+          updated_at = NOW()
+      WHERE event_id = ${adminCheck.rows.length > 0 ? '$4' : '$3'}
+      RETURNING *
+    `;
+
+    const queryParams = [
+      statusLower,
+      comment || null
+    ];
+
+    // Only add userId to params if admin exists in user_profiles
+    if (adminCheck.rows.length > 0) {
+      queryParams.push(userId);
+    }
+
+    queryParams.push(eventId);
+
+    console.log('Executing update query:', {
+      query: updateQuery,
+      params: queryParams
+    });
+
+    const updateResult = await client.query(updateQuery, queryParams);
 
     if (updateResult.rows.length === 0) {
-      await client.query("ROLLBACK")
-      return res.status(404).json({ error: "Event not found" })
+      console.error('No rows affected by update');
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Failed to update event status - no rows affected' });
     }
 
-    await client.query("COMMIT")
+    console.log('Update successful:', updateResult.rows[0]);
+    await client.query('COMMIT');
+    res.json(updateResult.rows[0]);
+  } catch (error) {
+    console.error('Error in status update endpoint:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      table: error.table,
+      constraint: error.constraint
+    });
 
-    res.status(200).json({
-      message: `Event status updated to ${status}`,
-      event: updateResult.rows[0],
-    })
-  } catch (err) {
-    await client.query("ROLLBACK")
-    console.error("Error updating event status:", err)
-    res.status(500).json({ error: "Failed to update event status", details: err.message })
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('Error during rollback:', rollbackError);
+    }
+
+    res.status(500).json({
+      error: 'Failed to update event status',
+      details: error.message
+    });
   } finally {
-    client.release()
+    client.release();
   }
-})
+});
 
 // Get users who have events
 app.get("/api/users-with-events", async (req, res) => {
@@ -2187,38 +2433,38 @@ app.get("/api/customers", async (req, res) => {
   }
 })
 
-// Get all payments
-app.get("/api/payments", async (req, res) => {
-  const client = await pool.connect()
-  try {
-    // Try a simplified query
-    const query = `
-      SELECT 
-        p.payment_id, 
-        p.event_id, 
-        p.amount, 
-        p.payment_date,
-        e.name as event_name,
-        up.firstname,
-        up.surname,
-        up.email
-      FROM 
-        payments p
-      INNER JOIN
-        events e ON p.event_id = e.event_id
-      INNER JOIN
-        user_profiles up ON e.user_id = up.user_id
-    `
+// // Get all payments
+// app.get("/api/payments", async (req, res) => {
+//   const client = await pool.connect()
+//   try {
+//     // Try a simplified query
+//     const query = `
+//       SELECT 
+//         p.payment_id, 
+//         p.event_id, 
+//         p.amount, 
+//         p.payment_date,
+//         e.name as event_name,
+//         up.firstname,
+//         up.surname,
+//         up.email
+//       FROM 
+//         payments p
+//       INNER JOIN
+//         events e ON p.event_id = e.event_id
+//       INNER JOIN
+//         user_profiles up ON e.user_id = up.user_id
+//     `
 
-    const result = await client.query(query)
-    res.json(result.rows)
-  } catch (error) {
-    console.error("Error fetching payments:", error)
-    res.status(500).json({ error: "Internal server error" })
-  } finally {
-    client.release()
-  }
-})
+//     const result = await client.query(query)
+//     res.json(result.rows)
+//   } catch (error) {
+//     console.error("Error fetching payments:", error)
+//     res.status(500).json({ error: "Internal server error" })
+//   } finally {
+//     client.release()
+//   }
+// })
 
 // Get user profile by ID
 app.get("/api/user-profile/:userId", async (req, res) => {
@@ -2271,25 +2517,25 @@ app.get("/api/user-events/:userId", async (req, res) => {
 })
 
 // Get payment by event ID
-app.get("/api/event-payment/:eventId", async (req, res) => {
-  const { eventId } = req.params
-  const client = await pool.connect()
-  try {
-    const query = `
-      SELECT * FROM payments WHERE event_id = $1
-    `
-    const result = await client.query(query, [eventId])
-    if (result.rows.length === 0) {
-      return res.json({ amount: null })
-    }
-    res.json(result.rows[0])
-  } catch (error) {
-    console.error("Error fetching event payment:", error)
-    res.status(500).json({ error: "Internal server error" })
-  } finally {
-    client.release()
-  }
-})
+// app.get("/api/event-payment/:eventId", async (req, res) => {
+//   const { eventId } = req.params
+//   const client = await pool.connect()
+//   try {
+//     const query = `
+//       SELECT * FROM payments WHERE event_id = $1
+//     `
+//     const result = await client.query(query, [eventId])
+//     if (result.rows.length === 0) {
+//       return res.json({ amount: null })
+//     }
+//     res.json(result.rows[0])
+//   } catch (error) {
+//     console.error("Error fetching event payment:", error)
+//     res.status(500).json({ error: "Internal server error" })
+//   } finally {
+//     client.release()
+//   }
+// })
 
 // API endpoint to fetch users without events
 app.get("/api/users-without-events", async (req, res) => {
@@ -2328,53 +2574,53 @@ app.get("/api/users-with-events", async (req, res) => {
   }
 })
 
-// API endpoint to fetch payments
-app.get("/api/payments", async (req, res) => {
-  try {
-    const client = await pool.connect()
-    const query = `
-      SELECT p.*, e.name as event_name, up.firstname, up.surname, up.email
-      FROM payments p
-      JOIN events e ON p.event_id = e.event_id
-      JOIN user_profiles up ON e.user_id = up.user_id
-    `
-    const result = await client.query(query)
-    client.release()
-    res.json(result.rows)
-  } catch (error) {
-    console.error("Error fetching payments:", error)
-    res.status(500).json({ error: "Internal server error" })
-  }
-})
+// // API endpoint to fetch payments
+// app.get("/api/payments", async (req, res) => {
+//   try {
+//     const client = await pool.connect()
+//     const query = `
+//       SELECT p.*, e.name as event_name, up.firstname, up.surname, up.email
+//       FROM payments p
+//       JOIN events e ON p.event_id = e.event_id
+//       JOIN user_profiles up ON e.user_id = up.user_id
+//     `
+//     const result = await client.query(query)
+//     client.release()
+//     res.json(result.rows)
+//   } catch (error) {
+//     console.error("Error fetching payments:", error)
+//     res.status(500).json({ error: "Internal server error" })
+//   }
+// })
 
 // API endpoint to fetch payments with user full names
-app.get("/api/payments-with-user-names", async (req, res) => {
-  try {
-    const client = await pool.connect()
-    const query = `
-      SELECT 
-        p.payment_id, 
-        p.amount, 
-        p.proof_of_payment,
-        p.event_id,
-        e.name as event_name,
-        u.firstname,
-        u.surname
-      FROM 
-        payments p
-      JOIN 
-        events e ON p.event_id = e.event_id
-      JOIN 
-        user_profiles u ON e.user_id = u.user_id
-    `
-    const result = await client.query(query)
-    client.release()
-    res.json(result.rows)
-  } catch (error) {
-    console.error("Error fetching payments:", error)
-    res.status(500).json({ error: "Failed to fetch payments" })
-  }
-})
+// app.get("/api/payments-with-user-names", async (req, res) => {
+//   try {
+//     const client = await pool.connect()
+//     const query = `
+//       SELECT 
+//         p.payment_id, 
+//         p.amount, 
+//         p.proof_of_payment,
+//         p.event_id,
+//         e.name as event_name,
+//         u.firstname,
+//         u.surname
+//       FROM 
+//         payments p
+//       JOIN 
+//         events e ON p.event_id = e.event_id
+//       JOIN 
+//         user_profiles u ON e.user_id = u.user_id
+//     `
+//     const result = await client.query(query)
+//     client.release()
+//     res.json(result.rows)
+//   } catch (error) {
+//     console.error("Error fetching payments:", error)
+//     res.status(500).json({ error: "Failed to fetch payments" })
+//   }
+// })
 
 //Leya Code
 //----------------payments organizer start
@@ -2961,24 +3207,24 @@ app.put("/api/events/:eventId/rehost", authenticateToken, async (req, res) => {
 
     const parsedTabs = updatedEvent.tabs
       ? updatedEvent.tabs.map((tab) => {
-          try {
-            return JSON.parse(tab)
-          } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e)
-            return {}
-          }
-        })
+        try {
+          return JSON.parse(tab)
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e)
+          return {}
+        }
+      })
       : []
 
     const parsedPackages = updatedEvent.packages
       ? updatedEvent.packages.map((pkg) => {
-          try {
-            return JSON.parse(pkg)
-          } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e)
-            return {}
-          }
-        })
+        try {
+          return JSON.parse(pkg)
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e)
+          return {}
+        }
+      })
       : []
 
     console.log("Event rehosted successfully:", updatedEvent.event_id)
@@ -3064,24 +3310,24 @@ app.get("/api/events-past", authenticateToken, async (req, res) => {
 
         const parsedTabs = event.tabs
           ? event.tabs.map((tab) => {
-              try {
-                return JSON.parse(tab)
-              } catch (e) {
-                console.warn(`Failed to parse tab: ${tab}`, e)
-                return {}
-              }
-            })
+            try {
+              return JSON.parse(tab)
+            } catch (e) {
+              console.warn(`Failed to parse tab: ${tab}`, e)
+              return {}
+            }
+          })
           : []
 
         const parsedPackages = event.packages
           ? event.packages.map((pkg) => {
-              try {
-                return JSON.parse(pkg)
-              } catch (e) {
-                console.warn(`Failed to parse package: ${pkg}`, e)
-                return {}
-              }
-            })
+            try {
+              return JSON.parse(pkg)
+            } catch (e) {
+              console.warn(`Failed to parse package: ${pkg}`, e)
+              return {}
+            }
+          })
           : []
 
         // Ensure attendees is an array
@@ -3120,80 +3366,99 @@ app.get("/api/events-past", authenticateToken, async (req, res) => {
   }
 })
 
-app.get("/api/events/:eventid", authenticateToken, async (req, res) => {
-  const client = await pool.connect()
+app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
+  const client = await pool.connect();
   try {
-    const eventId = req.params.eventid
+    const eventId = req.params.eventId;
     const query = `
       SELECT 
-        event_id,
-        name,
-        description,
-        terms_and_conditions,
-        location,
-        TO_CHAR(startdate, 'YYYY-MM-DD') as start_date,
-        TO_CHAR(enddate, 'YYYY-MM-DD') as end_date,
-        TO_CHAR(deadlinedate, 'YYYY-MM-DD') as registration_deadline_date,
-        time as start_time,
-        endtime as end_time,
-        deadlinetime as registration_deadline_time,
-        type as event_type,
-        capacity,
-        attendees,
-        contactnum,
-        email,
-        coverimage,
-        tabs,
-        packages,
-        status,
-        user_id
-      FROM events
-      WHERE event_id = $1
-        AND user_id = $2
-    `
-    const result = await client.query(query, [eventId, req.user.userId])
+        e.event_id,
+        e.name,
+        e.description,
+        e.terms_and_conditions,
+        e.location,
+        TO_CHAR(e.startdate, 'YYYY-MM-DD') as start_date,
+        TO_CHAR(e.enddate, 'YYYY-MM-DD') as end_date,
+        TO_CHAR(e.deadlinedate, 'YYYY-MM-DD') as registration_deadline_date,
+        e.time as start_time,
+        e.endtime as end_time,
+        e.deadlinetime as registration_deadline_time,
+        e.type as event_type,
+        e.capacity,
+        e.attendees,
+        e.contactnum,
+        e.email,
+        e.coverimage,
+        e.tabs,
+        e.packages,
+        e.status,
+        e.user_id,
+        u.firstname as organizer_name,
+        u.email as organizer_email
+      FROM events e
+      JOIN user_profiles u ON e.user_id = u.user_id
+      WHERE e.event_id = $1
+    `;
+    const result = await client.query(query, [eventId]);
+
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Event not found" })
+      return res.status(404).json({ error: "Event not found" });
     }
 
-    const event = result.rows[0]
-    let coverImageUrl = "/default-profile-picture.jpg"
+    const event = result.rows[0];
+    let coverImageUrl = "/default-profile-picture.jpg";
     if (event.coverimage) {
-      const coverKey = event.coverimage.split("/").slice(3).join("/")
+      const coverKey = event.coverimage.split("/").slice(3).join("/");
       try {
-        coverImageUrl = await generatePresignedUrl(coverKey)
+        coverImageUrl = await generatePresignedUrl(coverKey);
       } catch (e) {
-        console.warn("Failed to generate signed URL for cover image:", e)
+        console.warn("Failed to generate signed URL for cover image:", e);
       }
     }
 
     const parsedTabs = event.tabs
       ? event.tabs.map((tab) => {
-          try {
-            return JSON.parse(tab)
-          } catch (e) {
-            console.warn(`Failed to parse tab: ${tab}`, e)
-            return {}
-          }
-        })
-      : []
+        try {
+          return JSON.parse(tab);
+        } catch (e) {
+          console.warn(`Failed to parse tab: ${tab}`, e);
+          return {};
+        }
+      })
+      : [];
 
     const parsedPackages = event.packages
       ? event.packages.map((pkg) => {
-          try {
-            const parsedPkg = JSON.parse(pkg)
-            // Ensure package dates are also formatted
-            return {
-              ...parsedPkg,
-              startDate: parsedPkg.startDate ? formatDate(parsedPkg.startDate) : "N/A",
-              endDate: parsedPkg.endDate ? formatDate(parsedPkg.endDate) : "N/A",
+        try {
+          // Handle double-encoded JSON
+          let parsedPkg = pkg;
+          if (typeof pkg === "string") {
+            parsedPkg = JSON.parse(pkg); // First parse
+            if (typeof parsedPkg === "string") {
+              parsedPkg = JSON.parse(parsedPkg); // Second parse for double-encoded JSON
             }
-          } catch (e) {
-            console.warn(`Failed to parse package: ${pkg}`, e)
-            return {}
           }
-        })
-      : []
+          return {
+            name: parsedPkg.selectType || parsedPkg.packageType || "Unnamed Package",
+            type: parsedPkg.packageType || parsedPkg.selectType || "N/A",
+            details: parsedPkg.details || "No details provided",
+            price: parsedPkg.pricing ? parseFloat(parsedPkg.pricing) : 0,
+            startDate: parsedPkg.startDate ? formatDate(parsedPkg.startDate) : "N/A",
+            endDate: parsedPkg.endDate ? formatDate(parsedPkg.endDate) : "N/A",
+          };
+        } catch (e) {
+          console.warn(`Failed to parse package: ${pkg}`, e);
+          return {
+            name: "Error",
+            type: "N/A",
+            details: "Failed to parse package data",
+            price: 0,
+            startDate: "N/A",
+            endDate: "N/A",
+          };
+        }
+      })
+      : [];
 
     const responseEvent = {
       ...event,
@@ -3207,16 +3472,16 @@ app.get("/api/events/:eventid", authenticateToken, async (req, res) => {
           : typeof event.attendees === "string"
             ? [event.attendees]
             : [],
-    }
+    };
 
-    res.json(responseEvent)
+    res.json(responseEvent);
   } catch (error) {
-    console.error("Error fetching event:", error)
-    res.status(500).json({ error: "Failed to fetch event", details: error.message })
+    console.error("Error fetching event:", error);
+    res.status(500).json({ error: "Failed to fetch event", details: error.message });
   } finally {
-    client.release()
+    client.release();
   }
-})
+});
 
 // Helper function to format dates in backend
 function formatDate(dateString) {
@@ -3496,92 +3761,92 @@ app.get("/api/user-ticket-purchases/:userId", authenticateToken, async (req, res
 })
 
 // Get single event by ID
-app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
-  console.log(`[${new Date().toISOString()}] GET /api/events/${req.params.eventId}`);
-  
-  try {
-    const eventId = req.params.eventId;
-    
-    // Query to get event details
-    const eventQuery = `
-      SELECT 
-        e.event_id,
-        e.name,
-        e.description,
-        e.terms_and_conditions,
-        e.location,
-        TO_CHAR(e.startdate, 'YYYY-MM-DD') as start_date,
-        TO_CHAR(e.enddate, 'YYYY-MM-DD') as end_date,
-        TO_CHAR(e.deadlinedate, 'YYYY-MM-DD') as registration_deadline_date,
-        e.time as start_time,
-        e.endtime as end_time,
-        e.deadlinetime as registration_deadline_time,
-        e.type as event_type,
-        e.coverimage as cover_image,
-        e.status,
-        e.organizer_id,
-        u.name as organizer_name,
-        u.email as organizer_email
-      FROM events e
-      JOIN user_profiles u ON e.user_id = u.user_id
-      WHERE e.event_id = $1
-      AND e.status = 'approved'  -- Only return approved events
-    `;
-    
-    const eventResult = await pool.query(eventQuery, [eventId]);
-    
-    if (eventResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-    
-    const event = eventResult.rows[0];
-    
-    // Get packages for this event
-    const packagesQuery = `
-      SELECT 
-        package_id as id,
-        name,
-        type,
-        description as details,
-        price,
-        quantity_available as available,
-        TO_CHAR(start_date, 'YYYY-MM-DD') as start_date,
-        TO_CHAR(end_date, 'YYYY-MM-DD') as end_date
-      FROM packages
-      WHERE event_id = $1
-      AND status = 'active'
-    `;
-    
-    const packagesResult = await pool.query(packagesQuery, [eventId]);
-    
-    // Generate presigned URL for cover image if it exists
-    if (event.cover_image) {
-      try {
-        const params = {
-          Bucket: process.env.S3_BUCKET_NAME,
-          Key: event.cover_image,
-          Expires: 3600 // URL expires in 1 hour
-        };
-        event.cover_image_url = await s3.getSignedUrlPromise('getObject', params);
-      } catch (s3Error) {
-        console.error('Error generating presigned URL:', s3Error);
-        event.cover_image_url = null;
-      }
-    }
-    
-    // Combine event data with packages
-    const response = {
-      ...event,
-      packages: packagesResult.rows
-    };
-    
-    res.json(response);
-    
-  } catch (error) {
-    console.error('Error fetching event details:', error);
-    res.status(500).json({ error: 'Failed to fetch event details' });
-  }
-});
+// app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
+//   console.log(`[${new Date().toISOString()}] GET /api/events/${req.params.eventId}`);
+
+//   try {
+//     const eventId = req.params.eventId;
+
+//     // Query to get event details
+//     const eventQuery = `
+//       SELECT 
+//         e.event_id,
+//         e.name,
+//         e.description,
+//         e.terms_and_conditions,
+//         e.location,
+//         TO_CHAR(e.startdate, 'YYYY-MM-DD') as start_date,
+//         TO_CHAR(e.enddate, 'YYYY-MM-DD') as end_date,
+//         TO_CHAR(e.deadlinedate, 'YYYY-MM-DD') as registration_deadline_date,
+//         e.time as start_time,
+//         e.endtime as end_time,
+//         e.deadlinetime as registration_deadline_time,
+//         e.type as event_type,
+//         e.coverimage as cover_image,
+//         e.status,
+//         e.user_id,
+//         u.firstname as organizer_name,
+//         u.email as organizer_email
+//       FROM events e
+//       JOIN user_profiles u ON e.user_id = u.user_id
+//       WHERE e.event_id = $1
+//       AND e.status = 'approved'  -- Only return approved events
+//     `;
+
+//     const eventResult = await pool.query(eventQuery, [eventId]);
+
+//     if (eventResult.rows.length === 0) {
+//       return res.status(404).json({ error: 'Event not found' });
+//     }
+
+//     const event = eventResult.rows[0];
+
+//     // Get packages for this event
+//     const packagesQuery = `
+//       SELECT 
+//         package_id as id,
+//         name,
+//         type,
+//         description as details,
+//         price,
+//         quantity_available as available,
+//         TO_CHAR(start_date, 'YYYY-MM-DD') as start_date,
+//         TO_CHAR(end_date, 'YYYY-MM-DD') as end_date
+//       FROM packages
+//       WHERE event_id = $1
+//       AND status = 'active'
+//     `;
+
+//     const packagesResult = await pool.query(packagesQuery, [eventId]);
+
+//     // Generate presigned URL for cover image if it exists
+//     if (event.cover_image) {
+//       try {
+//         const params = {
+//           Bucket: process.env.S3_BUCKET_NAME,
+//           Key: event.cover_image,
+//           Expires: 3600 // URL expires in 1 hour
+//         };
+//         event.cover_image_url = await s3.getSignedUrlPromise('getObject', params);
+//       } catch (s3Error) {
+//         console.error('Error generating presigned URL:', s3Error);
+//         event.cover_image_url = null;
+//       }
+//     }
+
+//     // Combine event data with packages
+//     const response = {
+//       ...event,
+//       packages: packagesResult.rows
+//     };
+
+//     res.json(response);
+
+//   } catch (error) {
+//     console.error('Error fetching event details:', error);
+//     res.status(500).json({ error: 'Failed to fetch event details' });
+//   }
+// });
 
 // Start the server
 app.listen(port, () => {

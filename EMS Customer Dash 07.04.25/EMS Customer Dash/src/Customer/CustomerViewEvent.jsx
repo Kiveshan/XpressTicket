@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from "react";
 import "./CustomerViewEvent.css";
 import "../shared/ModernDashboard.css";
-import { useNavigate, useParams } from 'react-router-dom';
-import { FaSignOutAlt, FaArrowLeft, FaExclamationTriangle, FaHome, FaCalendarAlt, FaMapMarkerAlt, FaInfoCircle } from 'react-icons/fa';
-import EventImage from '../utils/EventImage';
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  FaSignOutAlt,
+  FaArrowLeft,
+  FaExclamationTriangle,
+  FaHome,
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaInfoCircle,
+} from "react-icons/fa";
+import EventImage from "../utils/EventImage";
 
 const CustomerViewEvent = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -11,6 +19,7 @@ const CustomerViewEvent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [packages, setPackages] = useState([]);
+  const [tabs, setTabs] = useState([]);
   const { eventId } = useParams();
   const nav = useNavigate();
 
@@ -19,48 +28,46 @@ const CustomerViewEvent = () => {
       try {
         setLoading(true);
         console.log(`Fetching event details for ID: ${eventId}`);
-        
-        // Get the authentication token from session storage
-        const token = sessionStorage.getItem('token');
-        
+
+        const token = sessionStorage.getItem("token");
         if (!token) {
-          console.warn('No authentication token found in session storage');
-          nav('/login');
+          console.warn("No authentication token found");
+          nav("/login");
           return;
         }
-        
-        console.log(`Making request to: http://localhost:5000/api/events/${eventId}`);
-        
+
         const response = await fetch(`http://localhost:5000/api/events/${eventId}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          credentials: 'include'
+          credentials: "include",
         });
-        
-        console.log('Response status:', response.status);
-        
+
+        console.log("Response status:", response.status);
+
         if (!response.ok) {
           if (response.status === 401) {
-            throw new Error('Unauthorized: Please log in again');
+            throw new Error("Unauthorized: Please log in again");
           } else if (response.status === 403) {
-            throw new Error('Forbidden: You do not have permission to view this event');
+            throw new Error("Forbidden: You do not have permission to view this event");
           } else if (response.status === 404) {
-            throw new Error('Event not found: The requested event does not exist or has been removed');
+            throw new Error("Event not found: The requested event does not exist or has been removed");
           } else {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to fetch event details');
+            throw new Error(errorData.message || "Failed to fetch event details");
           }
         }
-        
+
         const data = await response.json();
-        setEvent(data.event || data); // Handle both response formats
+        console.log("Fetched data:", data);
+        setEvent(data.event || data);
         setPackages(data.packages || []);
+        setTabs(data.tabs || []);
         setError(null);
       } catch (err) {
-        console.error('Error fetching event details:', err);
-        setError(err.message || 'An error occurred while fetching event details');
+        console.error("Error fetching event details:", err);
+        setError(err.message || "An error occurred while fetching event details");
       } finally {
         setLoading(false);
       }
@@ -70,11 +77,37 @@ const CustomerViewEvent = () => {
   }, [eventId, nav]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('token');
-    nav('/login');
+    sessionStorage.removeItem("token");
+    nav("/login");
   };
 
-  // Loading state
+  const handleSelectPackage = (pkg, index) => {
+    // Format data for CustomerFillinTicketPack1.jsx
+    const ticketDetailsData = {
+      event: {
+        event_id: event.event_id,
+        name: event.name,
+        location: event.location || "TBA",
+        start_date: event.start_date || "TBA",
+        start_time: event.start_time || "TBA",
+        coverimage: event.coverimage || "",
+        event_type: event.event_type || "Conference",
+        description: event.description || "",
+        terms_and_conditions: event.terms_and_conditions || "",
+      },
+      package: {
+        name: pkg.name || "Unnamed Package",
+        type: pkg.type || "N/A",
+        details: pkg.details || "No details provided",
+        price: pkg.price ? pkg.price.toString() : "0.00",
+        startDate: pkg.startDate || "",
+        endDate: pkg.endDate || "",
+      },
+    };
+    console.log("Navigating to ticket details with ticketDetailsData:", ticketDetailsData);
+    nav(`/customerticketdetails1/${eventId}/${index}`, { state: { ticketDetailsData } });
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -84,25 +117,18 @@ const CustomerViewEvent = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="error-container">
         <div className="error-card">
           <FaExclamationTriangle className="error-icon" />
           <h2>Event Not Found</h2>
-          <p>The event you're looking for doesn't exist or has been removed.</p>
+          <p>{error}</p>
           <div className="button-group">
-            <button 
-              onClick={() => nav(-1)} 
-              className="back-button"
-            >
+            <button onClick={() => nav(-1)} className="back-button">
               <FaArrowLeft /> Go Back
             </button>
-            <button 
-              onClick={() => nav('/events')} 
-              className="primary-button"
-            >
+            <button onClick={() => nav("/events")} className="primary-button">
               <FaHome /> Browse Events
             </button>
           </div>
@@ -111,10 +137,8 @@ const CustomerViewEvent = () => {
     );
   }
 
-  // Event details view
   return (
     <div className="customer-view-event">
-      {/* Header */}
       <header className="event-header">
         <div className="container">
           <div className="header-content">
@@ -131,68 +155,77 @@ const CustomerViewEvent = () => {
 
       <main className="event-main">
         <div className="container">
-          {/* Event Image */}
           <div className="event-image-container">
             <EventImage eventType={event.event_type} className="event-image" />
           </div>
 
-          {/* Event Details */}
           <div className="event-details">
             <div className="event-meta">
               <div className="meta-item">
                 <FaCalendarAlt className="meta-icon" />
-                <span>{new Date(event.start_date).toLocaleDateString()} - {new Date(event.end_date).toLocaleDateString()}</span>
+                <span>
+                  {new Date(event.start_date).toLocaleDateString()} -{" "}
+                  {new Date(event.end_date).toLocaleDateString()}
+                </span>
               </div>
               <div className="meta-item">
                 <FaMapMarkerAlt className="meta-icon" />
-                <span>{event.location || 'Location not specified'}</span>
+                <span>{event.location || "Location not specified"}</span>
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="tabs">
-              <button 
-                className={`tab ${activeTab === 0 ? 'active' : ''}`}
+              <button
+                className={`tab ${activeTab === 0 ? "active" : ""}`}
                 onClick={() => setActiveTab(0)}
               >
                 About
               </button>
-              <button 
-                className={`tab ${activeTab === 1 ? 'active' : ''}`}
+              <button
+                className={`tab ${activeTab === 1 ? "active" : ""}`}
                 onClick={() => setActiveTab(1)}
               >
                 Packages
               </button>
+              <button
+                className={`tab ${activeTab === 2 ? "active" : ""}`}
+                onClick={() => setActiveTab(2)}
+              >
+                Info
+              </button>
             </div>
 
-            {/* Tab Content */}
             <div className="tab-content">
               {activeTab === 0 ? (
                 <div className="about-tab">
                   <h3>Event Description</h3>
-                  <p>{event.description || 'No description available.'}</p>
-                  
+                  <p>{event.description || "No description available."}</p>
                   {event.terms_and_conditions && (
                     <div className="terms-section">
-                      <h4><FaInfoCircle /> Terms & Conditions</h4>
+                      <h4>
+                        <FaInfoCircle /> Terms & Conditions
+                      </h4>
                       <p>{event.terms_and_conditions}</p>
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : activeTab == 1 ? (
                 <div className="packages-tab">
                   {packages.length > 0 ? (
                     <div className="packages-grid">
                       {packages.map((pkg, index) => (
                         <div key={index} className="package-card">
-                          <h4>{pkg.name}</h4>
-                          <p className="package-type">{pkg.type}</p>
-                          <p className="package-details">{pkg.details}</p>
+                          <h4>{pkg.name || "Unnamed Package"}</h4>
+                          <p className="package-type">{pkg.type || "N/A"}</p>
+                          <p className="package-details">{pkg.details || "No details provided"}</p>
                           <div className="package-footer">
                             <span className="package-price">
-                              {pkg.price ? `$${pkg.price.toFixed(2)}` : 'Free'}
+                              {pkg.price ? `R ${parseFloat(pkg.price).toFixed(2)}` : "Free"}
                             </span>
-                            <button className="select-package">
+                            <button
+                              className="select-package"
+                              onClick={() => handleSelectPackage(pkg, index)}
+                            >
                               Select Package
                             </button>
                           </div>
@@ -202,6 +235,23 @@ const CustomerViewEvent = () => {
                   ) : (
                     <div className="no-packages">
                       <p>No packages available for this event.</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="info-tab">
+                  {tabs.length > 0 ? (
+                    <div className="tabs-grid">
+                      {tabs.map((tab, index) => (
+                        <div key={index} className="tab-card">
+                          <h4>{tab.name || "Unnamed Tab"}</h4>
+                          <p>{tab.content || "No content provided"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="no-tabs">
+                      <p>No additional information available for this event.</p>
                     </div>
                   )}
                 </div>
