@@ -58,8 +58,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "xpress-2",
-  password: "1234567890",
-  port: 5432,
+  password: "123456",
+  port: 5433,
   timezone: "UTC", // Ensure PostgreSQL uses UTC
 })
 
