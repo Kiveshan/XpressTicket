@@ -81,6 +81,33 @@ const CustomerViewEvent = () => {
     nav("/login");
   };
 
+  const handleSelectPackage = (pkg, index) => {
+    // Format data for CustomerFillinTicketPack1.jsx
+    const ticketDetailsData = {
+      event: {
+        event_id: event.event_id,
+        name: event.name,
+        location: event.location || "TBA",
+        start_date: event.start_date || "TBA",
+        start_time: event.start_time || "TBA",
+        coverimage: event.coverimage || "",
+        event_type: event.event_type || "Conference",
+        description: event.description || "",
+        terms_and_conditions: event.terms_and_conditions || "",
+      },
+      package: {
+        name: pkg.name || "Unnamed Package",
+        type: pkg.type || "N/A",
+        details: pkg.details || "No details provided",
+        price: pkg.price ? pkg.price.toString() : "0.00",
+        startDate: pkg.startDate || "",
+        endDate: pkg.endDate || "",
+      },
+    };
+    console.log("Navigating to ticket details with ticketDetailsData:", ticketDetailsData);
+    nav(`/customerticketdetails1/${eventId}/${index}`, { state: { ticketDetailsData } });
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -182,7 +209,7 @@ const CustomerViewEvent = () => {
                     </div>
                   )}
                 </div>
-              ) : activeTab === 1 ? (
+              ) : activeTab == 1 ? (
                 <div className="packages-tab">
                   {packages.length > 0 ? (
                     <div className="packages-grid">
@@ -193,9 +220,14 @@ const CustomerViewEvent = () => {
                           <p className="package-details">{pkg.details || "No details provided"}</p>
                           <div className="package-footer">
                             <span className="package-price">
-                              {pkg.price ? `R${pkg.price.toFixed(2)}` : "Free"}
+                              {pkg.price ? `R ${parseFloat(pkg.price).toFixed(2)}` : "Free"}
                             </span>
-                            <button className="select-package">Select Package</button>
+                            <button
+                              className="select-package"
+                              onClick={() => handleSelectPackage(pkg, index)}
+                            >
+                              Select Package
+                            </button>
                           </div>
                         </div>
                       ))}
