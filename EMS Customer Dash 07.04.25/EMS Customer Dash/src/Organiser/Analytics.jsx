@@ -182,7 +182,7 @@ export default function Analytics() {
       <header className="modern-header">
         <div className="header-left">
           <button className="modern-button" onClick={handleBack}>
-            <span className="button-icon"></span> Back
+            <i className="fas fa-arrow-left"></i> Back
           </button>
           <img
             src="/XPRESS TICKETS LOGO2.png"
@@ -191,8 +191,16 @@ export default function Analytics() {
           />
         </div>
         <h1 className="header-title"></h1> {/* Empty to maintain layout */}
-        <button className="modern-button" onClick={() => navigate("/")}>
-          <span className="button-icon">↩</span> Logout
+        <button
+          className="modern-button"
+          onClick={() => {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("userId");
+            sessionStorage.removeItem("user");
+            navigate("/");
+          }}
+        >
+          <i className="fas fa-sign-out-alt"></i> Logout
         </button>
       </header>
 

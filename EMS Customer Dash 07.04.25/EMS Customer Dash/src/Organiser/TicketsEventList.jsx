@@ -3,7 +3,7 @@ import './TicketsEventList.css';
 import { useNavigate } from 'react-router-dom';
 
 function TicketsEventList() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,7 +16,7 @@ function TicketsEventList() {
         if (!token) {
           setError('No authentication token found. Please log in.');
           setLoading(false);
-          nav('/');
+          navigate('/');
           return;
         }
         console.log('Fetching from: http://localhost:5000/api/organiser/events');
@@ -41,7 +41,7 @@ function TicketsEventList() {
       }
     };
     fetchEvents();
-  }, [nav]);
+  }, [navigate]);
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -50,8 +50,8 @@ function TicketsEventList() {
     <div className="tickets-event-list-container">
       <header className="modern-header">
         <div className="header-left">
-          <button className="modern-button" onClick={() => nav('/requestcard')}>
-            <span className="button-icon"></span> Back
+          <button className="modern-button" onClick={() => navigate('/requestcard')}>
+            <i className="fas fa-arrow-left"></i> Back
           </button>
           <img
             src="/XPRESS TICKETS LOGO2.png"
@@ -60,8 +60,16 @@ function TicketsEventList() {
           />
         </div>
         <h1 className="header-title"></h1> {/* Empty to maintain layout */}
-        <button className="modern-button" onClick={() => nav('/')}>
-          <span className="button-icon">↩</span> Logout
+        <button
+          className="modern-button"
+          onClick={() => {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("userId");
+            sessionStorage.removeItem("user");
+            navigate("/");
+          }}
+        >
+          <i className="fas fa-sign-out-alt"></i> Logout
         </button>
       </header>
       <h2 className="tickets-event-list-title">Event Requests</h2>
@@ -89,7 +97,7 @@ function TicketsEventList() {
                   <td>
                     <button
                       className="view-button"
-                      onClick={() => nav(`/ticketsrequest/${event.event_id}`)}
+                      onClick={() => navigate(`/ticketsrequest/${event.event_id}`)}
                     >
                       View
                     </button>
