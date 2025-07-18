@@ -1,205 +1,130 @@
-/* TicketsPayment.css - Optimized styles for TickectPaymentList component */
-
-/* Main container */
-.modern-container {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  min-height: 100vh;
-  background-color: #f8f9fa;
-  display: flex;
-  flex-direction: column;
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f7f7f7;
 }
 
-/* Modern header with gradient background */
-.modern-header {
-  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+.section-title {
+  text-align: center;
+  font-size: 24px;
+  margin: 20px 0;
+}
+
+.form-card12 {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 10px;
+  width: 850px;
+  margin-left: 350px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.table-container12 {
+  width: 1300px;
+  margin-left: 110px;
+  background-color: #ffffff;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  font-family: 'Arial', sans-serif;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background-color: #20c997;
   color: white;
-  padding: 15px 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  text-align: left;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+td {
+  padding: 12px;
+  border: 1px solid #ccc;
+  text-align: left;
+  font-size: 14px;
+}
+
+.buttons {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.view-btn {
+  background-color: #4f46e5;
+  color: white;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+.actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
+  justify-content: center;
+  gap: 20px;
+}
+
+.approve {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.reject {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Back Button Styles */
+.backbutton20 {
+  position: fixed;
+  background-color: #20c997;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 25px;
+  margin-top: -40px;
   z-index: 1000;
 }
 
+.backbutton20:hover {
+  background-color: #0c553f;
+}
+
+/* Header Left Container */
 .header-left {
   display: flex;
   align-items: center;
   gap: 15px;
-}
-
-.header-logo {
-  height: 50px;
-}
-
-/* Header spacer to prevent content overlap */
-.header-spacer {
-  height: 70px; /* Matches header height for desktop */
-}
-
-/* Modern buttons */
-.modern-button {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.modern-button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.button-icon {
-  font-size: 1.1rem;
-  margin-right: 5px;
-}
-
-.modern-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-/* Main content */
-.modern-main-content {
-  padding: 20px 25px;
-  flex-grow: 1;
-  min-height: calc(100vh - 70px); /* Ensures content fills viewport minus header */
-}
-
-/* Search and filter section */
-.modern-search-filter {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.modern-search-input {
-  position: relative;
-  flex: 1;
-  max-width: 400px;
-}
-
-.modern-search-input input {
-  width: 100%;
-  padding: 8px 12px 8px 32px;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  color: #495057;
-  background-color: #fff;
-  transition: all 0.2s ease;
-}
-
-.modern-search-input input:focus {
-  outline: none;
-  border-color: #4ca1af;
-  box-shadow: 0 0 0 3px rgba(76, 161, 175, 0.1);
-}
-
-.modern-search-icon {
-  position: absolute;
-  top: 50%;
-  left: 10px;
-  transform: translateY(-50%);
-  color: #6c757d;
-  font-size: 0.9rem;
-}
-
-.modern-filter-dropdown {
-  min-width: 150px;
-}
-
-.modern-filter-dropdown select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  color: #495057;
-  background-color: #fff;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.modern-filter-dropdown select:focus {
-  outline: none;
-  border-color: #4ca1af;
-  box-shadow: 0 0 0 3px rgba(76, 161, 175, 0.1);
-}
-
-/* Loading state */
-.modern-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  color: #6c757d;
-  text-align: center;
-  margin: 20px 25px;
-}
-
-.modern-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #4ca1af;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 10px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsive adjustments */
-@media (max-width: 600px) {
-  .modern-search-filter {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .modern-search-input {
-    max-width: none;
-  }
-
-  .modern-filter-dropdown {
-    width: 100%;
-  }
-
-  .modern-header {
-    flex-direction: column;
-    gap: 15px;
-    padding: 15px;
-  }
-
-  .header-left {
-    flex-direction: column;
-    gap: 15px;
-    align-items: center;
-  }
-
-  .header-logo {
-    height: 60px;
-  }
-
-  .modern-main-content {
-    padding: 15px;
-  }
-
-  .header-spacer {
-    height: 120px; /* Increased for stacked header on mobile */
-  }
 }

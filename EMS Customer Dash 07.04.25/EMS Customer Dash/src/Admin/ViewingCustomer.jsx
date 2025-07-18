@@ -1,16 +1,16 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import '../shared/ModernDashboard.css';
 import './ViewingCustomer.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { FaUser, FaEnvelope, FaPhone, FaBuilding, FaGraduationCap, FaIdCard } from 'react-icons/fa';
+import { FaSignOutAlt, FaArrowLeft, FaUser, FaEnvelope, FaPhone, FaBuilding, FaGraduationCap, FaIdCard } from 'react-icons/fa';
 
 const ViewingCustomer = () => {
   const nav = useNavigate();
   const location = useLocation();
   const userId = location.state?.userId;
   
+  // Initialize formData state
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,13 +26,15 @@ const ViewingCustomer = () => {
   const [error, setError] = useState(null);
   const [ticketPurchases, setTicketPurchases] = useState([]);
   
-  const API_BASE_URL = 'http://localhost:5000';
+  // Define the API base URL outside the useEffect to make it accessible
+  const API_BASE_URL = 'http://localhost:5000'; // Server is running on port 5000
   
+  // Define fetchUserData with useCallback to prevent dependency cycle
   const fetchUserData = useCallback(async () => {
     try {
       console.log('Fetching customer data for ID:', userId);
       setLoading(true);
-      setError(null);
+      setError(null); // Clear any previous errors
       
       if (!userId) {
         setError('No user ID provided. Cannot fetch user data.');
@@ -40,9 +42,10 @@ const ViewingCustomer = () => {
         return;
       }
       
+      // Fetch user profile data
       const userResponse = await axios.get(`${API_BASE_URL}/api/user-profile/${userId}`);
-      console.log('User API response:', userResponse.data);
       const userData = userResponse.data;
+      console.log('Customer data received:', userData);
       
       if (userData && Object.keys(userData).length > 0) {
         setFormData({
@@ -56,11 +59,12 @@ const ViewingCustomer = () => {
           organVAT: userData.vat_no || ''
         });
         
+        // Fetch tickets purchased by this customer
         try {
           console.log(`Fetching tickets for customer ID: ${userId}`);
           const ticketsResponse = await axios.get(`${API_BASE_URL}/api/user-tickets/${userId}`);
-          console.log('Tickets API response:', ticketsResponse.data);
           const ticketsData = ticketsResponse.data;
+          console.log('Tickets data:', ticketsData);
           
           if (Array.isArray(ticketsData) && ticketsData.length > 0) {
             setTicketPurchases(ticketsData.map(ticket => ({
@@ -89,94 +93,131 @@ const ViewingCustomer = () => {
       setError(`Error loading customer data: ${error.message || 'Unknown error'}`);
       setLoading(false);
     }
-  }, [userId, API_BASE_URL]);
+  }, [userId, API_BASE_URL, setFormData, setTicketPurchases, setError, setLoading]);
 
   useEffect(() => {
     if (userId) {
       fetchUserData();
     } else {
       console.error('No userId provided in location state');
+      // Redirect back to users list with an alert
       setTimeout(() => {
         alert('Error: No user ID provided. Redirecting to users list.');
         nav('/users');
       }, 100);
     }
     
-    return () => {};
-  }, [userId, nav, fetchUserData]);
+    // Cleanup function
+    return () => {
+      // Any cleanup needed
+    }
+  }, [userId, nav, fetchUserData]); // Include fetchUserData in dependencies
 
+  // Loading state - this is now handled with an overlay
   if (loading && !error) {
     return (
       <div className="modern-dashboard-container">
         <header className="modern-header">
-          <div className="header-left">
-            <button className="modern-button" onClick={() => nav('/users')}>
-              <i className="fas fa-arrow-left"></i> Back
-            </button>
-            <img
-              src="/XPRESS TICKETS LOGO2.png"
-              alt="EventXpress Logo"
-              className="header-logo"
-              onError={(e) => {
-                console.error('Failed to load logo');
-                e.target.src = '/fallback-logo.png';
-              }}
-            />
-          </div>
-          <div className="modern-header-actions">
-            <button className="modern-button" onClick={() => nav('/')}>
-              <span className="button-icon">↩</span> Logout
-            </button>
-          </div>
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="modern-logo"
+          />
         </header>
-        <div className="modern-loading">
-          <div className="modern-spinner"></div>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '50vh'
+        }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '5px solid #f3f3f3',
+            borderTop: '5px solid #4ca1af',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginBottom: '20px'
+          }}></div>
           <p>Loading customer profile...</p>
         </div>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}} />
       </div>
     );
   }
   
   return (
     <div className="modern-dashboard-container">
+      {/* Modern Header */}
       <header className="modern-header">
-        <div className="header-left">
-          <button className="modern-button" onClick={() => nav('/users')}>
-            <i className="fas fa-arrow-left"></i> Back
-          </button>
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="header-logo"
-            onError={(e) => {
-              console.error('Failed to load logo');
-              e.target.src = '/fallback-logo.png';
-            }}
-          />
-        </div>
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
         <div className="modern-header-actions">
-          <button className="modern-button" onClick={() => nav('/')}>
-            <span className="button-icon">↩</span> Logout
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
           </button>
         </div>
       </header>
       
+      {/* Error message display */}
       {error && (
-        <div className="modern-error">
-          <p>{error}</p>
-          <button className="modern-button" onClick={() => {
-            setError(null);
-            if (userId) fetchUserData();
-          }}>
+        <div style={{
+          margin: '10px 20px',
+          padding: '10px 15px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          borderRadius: '4px',
+          border: '1px solid #f5c6cb',
+          fontSize: '0.9rem'
+        }}>
+          {error}
+          <button 
+            style={{
+              marginLeft: '10px',
+              padding: '2px 8px',
+              fontSize: '0.8rem',
+              background: 'transparent',
+              border: '1px solid #721c24',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              color: '#721c24'
+            }}
+            onClick={() => {
+              setError(null);
+              if (userId) fetchUserData();
+            }}
+          >
             Retry
           </button>
         </div>
       )}
 
+      {/* Back Button */}
+      <div className="modern-back-button">
+        <button className="modern-btn modern-btn-secondary" onClick={() => nav("/users")}>
+          <FaArrowLeft /> Back to Users
+        </button>
+      </div>
+
+      {/* Main Content */}
       <main className="modern-main-content">
+        <h1 className="modern-page-title">Customer Profile</h1>
+        
         <div className="modern-profile-container">
+          {/* Profile Information - Complete redesign with compact table-like layout */}
           <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', width: '100%'}}>
+            {/* Left column */}
             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+              {/* Personal Information */}
               <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
                 <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
                   <span style={{fontSize: '11px', fontWeight: 500}}><FaUser size={10} style={{marginRight: '4px'}} /> Personal Information</span>
@@ -199,6 +240,7 @@ const ViewingCustomer = () => {
                 </table>
               </div>
               
+              {/* Additional Information */}
               <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
                 <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
                   <span style={{fontSize: '11px', fontWeight: 500}}><FaIdCard size={10} style={{marginRight: '4px'}} /> Additional Information</span>
@@ -218,7 +260,9 @@ const ViewingCustomer = () => {
               </div>
             </div>
             
+            {/* Right column */}
             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+              {/* Institution Details */}
               <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
                 <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
                   <span style={{fontSize: '11px', fontWeight: 500}}><FaBuilding size={10} style={{marginRight: '4px'}} /> Institution Details</span>
@@ -240,11 +284,14 @@ const ViewingCustomer = () => {
                   </tbody>
                 </table>
               </div>
+              
+              {/* No Actions section needed here - removed to match ViewingOrganiser */}
             </div>
           </div>
         </div>
       </main>
 
+      {/* Ticket Purchases Table */}
       <div style={{padding: '0 15px 15px 15px'}}>
         <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden', marginTop: '15px'}}>
           <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '8px 15px', color: 'white'}}>

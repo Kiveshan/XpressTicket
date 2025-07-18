@@ -1,159 +1,245 @@
-
 /* ViewingCustomer.css - Optimized profile card styles */
 
-/* Main dashboard container */
-.modern-dashboard-container {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  min-height: 100vh;
-  background-color: #f8f9fa;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Modern header with gradient background */
-.modern-header {
-  background: linear-gradient(135deg, #2c3e50, #4ca1af);
-  color: white;
-  padding: 15px 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.header-logo {
-  height: 50px;
-}
-
-/* Modern buttons */
-.modern-button {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.modern-button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.button-icon {
-  font-size: 1.1rem;
-  margin-right: 5px;
-}
-
-.modern-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-/* Main content */
-.modern-main-content {
-  padding: 20px 25px;
-  flex-grow: 1;
-}
-
-/* Loading state */
-.modern-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  color: #6c757d;
-  text-align: center;
-  margin: 20px 25px;
-}
-
-.modern-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #4ca1af;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 10px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Error state */
-.modern-error {
-  color: #dc3545;
-  text-align: center;
-  padding: 20px;
-  background-color: #f8d7da;
-  border-radius: 8px;
-  margin: 20px 25px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.modern-error button {
-  background-color: transparent;
-  border: 1px solid #dc3545;
-  color: #dc3545;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-/* Profile container */
+/* Main profile container */
 .modern-profile-container {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 8px;
   width: 100%;
-  padding: 0 15px;
+}
+
+/* Profile section with cards in a row */
+.modern-profile-section {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+/* Card styling for profile info cards */
+.modern-profile-section .modern-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.modern-card-header {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af) !important;
+  padding: 6px 15px !important;
+  border-bottom: 1px solid #e9ecef !important;
+  min-height: initial !important;
+  max-height: 36px !important;
+}
+
+.modern-card-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modern-card-header h2 svg {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.modern-card-body {
+  padding: 6px 15px !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: white !important;
+  color: #212529 !important;
+  max-height: none !important;
+  min-height: 0 !important;
+}
+
+/* Info rows with proper spacing and styling */
+.modern-info-row {
+  display: flex;
+  margin-bottom: 3px !important;
+  padding-bottom: 3px !important;
+  border-bottom: 1px solid #f1f3f4;
+  align-items: center;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+.modern-info-row:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.modern-info-label {
+  min-width: 100px;
+  font-weight: 600;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.modern-info-value {
+  flex: 1;
+  color: #212529;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Full width card for tables */
+.modern-card.modern-full-width {
+  width: 100%;
+  margin-top: 20px;
+}
+
+/* Modern table styling */
+.modern-table-container {
+  overflow-x: auto;
+  margin-bottom: 0;
+  border-radius: 0 0 8px 8px;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 0.9rem;
+}
+
+.modern-table thead {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+}
+
+.modern-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  white-space: nowrap;
+}
+
+.modern-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e9ecef;
+  color: #495057;
+}
+
+.modern-table tr:last-child td {
+  border-bottom: none;
+}
+
+.modern-table tr:hover td {
+  background-color: #f8f9fa;
+}
+
+/* Status badges styling */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: white;
+}
+
+.status-badge.active {
+  background-color: #4caf50;
+}
+
+.status-badge.pending {
+  background-color: #ff9800;
+}
+
+.status-badge.cancelled {
+  background-color: #f44336;
+}
+
+/* Action buttons styling */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.action-button {
+  padding: 8px 15px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: white;
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(44, 62, 80, 0.2);
 }
 
 /* Responsive adjustments */
 @media (max-width: 992px) {
-  .modern-profile-container > div {
-    grid-template-columns: 1fr;
+  .modern-profile-section {
+    flex-direction: column;
+  }
+  
+  .modern-profile-section .modern-card {
+    width: 100%;
+    margin-bottom: 15px;
+  }
+
+  .modern-profile-section .modern-card:last-child {
+    margin-bottom: 0;
   }
 }
 
-@media (max-width: 576px) {
-  .modern-header {
-    flex-direction: column;
-    gap: 15px;
-    padding: 15px;
+@media (max-width: 768px) {
+  .modern-back-button {
+    margin: 10px 15px;
   }
-
-  .header-left {
-    flex-direction: column;
-    gap: 15px;
-    align-items: center;
-  }
-
-  .header-logo {
-    height: 60px;
-  }
-
+  
   .modern-main-content {
     padding: 15px;
+  }
+  
+  .modern-page-title {
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+  }
+
+  .modern-card-header h2 {
+    font-size: 0.9rem;
+  }
+
+  .modern-info-label {
+    min-width: 90px;
+    font-size: 0.8rem;
+  }
+  
+  .modern-info-value {
+    font-size: 0.85rem;
+  }
+  
+  .modern-table th,
+  .modern-table td {
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
 }

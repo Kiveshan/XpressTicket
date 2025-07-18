@@ -1,8 +1,16 @@
 import React, { useState } from "react";
 import "./TicketsPayment.css";
 import { useNavigate } from "react-router-dom";
-import { FaSearch, FaEye } from "react-icons/fa";
+import "../shared/ModernDashboard.css";
+import {
+  FaSignOutAlt,
+  FaSearch,
+  FaFilter,
+  FaEye,
+  FaDownload,
+} from "react-icons/fa";
 
+// Enhanced sample data with more fields and entries
 const paymentData = [
   {
     id: "PAY-001",
@@ -40,79 +48,50 @@ const TickectPaymentList = () => {
   const nav = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [loading] = useState(false); // Static data, included for future async
 
-  console.log("TickectPaymentList: Rendering filter section", { searchQuery, filterStatus });
-
+  // Filter payments based on search query and status filter
   const filteredPayments = paymentData.filter((payment) => {
     const matchesSearch =
       payment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       payment.event.toLowerCase().includes(searchQuery.toLowerCase()) ||
       payment.id.toLowerCase().includes(searchQuery.toLowerCase());
+
     const matchesStatus =
       filterStatus === "all" ||
       payment.status.toLowerCase() === filterStatus.toLowerCase();
+
     return matchesSearch && matchesStatus;
   });
 
-  if (loading) {
-    return (
-      <div className="modern-container">
-        <header className="modern-header">
-          <div className="header-left">
-            <button className="modern-button" onClick={() => nav("/requestcard")}>
-              <i className="fas fa-arrow-left"></i> Back
-            </button>
-            <img
-              src="/XPRESS TICKETS LOGO2.png"
-              alt="EventXpress Logo"
-              className="header-logo"
-              onError={(e) => {
-                console.warn("Failed to load logo:", e.target.src);
-                e.target.src = "/default-event-image.jpg";
-              }}
-            />
-          </div>
-          <div className="modern-header-actions">
-            <button className="modern-button" onClick={() => nav("/")}>
-              <span className="button-icon">↩</span> Logout
-            </button>
-          </div>
-        </header>
-        <div className="header-spacer"></div>
-        <div className="modern-loading">
-          <div className="modern-spinner"></div>
-          <p>Loading payments...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="modern-container">
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
       <header className="modern-header">
         <div className="header-left">
-          <button className="modern-button" onClick={() => nav("/requestcard")}>
+          <button
+            className="backbutton20"
+            onClick={() => nav("/organiser-dash")}
+          >
             <i className="fas fa-arrow-left"></i> Back
           </button>
           <img
             src="/XPRESS TICKETS LOGO2.png"
             alt="EventXpress Logo"
-            className="header-logo"
-            onError={(e) => {
-              console.warn("Failed to load logo:", e.target.src);
-              e.target.src = "/default-event-image.jpg";
-            }}
+            className="modern-logo"
           />
         </div>
         <div className="modern-header-actions">
-          <button className="modern-button" onClick={() => nav("/")}>
-            <span className="button-icon">↩</span> Logout
+          <button className="modern-logout-btn" onClick={() => nav("/")}>
+            <FaSignOutAlt /> Logout
           </button>
         </div>
       </header>
-      <div className="header-spacer"></div>
+
+      {/* Main Content */}
       <main className="modern-main-content">
+        <h1 className="modern-page-title">Payment Management</h1>
+
+        {/* Search and Filter Section */}
         <div className="modern-search-filter">
           <div className="modern-search-input">
             <FaSearch className="modern-search-icon" />
@@ -125,6 +104,7 @@ const TickectPaymentList = () => {
           </div>
           <div className="modern-filter-dropdown">
             <select
+              className="modern-filter-btn"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
@@ -134,76 +114,50 @@ const TickectPaymentList = () => {
             </select>
           </div>
         </div>
-        <div style={{
-          overflowX: 'auto',
-          marginTop: '20px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)'
-        }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: '0.9rem'
-          }}>
-            <thead style={{
-              background: 'linear-gradient(135deg, #2c3e50, #4ca1af)',
-              color: 'white'
-            }}>
+        {/* Table Container */}
+        <div className="modern-table-container">
+          <table className="modern-table">
+            <thead>
               <tr>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Payment ID</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Purchaser Name</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Event</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Package</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Tickets</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Amount</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Date</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Status</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>Actions</th>
+                <th>Payment ID</th>
+                <th>Purchaser Name</th>
+                <th>Event</th>
+                <th>Package</th>
+                <th>Tickets</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredPayments.map((payment, index) => (
-                <tr key={index} style={{ borderBottom: '1px solid #e9ecef' }}>
-                  <td style={{ padding: '10px 16px', color: '#495057' }}>{payment.id}</td>
-                  <td style={{ padding: '10px 16px', color: '#495057' }}>{payment.name}</td>
-                  <td style={{ padding: '10px 16px', color: '#495057' }}>{payment.event}</td>
-                  <td style={{ padding: '10px 16px', color: '#495057' }}>{payment.package}</td>
-                  <td style={{ padding: '10px 16px', color: '#495057' }}>{payment.tickets}</td>
-                  <td style={{ padding: '10px 16px', color: '#495057' }}>{payment.amount}</td>
-                  <td style={{ padding: '10px 16px', color: '#495057' }}>{payment.date}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      padding: '4px 10px',
-                      borderRadius: '12px',
-                      fontSize: '0.8rem',
-                      fontWeight: 500,
-                      color: 'white',
-                      background: payment.status === "Verified" ? '#4caf50' : '#ff9800'
-                    }}>
+                <tr key={index}>
+                  <td>{payment.id}</td>
+                  <td>{payment.name}</td>
+                  <td>{payment.event}</td>
+                  <td>{payment.package}</td>
+                  <td>{payment.tickets}</td>
+                  <td>{payment.amount}</td>
+                  <td>{payment.date}</td>
+                  <td>
+                    <span
+                      className={`modern-badge ${
+                        payment.status === "Verified"
+                          ? "modern-badge-success"
+                          : payment.status === "Pending"
+                          ? "modern-badge-warning"
+                          : "modern-badge-info"
+                      }`}
+                    >
                       {payment.status}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 16px' }}>
+                  <td>
                     <button
-                      style={{
-                        background: '#4ca1af',
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
+                      className="modern-action-btn"
                       onClick={() => nav("/ticketspayment")}
                       title="View payment details"
-                      onMouseOver={(e) => {
-                        e.target.style.background = '#3d8a96';
-                      }}
-                      onMouseOut={(e) => {
-                        e.target.style.background = '#4ca1af';
-                      }}
                     >
                       <FaEye />
                     </button>
