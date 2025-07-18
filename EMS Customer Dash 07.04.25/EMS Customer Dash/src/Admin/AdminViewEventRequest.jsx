@@ -176,32 +176,65 @@ const AdminViewEventRequest = () => {
         return;
       }
 
+      console.log('Sending status update request:', {
+        url: `http://localhost:5000/api/admin/event/${eventid}/status`,
+        method: 'PUT',
+        status,
+        comment: comment || 'No comment provided'
+      });
+
       const response = await fetch(`http://localhost:5000/api/admin/event/${eventid}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status, comment }),
+        body: JSON.stringify({ 
+          status, 
+          comment: comment || ''
+        }),
       });
 
+      console.log('Response status:', response.status);
+      
+      // Try to parse response body even if status is not OK
+      let errorData = {};
+      try {
+        errorData = await response.json();
+        console.log('Response data:', errorData);
+      } catch (parseError) {
+        console.error('Failed to parse error response:', parseError);
+      }
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+
         if (response.status === 401 || response.status === 403) {
           sessionStorage.removeItem('token');
           sessionStorage.removeItem('user');
           nav('/login');
           return;
         }
-        throw new Error(`Failed to update status: ${errorData.error || response.statusText}`);
+        
+        throw new Error(
+          `Failed to update status: ${errorData.error || response.statusText || 'Unknown error'}`
+        );
       }
 
-      const data = await response.json();
-      console.log('Status updated:', data);
+      console.log('Status updated successfully:', errorData);
       nav('/event-approval');
     } catch (err) {
-      console.error('Error updating status:', err);
-      setError(err.message);
+      console.error('Error in handleStatusUpdate:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+        ...err
+      });
+      setError(`Error: ${err.message}. Please check the console for more details.`);
     } finally {
       setIsSubmitting(false);
     }
