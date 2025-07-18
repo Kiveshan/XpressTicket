@@ -58,8 +58,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "xpress-2",
-  password: "1234567890",
-  port: 5432,
+  password: "123456",
+  port: 5433,
   timezone: "UTC", // Ensure PostgreSQL uses UTC
 })
 
@@ -174,20 +174,7 @@ async function initializeLookupTables() {
       );
     `)
 
-    // Create payments table after events
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS public.payments (
-        payment_id SERIAL NOT NULL,
-        event_id integer NOT NULL,
-        amount real NOT NULL,
-        payment_type character varying NOT NULL DEFAULT 'Unknown',
-        proof_of_payment character varying,
-        CONSTRAINT payments_pkey PRIMARY KEY (payment_id),
-        CONSTRAINT payments_event_id_fkey FOREIGN KEY (event_id)
-          REFERENCES public.events (event_id) ON DELETE CASCADE
-      );
-    `)
-
+  
     // Seed sample data if no faculties present
     const { rows } = await client.query("SELECT COUNT(*)::int AS count FROM faculties")
     if (rows[0].count === 0) {
@@ -2437,8 +2424,6 @@ app.get("/api/organiser/events/:eventId/ticket-requests", authenticateToken, asy
         tp.number_of_tickets,
         tp.package,
         tp.amount,
-        tp.proof_of_payment,
-        tp.request_status,
         tp.delegate_details,
         e.name as event_name,
         up.firstname,
@@ -2487,50 +2472,6 @@ app.get("/api/organiser/events/:eventId/ticket-requests", authenticateToken, asy
   }
 })
 
-// Update ticket purchase request status
-app.put("/api/organiser/ticket-requests/:purchaseId/status", authenticateToken, async (req, res) => {
-  const client = await pool.connect()
-  try {
-    const { purchaseId } = req.params
-    const { userId } = req.user
-    const { request_status } = req.body
-
-    if (!request_status || !["Approved", "Rejected", "pending"].includes(request_status)) {
-      return res.status(400).json({ error: "Valid request status is required (Approved, Rejected, or pending)" })
-    }
-
-    await client.query("BEGIN")
-
-    const query = `
-      UPDATE ticket_purchases
-      SET request_status = $1
-      FROM events e
-      WHERE ticket_purchases.purchase_id = $2 AND e.event_id = ticket_purchases.event_id AND e.user_id = $3
-      RETURNING ticket_purchases.*
-    `
-    const result = await client.query(query, [request_status, purchaseId, userId])
-
-    if (result.rows.length === 0) {
-      await client.query("ROLLBACK")
-      return res.status(404).json({ error: "Ticket purchase not found or access denied" })
-    }
-
-    await client.query("COMMIT")
-    res.json({
-      message: `Ticket purchase status updated to ${request_status}`,
-      purchase: result.rows[0],
-    })
-  } catch (error) {
-    await client.query("ROLLBACK")
-    console.error("Error updating ticket request status:", error)
-    res.status(500).json({
-      error: "Failed to update ticket request status",
-      details: error.message,
-    })
-  } finally {
-    client.release()
-  }
-})
 
 // Get all ticket purchases for organiser's events
 app.get("/api/organiser/ticket-purchases", authenticateToken, async (req, res) => {
@@ -2556,7 +2497,7 @@ app.get("/api/organiser/ticket-purchases", authenticateToken, async (req, res) =
       FROM ticket_purchases tp
       JOIN events e ON tp.event_id = e.event_id
       JOIN user_profiles up ON tp.user_id = up.user_id
-      WHERE e.user_id = $1 AND tp.request_status = 'Approved'
+      WHERE e.user_id = $1
       ORDER BY tp.purchase_id DESC
     `
     const result = await client.query(query, [userId])
@@ -2682,7 +2623,7 @@ app.put("/api/organiser/ticket-purchases/:purchaseId/status", authenticateToken,
       UPDATE ticket_purchases
       SET status = $1
       FROM events e
-      WHERE ticket_purchases.purchase_id = $2 AND e.event_id = ticket_purchases.event_id AND e.user_id = $3 AND tp.request_status = 'Approved'
+      WHERE ticket_purchases.purchase_id = $2 AND e.event_id = ticket_purchases.event_id AND e.user_id = $3
       RETURNING ticket_purchases.*
     `
     const result = await client.query(query, [status, purchaseId, userId])
@@ -2753,8 +2694,8 @@ app.get("/api/organiser/analytics", authenticateToken, async (req, res) => {
         TO_CHAR(e.startdate, 'Month') AS month,
         TO_CHAR(e.startdate, 'YYYY') AS year
       FROM events e
-      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id AND tp.request_status = 'Approved'
-      WHERE e.user_id = $1
+      LEFT JOIN ticket_purchases tp ON e.event_id = tp.event_id
+      WHERE e.user_id = $1 AND tp.status = 'Approved'
       GROUP BY e.event_id, e.name, e.startdate
       ORDER BY e.startdate DESC;
     `
