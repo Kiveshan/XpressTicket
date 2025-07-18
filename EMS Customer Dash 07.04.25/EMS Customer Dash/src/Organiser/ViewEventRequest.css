@@ -25,28 +25,22 @@
   gap: 16px;
 }
 
-/* Back Button Styles */
-.backbutton20 {
-  position: fixed;
-  background-color: #20c997;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 25px;
-  margin-top: -40px;
-  z-index: 1000;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.backbutton20:hover {
-  background-color: #0c553f;
+.modern-logo {
+  height: 40px;
+  object-fit: contain;
 }
 
 .view-section-nav {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .view-nav-button {
@@ -61,6 +55,9 @@
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .view-nav-button.active {
@@ -71,6 +68,27 @@
 }
 
 .view-nav-button:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.modern-button {
+  padding: 10px 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modern-button:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
 }
@@ -551,11 +569,17 @@
 .modern-loading-overlay {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   min-height: 100vh;
   background: white;
-  padding: 60px 20px;
+  padding: 20px;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
 }
 
 .view-empty-state-icon {
@@ -573,6 +597,7 @@
   }
 
   .view-packages-tabs-layout {
+    grid-template-columns: 1fr;
     gap: 30px;
   }
 }
@@ -588,11 +613,6 @@
     margin: 0 auto;
   }
 
-  .view-packages-tabs-layout {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-
   .view-section-content {
     padding: 24px;
   }
@@ -603,8 +623,18 @@
     text-align: center;
   }
 
+  .header-left {
+    width: 100%;
+    justify-content: center;
+  }
+
   .view-section-nav {
     justify-content: center;
+    margin-top: 16px;
+  }
+
+  .modern-button {
+    margin-top: 16px;
   }
 }
 

@@ -157,8 +157,38 @@ const ViewEventRequest = () => {
   if (loading) {
     return (
       <div className="modern-loading-overlay">
-        <div className="view-empty-state-icon">⏳</div>
-        <p>Loading event details...</p>
+        <header className="view-event-header">
+          <div className="header-left">
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="modern-logo"
+            />
+            <div className="view-section-nav">
+              <button
+                className="view-nav-button"
+                onClick={() => navigate("/event-request")}
+              >
+                <i className="fas fa-arrow-left"></i> Back to Events
+              </button>
+            </div>
+          </div>
+          <button
+            className="modern-button"
+            onClick={() => {
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("userId");
+              sessionStorage.removeItem("user");
+              navigate("/login");
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </header>
+        <div className="loading-content">
+          <div className="view-empty-state-icon">⏳</div>
+          <p>Loading event details...</p>
+        </div>
       </div>
     )
   }
@@ -166,6 +196,34 @@ const ViewEventRequest = () => {
   if (error) {
     return (
       <div className="view-event-container">
+        <header className="view-event-header">
+          <div className="header-left">
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="modern-logo"
+            />
+            <div className="view-section-nav">
+              <button
+                className="view-nav-button"
+                onClick={() => navigate("/event-request")}
+              >
+                <i className="fas fa-arrow-left"></i> Back to Events
+              </button>
+            </div>
+          </div>
+          <button
+            className="modern-button"
+            onClick={() => {
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("userId");
+              sessionStorage.removeItem("user");
+              navigate("/login");
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </header>
         <div className="view-event-card">
           <div className="view-empty-state">
             <div className="view-empty-state-icon">❌</div>
@@ -178,12 +236,20 @@ const ViewEventRequest = () => {
 
   return (
     <div className="view-event-container">
-      <div className="view-event-card">
-        <div className="view-event-header">
-          <button className="backbutton20" onClick={() => navigate("/event-request")}>
-            <i className="fas fa-arrow-left"></i> Back to Events
-          </button>
+      <header className="view-event-header">
+        <div className="header-left">
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="modern-logo"
+          />
           <div className="view-section-nav">
+            <button
+              className="view-nav-button"
+              onClick={() => navigate("/event-request")}
+            >
+              <i className="fas fa-arrow-left"></i> Back to Events
+            </button>
             <button
               className={`view-nav-button ${currentSection === "eventInfo" ? "active" : ""}`}
               onClick={showEventInfo}
@@ -210,7 +276,20 @@ const ViewEventRequest = () => {
             </button>
           </div>
         </div>
+        <button
+          className="modern-button"
+          onClick={() => {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("userId");
+            sessionStorage.removeItem("user");
+            navigate("/login");
+          }}
+        >
+          <i className="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </header>
 
+      <div className="view-event-card">
         <div className="view-section-content">
           {/* Section 1: Event Information */}
           {currentSection === "eventInfo" && (
