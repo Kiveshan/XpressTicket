@@ -58,8 +58,8 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "xpress-2",
-  password: "123456",
-  port: 5433,
+  password: "1234567890",
+  port: 5432,
   timezone: "UTC", // Ensure PostgreSQL uses UTC
 })
 
@@ -174,7 +174,6 @@ async function initializeLookupTables() {
       );
     `)
 
-  
     // Seed sample data if no faculties present
     const { rows } = await client.query("SELECT COUNT(*)::int AS count FROM faculties")
     if (rows[0].count === 0) {
