@@ -1,300 +1,336 @@
 /* ParchasedTicketModern.css - Clean implementation for the ParchasedTicket component */
 
+/* Reset all styles to prevent conflicts */
+.purchased-ticket-page * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Ensure no hardcoded content is displayed */
+.purchased-ticket-page::before,
+.purchased-ticket-page::after {
+  display: none !important;
+}
+
 /* Main container */
-.modern-dashboard-container {
+.purchased-ticket-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background-color: #f8f9fa;
-  font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Header */
-.modern-header {
+.purchased-ticket-header {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  color: white;
+  padding: 15px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.purchased-ticket-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  background-color: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.modern-logo {
-  height: 50px;
+.purchased-ticket-logo {
+  height: 35px;
 }
 
-.modern-header-actions {
+.purchased-ticket-actions {
   display: flex;
   align-items: center;
   gap: 15px;
 }
 
-.modern-logout-btn {
-  background-color: transparent;
-  color: #4ca1af;
-  border: 1px solid #4ca1af;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: 500;
+.purchased-ticket-btn {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
+  gap: 5px;
+  transition: all 0.2s ease;
 }
 
-.modern-logout-btn:hover {
-  background-color: #4ca1af;
-  color: white;
+.purchased-ticket-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Main content */
-.modern-dashboard-content {
-  padding: 0 20px 5px !important;
-  max-width: 1200px !important;
-  margin: 0 auto !important;
-  width: 100% !important;
-}
-
-/* Back button */
-.modern-back-button {
-  margin: 5px 0 !important;
-}
-
-.modern-back-btn {
-  background-color: transparent;
-  color: #2c3e50;
-  border: 1px solid #2c3e50;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-}
-
-.modern-back-btn:hover {
-  background-color: #2c3e50;
-  color: white;
+.purchased-ticket-main {
+  padding: 20px 15px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* Page title */
-.modern-dashboard-page-title {
-  margin: 5px 0 !important;
+.purchased-ticket-title {
+  margin-bottom: 20px;
 }
 
-.modern-dashboard-page-title h1 {
-  font-size: 1.3rem;
+.purchased-ticket-title h1 {
+  font-size: 1.5rem;
   color: #2c3e50;
-  margin: 0 0 3px 0;
+  margin: 0 0 5px 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.modern-dashboard-page-title p {
+.purchased-ticket-title p {
   margin: 0;
   color: #6c757d;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
-/* Cards */
-.modern-card {
-  background-color: white !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-  overflow: hidden !important;
-  margin-bottom: 8px !important;
-  padding: 0 !important;
+/* Debug info */
+.purchased-ticket-debug {
+  background-color: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  color: #0c4a6e;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
 }
 
 /* Event info card */
-.event-info-card {
-  background: linear-gradient(135deg, #2c3e50, #4ca1af) !important;
-  color: white !important;
-  margin-bottom: 8px !important;
+.purchased-ticket-event-info {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  color: white;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 }
 
-.event-info-header {
-  padding: 8px 15px !important;
+.purchased-ticket-event-content {
+  padding: 20px;
 }
 
-.event-info-header h2 {
-  margin: 0 0 5px 0;
-  font-size: 1.2rem;
+.purchased-ticket-event-title {
+  margin: 0 0 10px 0;
+  font-size: 1.3rem;
   font-weight: 600;
 }
 
-.event-meta {
+.purchased-ticket-event-meta {
   display: flex;
+  gap: 20px;
+  font-size: 0.9rem;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 0.85rem;
 }
 
-.event-meta span {
+.purchased-ticket-event-meta span {
   display: flex;
   align-items: center;
   gap: 5px;
 }
 
 /* Search */
-.search-container {
-  padding: 6px 15px !important;
+.purchased-ticket-search {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-bottom: 20px;
 }
 
-.search-input-container {
+.purchased-ticket-search-content {
+  padding: 15px;
+}
+
+.purchased-ticket-search-wrapper {
   position: relative;
-  max-width: 500px;
+  display: flex;
+  align-items: center;
 }
 
-.search-icon {
+.purchased-ticket-search-icon {
   position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 15px;
   color: #6c757d;
 }
 
-.modern-search-input {
+.purchased-ticket-search-input {
   width: 100%;
-  padding: 8px 8px 8px 30px;
+  padding: 10px 15px 10px 45px;
   border: 1px solid #ced4da;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  outline: none;
   transition: border-color 0.2s;
 }
 
-.modern-search-input:focus {
-  outline: none;
+.purchased-ticket-search-input:focus {
   border-color: #4ca1af;
   box-shadow: 0 0 0 2px rgba(76, 161, 175, 0.2);
 }
 
+/* Content states */
+.purchased-ticket-content {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.purchased-ticket-loading,
+.purchased-ticket-error,
+.purchased-ticket-empty {
+  padding: 40px;
+  text-align: center;
+}
+
+.purchased-ticket-loading p {
+  color: #4ca1af;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.purchased-ticket-error p {
+  color: #e74c3c;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.purchased-ticket-empty-icon {
+  font-size: 48px;
+  color: #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.purchased-ticket-empty h3 {
+  color: #374151;
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+}
+
+.purchased-ticket-empty p {
+  color: #6b7280;
+  margin: 0 0 20px 0;
+}
+
 /* Table */
-.modern-table-container {
-  width: 100%;
+.purchased-ticket-table-wrapper {
   overflow-x: auto;
 }
 
-.modern-table {
+.purchased-ticket-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
-.modern-table th {
-  background-color: #f8f9fa !important;
-  color: #495057 !important;
-  font-weight: 600 !important;
-  text-align: left !important;
-  padding: 6px 10px !important;
-  border-bottom: 2px solid #e9ecef !important;
+.purchased-ticket-table th {
+  background-color: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  text-align: left;
+  padding: 15px 20px;
+  border-bottom: 2px solid #e9ecef;
 }
 
-.modern-table td {
-  padding: 6px 10px !important;
-  border-bottom: 1px solid #e9ecef !important;
-  color: #495057 !important;
+.purchased-ticket-table td {
+  padding: 15px 20px;
+  color: #495057;
+  border-bottom: 1px solid #f3f4f6;
 }
 
-.modern-table tbody tr:hover {
+.purchased-ticket-table tbody tr:hover {
   background-color: #f8f9fa;
 }
 
-/* Package badge */
-.package-badge {
+.purchased-ticket-badge {
   background-color: #e9f7fe;
   color: #2c3e50;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-/* Buttons */
-.modern-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  font-size: 0.85rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.modern-btn-primary {
-  background-color: #4ca1af;
-  color: white;
-}
-
-.modern-btn-primary:hover {
-  background-color: #3d8e9c;
-}
-
-.modern-btn-secondary {
-  background-color: #e9ecef;
-  color: #495057;
-}
-
-.modern-btn-secondary:hover {
-  background-color: #dee2e6;
-}
-
-/* Loading and error states */
-.loading-container, .error-container, .no-tickets-container {
-  padding: 10px !important;
-  text-align: center !important;
-}
-
-.loading-container p {
-  color: #4ca1af;
-  margin: 0;
-}
-
-.error-text {
-  color: #e74c3c;
-  margin-bottom: 8px;
-}
-
-.amount-text {
-  font-weight: 500;
-}
-
-/* Package badge */
-.package-badge {
-  background-color: #e9f7fe;
-  color: #2c3e50;
-  padding: 3px 8px;
-  border-radius: 12px;
+  padding: 5px 10px;
+  border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 500;
   display: inline-block;
 }
 
-/* Responsive adjustments */
+.purchased-ticket-view-btn {
+  background-color: #4ca1af;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.purchased-ticket-view-btn:hover {
+  background-color: #3d8e9c;
+}
+
+.purchased-ticket-refresh-btn {
+  background-color: #4ca1af;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.purchased-ticket-refresh-btn:hover {
+  background-color: #3d8e9c;
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
-  .modern-table-container {
-    margin: 0 -10px;
-    width: calc(100% + 20px);
+  .purchased-ticket-main {
+    padding: 15px 10px;
   }
-  
-  .event-meta {
+
+  .purchased-ticket-event-meta {
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
   }
-  
-  .modern-dashboard-content {
-    padding: 0 10px 10px;
+
+  .purchased-ticket-table {
+    font-size: 0.8rem;
   }
+
+  .purchased-ticket-table th,
+  .purchased-ticket-table td {
+    padding: 10px 12px;
+  }
+
+  .purchased-ticket-title h1 {
+    font-size: 1.3rem;
+  }
+}
+
+/* Ensure no pseudo-elements or hidden content */
+*::before,
+*::after {
+  content: none !important;
+}
+
+/* Override any potential hardcoded content */
+.hardcoded-content,
+.sample-data,
+.mock-data,
+.test-data {
+  display: none !important;
 }
