@@ -1,93 +1,116 @@
-import React, { useState } from "react";
-import { useNavigate } from 'react-router-dom';
-import './Form.css';
+"use client"
+
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import "./Form.css"
 
 function Form() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const nav = useNavigate();
+  const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
+  const nav = useNavigate()
 
   const handleToggle = () => {
-    setIsLogin(!isLogin);
-    setErrorMessage("");
-    setUsername("");
-    setPassword("");
-    setConfirmPassword("");
-  };
+    setIsLogin(!isLogin)
+    setErrorMessage("")
+    setUsername("")
+    setPassword("")
+    setConfirmPassword("")
+  }
 
   // Handle user/admin login
   const handleLogin = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!username || !password) {
-      setErrorMessage("Please enter both email and password.");
-      return;
+      setErrorMessage("Please enter both email and password.")
+      return
     }
 
-    const loginData = { email: username, password };
+    const loginData = { email: username, password }
 
     try {
       // Check if admin credentials
-      const ADMIN_EMAIL = 'admin@eventxpress.com';
-      const ADMIN_PASSWORD = 'admin123';
+      const ADMIN_EMAIL = "admin@eventxpress.com"
+      const ADMIN_PASSWORD = "admin123"
 
-      let url = 'http://localhost:5000/api/login';
+      let url = "http://localhost:5000/api/login"
       if (username === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        url = 'http://localhost:5000/api/admin/login';
+        url = "http://localhost:5000/api/admin/login"
       }
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(loginData),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (response.ok) {
-        // Store user and token in sessionStorage
-        sessionStorage.setItem('userId', data.user.id);
-        sessionStorage.setItem('user', JSON.stringify(data.user));
-        sessionStorage.setItem('token', data.token);
-        
+        // Store user and token in sessionStorage with consistent naming
+        console.log("Login successful, storing session data:", data)
+
+        sessionStorage.setItem("userId", data.user.id)
+        sessionStorage.setItem("user", JSON.stringify(data.user))
+        sessionStorage.setItem("token", data.token)
+
+        // Also store userInfo for backward compatibility
+        sessionStorage.setItem(
+          "userInfo",
+          JSON.stringify({
+            userId: data.user.id,
+            user_id: data.user.id,
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.name,
+            role: data.user.role,
+          }),
+        )
+
+        console.log("Session storage after login:")
+        console.log("userId:", sessionStorage.getItem("userId"))
+        console.log("user:", sessionStorage.getItem("user"))
+        console.log("userInfo:", sessionStorage.getItem("userInfo"))
+        console.log("token:", sessionStorage.getItem("token") ? "exists" : "missing")
+
         // Check user role and redirect accordingly
-        if (data.user.role === 'Admin') {
-          nav('/admin-dash');
+        if (data.user.role === "Admin") {
+          nav("/admin-dash")
         } else if (data.user.isAdmin) {
           // Keep backward compatibility with the existing isAdmin check
-          nav('/admin-dash');
+          nav("/admin-dash")
         } else {
-          nav('/mainmenu');
+          nav("/mainmenu")
         }
       } else {
-        setErrorMessage(data.message || "Login failed. Please check your credentials.");
+        setErrorMessage(data.message || "Login failed. Please check your credentials.")
       }
     } catch (error) {
-      console.error("Error logging in:", error);
-      setErrorMessage("An error occurred. Please try again.");
+      console.error("Error logging in:", error)
+      setErrorMessage("An error occurred. Please try again.")
     }
-  };
+  }
 
   // Handle registration
   const handleRegister = (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!username || !password || password !== confirmPassword) {
-      return;
+      return
     }
 
     // Store registration data (for next step in flow)
-    sessionStorage.setItem("reg_email", username);
-    sessionStorage.setItem("reg_password", password);
-    nav('/information-form');
-  };
+    sessionStorage.setItem("reg_email", username)
+    sessionStorage.setItem("reg_password", password)
+    nav("/information-form")
+  }
 
-  const isRegisterButtonDisabled = !username || !password || password !== confirmPassword;
+  const isRegisterButtonDisabled = !username || !password || password !== confirmPassword
 
   return (
     <div className="auth-container">
@@ -119,10 +142,16 @@ function Form() {
                   />
                 </div>
                 {errorMessage && <p className="error-message">{errorMessage}</p>}
-                <button type="submit" className="submit-button">Log In</button>
+                <button type="submit" className="submit-button">
+                  Log In
+                </button>
               </form>
               <p className="toggle-text">
-                Click <span onClick={handleToggle} className="toggle-link">Register</span> if you do have Account.
+                Click{" "}
+                <span onClick={handleToggle} className="toggle-link">
+                  Register
+                </span>{" "}
+                if you do have Account.
               </p>
             </>
           ) : (
@@ -157,17 +186,22 @@ function Form() {
                   />
                 </div>
                 {errorMessage && <p className="error-message">{errorMessage}</p>}
-                <button type="submit" className="submit-button" disabled={isRegisterButtonDisabled}>Register</button>
+                <button type="submit" className="submit-button" disabled={isRegisterButtonDisabled}>
+                  Register
+                </button>
               </form>
               <p className="toggle-text">
-                Already have an account? <span onClick={handleToggle} className="toggle-link">Log In</span>
+                Already have an account?{" "}
+                <span onClick={handleToggle} className="toggle-link">
+                  Log In
+                </span>
               </p>
             </>
           )}
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-export default Form;
+export default Form
