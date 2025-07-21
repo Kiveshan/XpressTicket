@@ -2,15 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import {
-  FaSignOutAlt,
-  FaArrowLeft,
-  FaCalendarAlt,
-  FaMapMarkerAlt,
-  FaDownload,
-  FaEnvelope,
-  FaPrint,
-} from "react-icons/fa"
+import { FaSignOutAlt, FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaDownload, FaEnvelope } from "react-icons/fa"
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -345,6 +337,9 @@ Quantity: ${ticket.quantity || 1}`,
         minHeight: "100vh",
         backgroundColor: "#f8f9fa",
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        width: "100%",
+        margin: 0,
+        padding: 0,
       }}
     >
       {/* Header with Logo and Logout */}
@@ -354,6 +349,7 @@ Quantity: ${ticket.quantity || 1}`,
           color: "white",
           padding: "15px 20px",
           boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+          width: "100%",
         }}
       >
         <div
@@ -597,7 +593,7 @@ Quantity: ${ticket.quantity || 1}`,
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Removed View Tickets button */}
         <div
           style={{
             display: "flex",
@@ -630,32 +626,6 @@ Quantity: ${ticket.quantity || 1}`,
             }}
           >
             <FaEnvelope /> Email Invoice
-          </button>
-
-          <button
-            onClick={handlePrint}
-            style={{
-              backgroundColor: "#17a2b8",
-              color: "white",
-              border: "none",
-              padding: "12px 24px",
-              borderRadius: "8px",
-              fontSize: "1rem",
-              fontWeight: "500",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              transition: "background-color 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = "#138496"
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = "#17a2b8"
-            }}
-          >
-            <FaPrint /> Print Invoice
           </button>
 
           <button

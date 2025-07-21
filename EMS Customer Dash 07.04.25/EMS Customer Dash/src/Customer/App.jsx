@@ -22,6 +22,7 @@ import CustomerUploadPOP from "./CustomerUploadPOP"
 import ConfirmTicketPackage from "./ConfirmTicketPackage"
 import CustomerFillinTicketPack1 from "./CustomerFillinTicketPack1"
 import Receipt from "./Receipt"
+import InvoicePreview from "./InvoicePreview"
 
 // Organiser
 import OrganiserDash from "../Organiser/OrganiserDash"
@@ -47,6 +48,7 @@ import AdminViewEventRequest from "../Admin/AdminViewEventRequest"
 import SystemUsers from "../Admin/SystemUsers"
 import ViewingCustomer from "../Admin/ViewingCustomer"
 import ViewingOrganiser from "../Admin/ViewingOrganiser"
+
 var userIsRegistered = true
 
 function App() {
@@ -57,7 +59,7 @@ function App() {
         v7_relativeSplatPath: true,
       }}
     >
-      <div className="container">
+      <div style={{ width: "100%", minHeight: "100vh", margin: 0, padding: 0 }}>
         <Routes>
           {/* Customer */}
           <Route path="/" element={<Form />} />
@@ -83,6 +85,7 @@ function App() {
           <Route path="/uploadpop" element={<CustomerUploadPOP />} />
           <Route path="/confirm-ticket-package/:eventId/:packageIndex" element={<ConfirmTicketPackage />} />
           <Route path="/receipt" element={<Receipt />} />
+          <Route path="/invoice-preview" element={<InvoicePreview />} />
 
           {/* Organiser */}
           <Route path="/organiser-dash" element={<OrganiserDash />} />
@@ -110,7 +113,6 @@ function App() {
           <Route path="/viewingcustomer" element={<ViewingCustomer />} />
           <Route path="/viewingorganiser" element={<ViewingOrganiser />} />
         </Routes>
-        {/* <CustomerFillinTicketPack /> */}
       </div>
     </Router>
   )
