@@ -3418,46 +3418,49 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
 
     const parsedTabs = event.tabs
       ? event.tabs.map((tab) => {
-        try {
-          return JSON.parse(tab);
-        } catch (e) {
-          console.warn(`Failed to parse tab: ${tab}`, e);
-          return {};
-        }
-      })
+          try {
+            return JSON.parse(tab);
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e);
+            return {};
+          }
+        })
       : [];
 
     const parsedPackages = event.packages
       ? event.packages.map((pkg) => {
-        try {
-          // Handle double-encoded JSON
-          let parsedPkg = pkg;
-          if (typeof pkg === "string") {
-            parsedPkg = JSON.parse(pkg); // First parse
-            if (typeof parsedPkg === "string") {
-              parsedPkg = JSON.parse(parsedPkg); // Second parse for double-encoded JSON
+          try {
+            let parsedPkg = pkg;
+            if (typeof pkg === "string") {
+              parsedPkg = JSON.parse(pkg);
+              if (typeof parsedPkg === "string") {
+                parsedPkg = JSON.parse(parsedPkg);
+              }
             }
+            return {
+              name: parsedPkg.selectType || parsedPkg.packageType || "Unnamed Package",
+              type: parsedPkg.packageType || parsedPkg.selectType || "N/A",
+              details: parsedPkg.details || "No details provided",
+              price: parsedPkg.pricing ? parseFloat(parsedPkg.pricing) : 0,
+              startDate: parsedPkg.startDate ? formatDate(parsedPkg.startDate) : "N/A",
+              endDate: parsedPkg.endDate ? formatDate(parsedPkg.endDate) : "N/A",
+              location: parsedPkg.location || "N/A",
+              duration: parsedPkg.duration || "N/A",
+            };
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e);
+            return {
+              name: "Error",
+              type: "N/A",
+              details: "Failed to parse package data",
+              price: 0,
+              startDate: "N/A",
+              endDate: "N/A",
+              location: "N/A",
+              duration: "N/A",
+            };
           }
-          return {
-            name: parsedPkg.selectType || parsedPkg.packageType || "Unnamed Package",
-            type: parsedPkg.packageType || parsedPkg.selectType || "N/A",
-            details: parsedPkg.details || "No details provided",
-            price: parsedPkg.pricing ? parseFloat(parsedPkg.pricing) : 0,
-            startDate: parsedPkg.startDate ? formatDate(parsedPkg.startDate) : "N/A",
-            endDate: parsedPkg.endDate ? formatDate(parsedPkg.endDate) : "N/A",
-          };
-        } catch (e) {
-          console.warn(`Failed to parse package: ${pkg}`, e);
-          return {
-            name: "Error",
-            type: "N/A",
-            details: "Failed to parse package data",
-            price: 0,
-            startDate: "N/A",
-            endDate: "N/A",
-          };
-        }
-      })
+        })
       : [];
 
     const responseEvent = {
@@ -3497,7 +3500,6 @@ function formatDate(dateString) {
     return "N/A"
   }
 }
-
 // API endpoint for saving ticket purchases
 app.post("/api/ticket-purchases", authenticateToken, async (req, res) => {
   try {
