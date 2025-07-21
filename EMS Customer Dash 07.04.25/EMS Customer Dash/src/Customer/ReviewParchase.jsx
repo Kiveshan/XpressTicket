@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaUsers } from "react-icons/fa"
+import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaUsers, FaMapMarkerAlt } from "react-icons/fa"
 
 const ReviewParchase = () => {
   const navigate = useNavigate()
@@ -10,13 +10,6 @@ const ReviewParchase = () => {
   const [purchasedTickets, setPurchasedTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
-  // Get event data from navigation state (not needed for this component)
-  // const eventData = location.state || {}
-  // const { eventId, eventName, eventImage, eventDate, eventLocation, eventDescription } = eventData
-
-  // console.log("ReviewPurchase - Event Data:", eventData)
-  // console.log("ReviewPurchase - Event ID:", eventId)
 
   useEffect(() => {
     const fetchPurchasedTickets = async () => {
@@ -73,14 +66,28 @@ const ReviewParchase = () => {
 
         console.log("Filtered user purchases:", userPurchases)
 
+        // Remove duplicates based on purchase_id (in case API returns duplicates)
+        const uniquePurchases = userPurchases.reduce((acc, current) => {
+          const existingPurchase = acc.find((item) => item.purchase_id === current.purchase_id)
+          if (!existingPurchase) {
+            acc.push(current)
+          }
+          return acc
+        }, [])
+
+        console.log("Unique purchases after deduplication:", uniquePurchases)
+
         // Group purchases by event
         const eventGroups = {}
-        userPurchases.forEach((purchase) => {
+        uniquePurchases.forEach((purchase) => {
           const eventId = purchase.event_id
           if (!eventGroups[eventId]) {
             eventGroups[eventId] = {
               eventId: eventId,
               eventName: purchase.event_name,
+              eventLocation: purchase.event_location,
+              eventDate: purchase.event_date,
+              eventImage: purchase.event_image,
               purchases: [],
               totalTickets: 0,
               totalAmount: 0,
@@ -100,10 +107,16 @@ const ReviewParchase = () => {
 
               if (Array.isArray(delegates)) {
                 delegateCount = delegates.length
+              } else if (typeof delegates === "object" && delegates !== null) {
+                delegateCount = 1
               }
             } catch (e) {
               console.error("Error parsing delegate details:", e)
+              delegateCount = purchase.number_of_tickets || 1
             }
+          } else {
+            // Fallback to number_of_tickets if delegate_details is not available
+            delegateCount = purchase.number_of_tickets || 1
           }
 
           eventGroups[eventId].totalTickets += delegateCount
@@ -112,8 +125,8 @@ const ReviewParchase = () => {
 
         // Convert to array and sort by most recent
         const groupedTickets = Object.values(eventGroups).sort((a, b) => {
-          const aDate = Math.max(...a.purchases.map((p) => new Date(p.purchase_date).getTime()))
-          const bDate = Math.max(...b.purchases.map((p) => new Date(p.purchase_date).getTime()))
+          const aDate = getLatestPurchaseDate(a.purchases)
+          const bDate = getLatestPurchaseDate(b.purchases)
           return bDate - aDate
         })
 
@@ -124,6 +137,7 @@ const ReviewParchase = () => {
           console.log(
             `ReviewPurchase - Event ${group.eventId} (${group.eventName}) - Total tickets: ${group.totalTickets}, Total amount: ${group.totalAmount}`,
           )
+          console.log(`Number of unique purchases: ${group.purchases.length}`)
         })
 
         setPurchasedTickets(groupedTickets)
@@ -138,6 +152,27 @@ const ReviewParchase = () => {
     fetchPurchasedTickets()
   }, [navigate])
 
+  // Helper function to get the latest purchase date safely
+  const getLatestPurchaseDate = (purchases) => {
+    const validDates = purchases
+      .map((p) => {
+        const date = new Date(p.purchase_date)
+        return isNaN(date.getTime()) ? null : date.getTime()
+      })
+      .filter((date) => date !== null)
+
+    return validDates.length > 0 ? Math.max(...validDates) : 0
+  }
+
+  // Helper function to format the latest purchase date
+  const getFormattedLatestDate = (purchases) => {
+    const latestTimestamp = getLatestPurchaseDate(purchases)
+    if (latestTimestamp === 0) {
+      return "Date not available"
+    }
+    return formatDate(new Date(latestTimestamp).toISOString())
+  }
+
   const handleViewTickets = (eventGroup) => {
     console.log("ReviewPurchase - Navigating to tickets list for event:", eventGroup)
     navigate("/ticketslist", {
@@ -149,6 +184,10 @@ const ReviewParchase = () => {
         purchases: eventGroup.purchases,
       },
     })
+  }
+
+  const handleBackToDashboard = () => {
+    navigate("/customerdash")
   }
 
   const handleLogout = () => {
@@ -173,6 +212,18 @@ const ReviewParchase = () => {
     } catch (e) {
       return "Date not available"
     }
+  }
+
+  const getEventImageUrl = (eventImage) => {
+    if (!eventImage) return "/placeholder.svg?height=200&width=400"
+
+    // If it's already a full URL, return as is
+    if (eventImage.startsWith("http://") || eventImage.startsWith("https://")) {
+      return eventImage
+    }
+
+    // If it's a relative path, construct the full URL
+    return `http://localhost:5000${eventImage.startsWith("/") ? "" : "/"}${eventImage}`
   }
 
   return (
@@ -204,7 +255,7 @@ const ReviewParchase = () => {
           <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
           <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
             <button
-              onClick={() => navigate(-1)}
+              onClick={handleBackToDashboard}
               style={{
                 background: "transparent",
                 color: "white",
@@ -218,7 +269,7 @@ const ReviewParchase = () => {
                 gap: "5px",
               }}
             >
-              <FaArrowLeft /> Back
+              <FaArrowLeft /> Back to Dashboard
             </button>
             <button
               onClick={handleLogout}
@@ -347,7 +398,7 @@ const ReviewParchase = () => {
             style={{
               display: "grid",
               gap: "20px",
-              gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))",
             }}
           >
             {purchasedTickets.map((eventGroup) => (
@@ -370,50 +421,104 @@ const ReviewParchase = () => {
                   e.currentTarget.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.08)"
                 }}
               >
-                {/* Event Header */}
+                {/* Event Image */}
                 <div
                   style={{
-                    background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-                    color: "white",
-                    padding: "20px",
+                    height: "200px",
+                    overflow: "hidden",
+                    position: "relative",
                   }}
                 >
+                  <img
+                    src={getEventImageUrl(eventGroup.eventImage) || "/placeholder.svg"}
+                    alt={eventGroup.eventName}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      transition: "transform 0.3s ease",
+                    }}
+                    onError={(e) => {
+                      e.target.src = "/placeholder.svg?height=200&width=400"
+                    }}
+                  />
+                  {/* Ticket Count Badge */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "15px",
+                      right: "15px",
+                      backgroundColor: "rgba(76, 161, 175, 0.9)",
+                      color: "white",
+                      padding: "8px 12px",
+                      borderRadius: "20px",
+                      fontSize: "0.85rem",
+                      fontWeight: "600",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      backdropFilter: "blur(10px)",
+                    }}
+                  >
+                    <FaTicketAlt />
+                    {eventGroup.totalTickets} {eventGroup.totalTickets === 1 ? "ticket" : "tickets"}
+                  </div>
+                </div>
+
+                {/* Event Content */}
+                <div style={{ padding: "20px" }}>
+                  {/* Event Title */}
                   <h3
                     style={{
-                      margin: "0 0 10px 0",
-                      fontSize: "1.3rem",
+                      margin: "0 0 15px 0",
+                      fontSize: "1.4rem",
                       fontWeight: "600",
+                      color: "#2c3e50",
+                      lineHeight: "1.3",
                     }}
                   >
                     {eventGroup.eventName}
                   </h3>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "15px",
-                      fontSize: "0.9rem",
-                      opacity: "0.9",
-                    }}
-                  >
-                    <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                      <FaTicketAlt />
-                      {eventGroup.totalTickets} {eventGroup.totalTickets === 1 ? "ticket" : "tickets"}
-                    </span>
-                    <span>Total: {formatPrice(eventGroup.totalAmount)}</span>
-                  </div>
-                </div>
 
-                {/* Event Details */}
-                <div style={{ padding: "20px" }}>
+                  {/* Event Details */}
                   <div
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      gap: "12px",
+                      gap: "10px",
                       marginBottom: "20px",
                     }}
                   >
+                    {eventGroup.eventDate && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          color: "#6b7280",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        <FaCalendarAlt style={{ color: "#4ca1af" }} />
+                        <span>Event Date: {formatDate(eventGroup.eventDate)}</span>
+                      </div>
+                    )}
+
+                    {eventGroup.eventLocation && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          color: "#6b7280",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        <FaMapMarkerAlt style={{ color: "#4ca1af" }} />
+                        <span>Location: {eventGroup.eventLocation}</span>
+                      </div>
+                    )}
+
                     <div
                       style={{
                         display: "flex",
@@ -423,11 +528,8 @@ const ReviewParchase = () => {
                         fontSize: "0.9rem",
                       }}
                     >
-                      <FaCalendarAlt />
-                      <span>
-                        Latest Purchase:{" "}
-                        {formatDate(Math.max(...eventGroup.purchases.map((p) => new Date(p.purchase_date).getTime())))}
-                      </span>
+                      <FaCalendarAlt style={{ color: "#4ca1af" }} />
+                      <span>Latest Purchase: {getFormattedLatestDate(eventGroup.purchases)}</span>
                     </div>
 
                     <div
@@ -439,41 +541,59 @@ const ReviewParchase = () => {
                         fontSize: "0.9rem",
                       }}
                     >
-                      <FaUsers />
+                      <FaUsers style={{ color: "#4ca1af" }} />
                       <span>
                         {eventGroup.purchases.length} purchase{eventGroup.purchases.length !== 1 ? "s" : ""}
                       </span>
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  <button
-                    onClick={() => handleViewTickets(eventGroup)}
+                  {/* Price and Action */}
+                  <div
                     style={{
-                      width: "100%",
-                      backgroundColor: "#4ca1af",
-                      color: "white",
-                      border: "none",
-                      padding: "12px 20px",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      fontWeight: "500",
-                      cursor: "pointer",
-                      transition: "background-color 0.2s ease",
                       display: "flex",
+                      justifyContent: "space-between",
                       alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "#3d8e9c"
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "#4ca1af"
+                      paddingTop: "15px",
+                      borderTop: "1px solid #e5e7eb",
                     }}
                   >
-                    <FaTicketAlt /> View Tickets
-                  </button>
+                    <div
+                      style={{
+                        fontSize: "1.2rem",
+                        fontWeight: "600",
+                        color: "#059669",
+                      }}
+                    >
+                      Total: {formatPrice(eventGroup.totalAmount)}
+                    </div>
+
+                    <button
+                      onClick={() => handleViewTickets(eventGroup)}
+                      style={{
+                        backgroundColor: "#4ca1af",
+                        color: "white",
+                        border: "none",
+                        padding: "10px 20px",
+                        borderRadius: "8px",
+                        fontSize: "0.9rem",
+                        fontWeight: "500",
+                        cursor: "pointer",
+                        transition: "background-color 0.2s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = "#3d8e9c"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = "#4ca1af"
+                      }}
+                    >
+                      <FaTicketAlt /> View Tickets
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
