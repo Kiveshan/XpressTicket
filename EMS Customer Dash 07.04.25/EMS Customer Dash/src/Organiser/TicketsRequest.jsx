@@ -5,7 +5,7 @@ import './TicketsRequest.css';
 import './ModernOrganizerStyles.css';
 
 function TicketsRequest() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const { eventId } = useParams();
   const [requests, setRequests] = useState([]);
   const [eventName, setEventName] = useState('');
@@ -19,7 +19,7 @@ function TicketsRequest() {
         if (!token) {
           setError('No authentication token found. Please log in.');
           setLoading(false);
-          nav('/');
+          navigate('/login');
           return;
         }
         const response = await fetch(`http://localhost:5000/api/organiser/events/${eventId}/ticket-requests`, {
@@ -33,7 +33,7 @@ function TicketsRequest() {
         const data = await response.json();
         console.log('Fetched requests:', data);
         setRequests(data);
-        setEventName(data.length > 0 ? data[0].event_name : 'Event'); // Dynamically set event name
+        setEventName(data.length > 0 ? data[0].event_name : 'Event');
         setLoading(false);
       } catch (err) {
         console.error('Error fetching requests:', err);
@@ -42,57 +42,16 @@ function TicketsRequest() {
       }
     };
     fetchRequests();
-  }, [eventId, nav]);
+  }, [eventId, navigate]);
 
-  const handleStatusUpdate = async (purchaseId, request_status) => {
-    try {
-      const token = sessionStorage.getItem('token');
-      if (!token) {
-        setError('No authentication token found. Please log in.');
-        setLoading(false);
-        nav('/');
-        return;
-      }
-      const response = await fetch(`http://localhost:5000/api/organiser/ticket-requests/${purchaseId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ request_status }),
-      });
-      const result = await response.json();
-      if (response.ok) {
-        alert(`Ticket request ${request_status} successfully`);
-        setRequests(requests.filter((req) => req.purchase_id !== purchaseId));
-        nav('/tickets-event-list');
-      } else {
-        alert(result.error);
-      }
-    } catch (error) {
-      console.error('Error updating request status:', error);
-      alert('Failed to update request status');
-    }
-  };
-
-  const handleViewProof = (proofUrl) => {
-    if (proofUrl) {
-      window.open(proofUrl, '_blank');
-    } else {
-      alert('No proof of payment available');
-    }
-  };
-
-   //excel 
   const handleDownloadCustomers = async () => {
     try {
       const token = sessionStorage.getItem('token');
       if (!token) {
         setError('No authentication token found. Please log in.');
-        nav('/');
+        navigate('/login');
         return;
       }
-      // Fetch all ticket requests (regardless of status) from the server
       const response = await fetch(`http://localhost:5000/api/organiser/events/${eventId}/ticket-requests?all=true`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -103,26 +62,21 @@ function TicketsRequest() {
       }
       const data = await response.json();
 
-
-      // Check if data is empty
       if (data.length === 0) {
         alert('No customer data available for download.');
         return;
       }
 
-      // Prepare data for Excel by mapping requesta to desired columes 
       const excelData = data.map((request) => ({
         'Purchaser Name': request.purchaser_name,
         'Package': request.package,
         'Number of Tickets': request.number_of_tickets,
-        'Amount': `R ${Number(request.amount).toFixed(2)}`,// formating for currency 
+        'Amount': `R ${Number(request.amount).toFixed(2)}`,
       }));
 
-      // Calculate totals for tickets 
       const totalTickets = data.reduce((sum, request) => sum + request.number_of_tickets, 0);
       const totalAmount = data.reduce((sum, request) => sum + Number(request.amount), 0);
 
-      // Add totals row to the excel data 
       excelData.push({
         'Purchaser Name': 'Total',
         'Package': '',
@@ -130,24 +84,19 @@ function TicketsRequest() {
         'Amount': `R ${totalAmount.toFixed(2)}`,
       });
 
-      // Create worksheet from prepared data
       const ws = XLSX.utils.json_to_sheet(excelData, {
         header: ['Purchaser Name', 'Package', 'Number of Tickets', 'Amount'],
       });
 
-      // Set column widths
       ws['!cols'] = [
-        { wch: 20 }, // Purchaser Name
-        { wch: 20 }, // Package
-        { wch: 15 }, // Number of Tickets
-        { wch: 15 }, // Amount
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 15 },
       ];
 
-      // Create workbook and add the worksheet
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, data[0]?.event_name || 'Customers');
-
-      // Generate and download the Excel file
       XLSX.writeFile(wb, `${data[0]?.event_name || 'event'}_customers.xlsx`);
     } catch (error) {
       console.error('Error downloading customers:', error);
@@ -155,14 +104,81 @@ function TicketsRequest() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) {
+    return (
+      <div className="modern-loading-overlay">
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="modern-button" onClick={() => navigate('/tickets-event-list')}>
+              <i className="fas fa-arrow-left"></i> Back
+            </button>
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="header-logo"
+            />
+          </div>
+          <h1 className="header-title">Ticket Requests</h1>
+          <button
+            className="modern-button"
+            onClick={() => {
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("userId");
+              sessionStorage.removeItem("user");
+              navigate('/login');
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </header>
+        <div className="loading-content">
+          <div className="view-empty-state-icon">⏳</div>
+          <p>Loading ticket requests...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="modern-container">
+        <header className="modern-header">
+          <div className="header-left">
+            <button className="modern-button" onClick={() => navigate('/tickets-event-list')}>
+              <i className="fas fa-arrow-left"></i> Back
+            </button>
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="header-logo"
+            />
+          </div>
+          <h1 className="header-title">Ticket Requests</h1>
+          <button
+            className="modern-button"
+            onClick={() => {
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("userId");
+              sessionStorage.removeItem("user");
+              navigate('/login');
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </header>
+        <div className="error-content">
+          <div className="view-empty-state-icon">❌</div>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modern-container">
       <header className="modern-header">
         <div className="header-left">
-          <button className="modern-button" onClick={() => nav('/tickets-event-list')}>
+          <button className="modern-button" onClick={() => navigate('/tickets-event-list')}>
             <i className="fas fa-arrow-left"></i> Back
           </button>
           <img
@@ -172,53 +188,45 @@ function TicketsRequest() {
           />
         </div>
         <h1 className="header-title">Ticket Requests</h1>
-        <button className="modern-button" onClick={() => nav('/')}>
+        <button
+          className="modern-button"
+          onClick={() => {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("userId");
+            sessionStorage.removeItem("user");
+            navigate('/login');
+          }}
+        >
           <i className="fas fa-sign-out-alt"></i> Logout
         </button>
       </header>
- 
-      
- 
+
       <h2 className="tickets-request-title">Ticket Requests for {eventName}</h2>
- 
-      <div className="button-container" style={{ textAlign: 'center' }}>
+
+      <div className="button-container">
         <button className="primary-button" onClick={handleDownloadCustomers}>
-          Download all customers
+          Download All Customers
         </button>
       </div>
- 
+
       <div className="tickets-request-table">
         <table>
           <thead>
             <tr>
               <th>Purchaser Name</th>
               <th>Number of Tickets</th>
-              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {requests.length === 0 ? (
               <tr>
-                <td colSpan="3">No ticket requests found</td>
+                <td colSpan="2">No ticket requests found</td>
               </tr>
             ) : (
               requests.map((request) => (
                 <tr key={request.purchase_id}>
                   <td>{request.purchaser_name}</td>
                   <td>{request.number_of_tickets}</td>
-                  <td>
-                    <button
-                      className="view-proof-button"
-                      onClick={() => handleViewProof(request.proof_of_payment_url)}
-                    >
-                      View Proof
-                    </button>
-                    {request.request_status === 'pending' && (
-                      <>
-                        {/* Empty for now as per your instruction */}
-                      </>
-                    )}
-                  </td>
                 </tr>
               ))
             )}
