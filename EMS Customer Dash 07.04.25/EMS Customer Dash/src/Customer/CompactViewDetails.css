@@ -1,54 +1,54 @@
-/* CompactViewDetails.css - Modern Compact Design */
+/* CompactTicketStyles.css - Completely new CSS file for ParchasedTicket page */
 
-/* Base styles */
-.compact-details-container {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  color: #495057;
-  line-height: 1.5;
+/* Minimal styles to avoid conflicts */
+
+/* Container styles */
+.compact-container {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
 }
 
-/* Header */
+/* Header styles */
 .compact-header {
   background: linear-gradient(135deg, #2c3e50, #4ca1af);
-  padding: 12px 20px;
+  padding: 8px 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .compact-logo {
-  height: 40px;
+  height: 35px;
 }
 
 .compact-header-actions {
   display: flex;
-  gap: 10px;
+  align-items: center;
 }
 
 .compact-logout-btn {
-  background-color: rgba(255, 255, 255, 0.2);
+  background: transparent;
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 4px;
-  padding: 6px 12px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
+  gap: 5px;
+  transition: all 0.2s;
 }
 
 .compact-logout-btn:hover {
-  background-color: #4ca1af;
-  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Main content */
 .compact-content {
-  padding: 0 20px 5px;
+  padding: 0 15px 5px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
@@ -60,20 +60,21 @@
 }
 
 .compact-back-btn {
-  background-color: transparent;
-  color: #2c3e50;
-  border: none;
-  padding: 6px 12px;
+  background: transparent;
+  color: #4ca1af;
+  border: 1px solid #4ca1af;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: color 0.2s;
+  gap: 5px;
+  transition: all 0.2s;
 }
 
 .compact-back-btn:hover {
-  color: #4ca1af;
+  background-color: #f0f8ff;
 }
 
 /* Page title */
@@ -82,16 +83,18 @@
 }
 
 .compact-page-title h1 {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   color: #2c3e50;
   margin: 0;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .compact-page-title p {
-  font-size: 0.9rem;
+  margin: 0;
   color: #6c757d;
-  margin: 4px 0 0;
+  font-size: 0.85rem;
 }
 
 /* Cards */
@@ -107,77 +110,73 @@
 /* Event info card */
 .compact-event-card {
   background: linear-gradient(135deg, #2c3e50, #4ca1af);
-  color: #ffffff;
+  color: white;
   margin-bottom: 15px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .compact-event-header {
   padding: 12px 15px;
 }
 
-.compact-event-title {
-  margin-bottom: 8px;
-}
-
-.compact-event-title h1 {
-  font-size: 1.4rem;
+.compact-event-header h2 {
   margin: 0;
+  font-size: 1.1rem;
   font-weight: 600;
-  color: #ffffff;
 }
 
-.compact-event-subtitle {
-  font-size: 0.9rem;
-  margin: 4px 0 0;
-  opacity: 0.9;
-  color: #ffffff;
-}
-
-.compact-event-location {
-  padding: 0 15px 12px;
-  font-size: 0.9rem;
-  color: #ffffff;
-}
-
-.compact-event-location p {
-  margin: 4px 0;
+.compact-event-meta {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #ffffff;
-}
-
-/* Card header */
-.compact-card-header {
-  padding: 12px 15px;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.compact-card-header h2 {
-  font-size: 1.2rem;
-  color: #2c3e50;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.compact-card-header p {
+  gap: 15px;
+  margin-top: 5px;
   font-size: 0.85rem;
-  color: #6c757d;
-  margin: 4px 0 0;
 }
 
-/* Tables */
-.compact-table-responsive {
+.compact-event-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Search */
+.compact-search-container {
+  padding: 12px 15px;
+}
+
+.compact-search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.compact-search-icon {
+  position: absolute;
+  left: 10px;
+  color: #6c757d;
+}
+
+.compact-search-input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #ced4da;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.compact-search-input:focus {
+  border-color: #4ca1af;
+  box-shadow: 0 0 0 2px rgba(76, 161, 175, 0.2);
+}
+
+/* Table styles */
+.compact-table-container {
   overflow-x: auto;
 }
 
 .compact-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
 }
 
 .compact-table th {
@@ -185,99 +184,32 @@
   color: #495057;
   font-weight: 600;
   text-align: left;
-  padding: 10px;
+  padding: 12px 15px;
   border-bottom: 2px solid #e9ecef;
+  font-size: 0.9rem;
 }
 
 .compact-table td {
-  padding: 10px;
-  border-bottom: 1px solid #e9ecef;
+  padding: 12px 15px;
+  border-bottom: 1px solid #f3f4f6;
   color: #495057;
+  font-size: 0.9rem;
 }
 
-.compact-table tr:hover {
+.compact-table tbody tr:hover {
   background-color: #f8f9fa;
 }
 
-/* Package cell */
-.compact-package-cell {
-  display: flex;
-  flex-direction: column;
-}
-
-.compact-package-type {
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.compact-package-id {
-  font-size: 0.8rem;
-  color: #6c757d;
-  margin-top: 2px;
-}
-
-/* Attendee cell */
-.compact-attendee-cell {
-  display: flex;
-  flex-direction: column;
-}
-
-.compact-attendee-name {
-  font-weight: 500;
-}
-
-.compact-attendee-gender {
-  font-size: 0.8rem;
-  color: #6c757d;
-  margin-top: 2px;
-}
-
-/* Contact cell */
-.compact-contact-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.compact-contact-email,
-.compact-contact-phone {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.85rem;
-}
-
-/* Badge */
-.compact-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: #e9f7fe;
-  color: #2c3e50;
-}
-
-.compact-badge-standard {
-  background-color: #e9f7fe;
-  color: #2c3e50;
-}
-
-.compact-badge-premium {
-  background-color: #e9ecef;
-  color: #495057;
-}
-
-/* Button */
+/* Button styles */
 .compact-btn {
   border: none;
   border-radius: 4px;
-  padding: 6px 12px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
   cursor: pointer;
-  font-size: 0.9rem;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   transition: all 0.2s;
 }
 
@@ -290,103 +222,245 @@
   background-color: #3a8a98;
 }
 
-.compact-btn-outline {
-  background-color: transparent;
-  color: #4ca1af;
-  border: 1px solid #4ca1af;
-}
-
-.compact-btn-outline:hover {
-  background-color: #4ca1af;
-  color: white;
-}
-
-.compact-btn-sm {
-  padding: 4px 8px;
+/* Package badge */
+.compact-package-badge {
+  background-color: #e9f7fe;
+  color: #2c3e50;
+  padding: 4px 12px;
+  border-radius: 15px;
   font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
 }
 
-/* Download button */
-.compact-download-btn {
-  background-color: #4ca1af;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: background-color 0.2s;
-}
-
-.compact-download-btn:hover {
-  background-color: #3a8a98;
-}
-
-.compact-download-btn:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.7;
+/* Amount text */
+.compact-amount-text {
+  font-weight: 500;
 }
 
 /* Loading and error states */
-.compact-loading, .compact-error, .compact-no-tickets {
+.compact-loading,
+.compact-error,
+.compact-no-tickets {
   padding: 20px;
   text-align: center;
 }
 
-.compact-loading-spinner {
-  display: inline-block;
-  width: 30px;
-  height: 30px;
-  border: 3px solid rgba(76, 161, 175, 0.3);
-  border-radius: 50%;
-  border-top-color: #4ca1af;
-  animation: spin 1s ease-in-out infinite;
-  margin-bottom: 10px;
+.compact-loading p {
+  color: #4ca1af;
+  margin: 0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.compact-error-message {
-  color: #dc3545;
-  margin-bottom: 15px;
-}
-
-/* Total amount */
-.compact-total-section {
-  display: flex;
-  justify-content: flex-end;
-  padding: 15px;
-  border-top: 1px solid #e9ecef;
-}
-
-.compact-total-amount {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #2c3e50;
+.compact-error-text {
+  color: #e74c3c;
+  margin-bottom: 8px;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .compact-table {
+  .compact-table-container {
+    margin: 0 -15px;
+  }
+
+  .compact-event-meta {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .compact-header {
+    padding: 8px 10px;
+  }
+
+  .compact-content {
+    padding: 0 10px 5px;
+  }
+}
+
+/* Compact ticket container */
+.compact-ticket-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Compact ticket header */
+.compact-ticket-header {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  color: white;
+  padding: 20px;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 0;
+}
+
+/* Compact ticket title */
+.compact-ticket-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Compact ticket subtitle */
+.compact-ticket-subtitle {
+  margin: 5px 0 0 0;
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+/* Compact ticket content */
+.compact-ticket-content {
+  background: white;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Compact ticket search */
+.compact-ticket-search {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+/* Compact ticket table */
+.compact-ticket-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Compact ticket table header */
+.compact-ticket-table th {
+  background-color: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 15px;
+  border-bottom: 2px solid #e9ecef;
+  font-size: 0.9rem;
+}
+
+/* Compact ticket table data */
+.compact-ticket-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+/* Compact ticket table row hover */
+.compact-ticket-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Compact ticket badge */
+.compact-ticket-badge {
+  background-color: #e9f7fe;
+  color: #2c3e50;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Compact ticket button */
+.compact-ticket-btn {
+  background-color: #4ca1af;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background-color 0.2s;
+}
+
+/* Compact ticket button hover */
+.compact-ticket-btn:hover {
+  background-color: #3d8e9c;
+}
+
+/* Compact ticket empty state */
+.compact-ticket-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+}
+
+/* Compact ticket empty icon */
+.compact-ticket-empty-icon {
+  font-size: 3rem;
+  color: #e9ecef;
+  margin-bottom: 15px;
+}
+
+/* Compact ticket empty title */
+.compact-ticket-empty-title {
+  font-size: 1.2rem;
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+/* Compact ticket empty text */
+.compact-ticket-empty-text {
+  margin-bottom: 20px;
+}
+
+/* Compact ticket refresh button */
+.compact-ticket-refresh-btn {
+  background-color: #4ca1af;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* Compact ticket refresh button hover */
+.compact-ticket-refresh-btn:hover {
+  background-color: #3d8e9c;
+}
+
+/* Compact ticket loading state */
+.compact-ticket-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #4ca1af;
+}
+
+/* Compact ticket error state */
+.compact-ticket-error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  padding: 15px 20px;
+  margin: 15px 0;
+  border-radius: 4px;
+  border-left: 4px solid #ef4444;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .compact-ticket-container {
+    padding: 10px;
+  }
+
+  .compact-ticket-table {
     font-size: 0.8rem;
   }
-  
-  .compact-table th,
-  .compact-table td {
-    padding: 8px 6px;
+
+  .compact-ticket-table th,
+  .compact-ticket-table td {
+    padding: 8px 10px;
   }
-  
-  .compact-event-title h1 {
-    font-size: 1.2rem;
+
+  .compact-ticket-header {
+    padding: 15px;
   }
-  
-  .compact-card-header h2 {
-    font-size: 1.1rem;
+
+  .compact-ticket-title {
+    font-size: 1.3rem;
   }
 }

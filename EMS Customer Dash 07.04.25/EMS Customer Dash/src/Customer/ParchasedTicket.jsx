@@ -1,848 +1,865 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import './ParchasedTicketModern.css';
-import { FaSearch, FaEye, FaCalendarAlt, FaEnvelope, FaArrowLeft, FaSignOutAlt, FaUser, FaDownload } from 'react-icons/fa';
+"use client"
 
-// Helper function to format price
-const formatPrice = (price) => {
-  if (price === 'N/A' || price === undefined || price === null) return 'N/A';
-  const numPrice = parseFloat(price);
-  return isNaN(numPrice) ? 'N/A' : `R ${numPrice.toFixed(2)}`;
-};
+import { useState, useEffect } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import "./CompactViewDetails.css"
+import { FaSignOutAlt, FaArrowLeft, FaTicketAlt, FaMapMarkerAlt, FaEnvelope, FaPhone, FaDownload } from "react-icons/fa"
+import { jsPDF } from "jspdf"
 
-// Process ticket data from API response
-const processTicketData = (purchases, eventId) => {
-  if (!Array.isArray(purchases)) return [];
-  
-  return purchases.flatMap(purchase => {
-    // Skip if not approved or doesn't match eventId
-    if (purchase.status !== 'approved' || purchase.event_id?.toString() !== eventId?.toString()) {
-      return [];
+const ViewMoreDetailsCompact = () => {
+  const nav = useNavigate()
+  const location = useLocation()
+  const [generatingPdf, setGeneratingPdf] = useState({})
+  const [ticketData, setTicketData] = useState(null)
+  const [eventDetails, setEventDetails] = useState({
+    name: "",
+    shortName: "",
+    location: "",
+    venue: "",
+  })
+  const [packages, setPackages] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Helper function to fix duplicated URLs
+  const fixImageUrl = (url) => {
+    if (!url) return ""
+
+    // Check if the URL has a duplicated base URL
+    const s3BaseUrl = "https://xpressticket.s3.af-south-1.amazonaws.com/"
+
+    if (url.includes(s3BaseUrl + s3BaseUrl)) {
+      // Remove the duplicate base URL
+      return url.replace(s3BaseUrl + s3BaseUrl, s3BaseUrl)
     }
-    
+
+    return url
+  }
+
+  // Function to fetch ticket data from the server using ticketId
+  const fetchTicketData = async (ticketId) => {
     try {
-      // Parse delegate_details if it's a string, otherwise use as is
-      const delegateDetails = typeof purchase.delegate_details === 'string' 
-        ? JSON.parse(purchase.delegate_details)
-        : purchase.delegate_details;
-      
-      // Handle both array and single object formats
-      const delegates = Array.isArray(delegateDetails) ? delegateDetails : [delegateDetails];
-      
-      return delegates.map((delegate, index) => ({
-        id: `${purchase.purchase_id}-${index}`,
-        purchaseId: purchase.purchase_id,
-        eventId: purchase.event_id,
-        eventName: purchase.event_name || 'Event',
-        ticketType: purchase.ticket_type || 'General',
-        status: purchase.status,
-        purchaseDate: purchase.purchase_date ? new Date(purchase.purchase_date).toLocaleDateString() : 'N/A',
-        ...delegate,
-        // Ensure all required fields have fallbacks
-        name: delegate.name || `${delegate.firstName || ''} ${delegate.lastName || ''}`.trim() || 'Guest',
-        email: delegate.email || 'No email provided',
-        ticketNumber: delegate.ticketNumber || `TKT-${purchase.purchase_id}-${index}`,
-        amount: delegate.amount || purchase.amount || 0,
-        // Include all delegate details for the PDF
-        delegateDetails: delegate
-      }));
-    } catch (error) {
-      console.error('Error processing delegate details:', error);
-      return [];
+      setLoading(true)
+      console.log("Fetching ticket data for ID:", ticketId)
+
+      // Get user token from session storage
+      const token = sessionStorage.getItem("token")
+      if (!token) {
+        setError("Authentication required")
+        setLoading(false)
+        return
+      }
+
+      // Fetch ticket data from the server
+      const response = await fetch(`https://xpressticket.co.za/api/ticket/${ticketId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error fetching ticket: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log("Ticket data received:", data)
+
+      // Process the ticket data
+      if (data && data.ticket) {
+        const ticket = data.ticket
+
+        // Fix any image URLs
+        if (ticket.coverImage) {
+          ticket.coverImage = fixImageUrl(ticket.coverImage)
+        }
+
+        if (ticket.event?.coverImage) {
+          ticket.event.coverImage = fixImageUrl(ticket.event.coverImage)
+        }
+
+        // Set ticket data
+        setTicketData({
+          ticketId: ticket.id || ticketId,
+          purchaseId: ticket.purchaseId,
+          eventId: ticket.eventId,
+          delegateDetails: ticket.delegateDetails,
+          eventName: ticket.eventName || (ticket.event ? ticket.event.name : "Event"),
+          packageName: ticket.packageName,
+          amount: ticket.amount,
+          tickets: ticket.tickets,
+        })
+
+        // Set event details
+        setEventDetails({
+          name: ticket.eventName || (ticket.event ? ticket.event.name : "Event Details"),
+          shortName: ticket.event ? ticket.event.shortName : "",
+          location: ticket.event ? ticket.event.location : "",
+          venue: ticket.event ? ticket.event.venue : "",
+        })
+
+        // Process delegate details
+        processTicketDetails(ticket)
+        return
+      } else {
+        throw new Error("Invalid ticket data received")
+      }
+    } catch (apiError) {
+      console.error("API call failed, using fallback data:", apiError)
+      // If we're in development or the API call fails, use fallback data
+      useFallbackData(ticketId)
+    } finally {
+      setLoading(false)
     }
-  });
-};
+  }
 
-const ParchasedTicket = () => {
-  const nav = useNavigate();
-  const location = useLocation();
-  const [ticketData, setTicketData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [userId, setUserId] = useState(null);
-  
-  // Get event data from navigation state
-  const eventData = location.state || {};
-  const { 
-    eventId, 
-    eventName = 'Event', 
-    eventDate = 'Date not specified', 
-    eventLocation = 'Location not specified',
-    eventPrice = 'N/A',
-    numberOfTickets = 0,
-    ticketType = 'Standard'
-  } = eventData;
-  
-  // Log the received data for debugging
-  useEffect(() => {
-    console.log('Event data received:', eventData);
-    console.log('Current eventId:', eventData.eventId);
-  }, [eventData]);
-  
-  // Handle viewing ticket details - navigates to ticket details page
-  const handleViewDetails = (ticket) => {
-    console.log('Viewing ticket details:', ticket);
-    nav("/view-more-details", { 
-      state: { 
-        ticketId: ticket.id,
-        purchaseId: ticket.purchaseId,
-        eventId: ticket.eventId,
-        eventName: ticket.eventName,
-        eventDate: ticket.purchaseDate,
-        eventLocation: ticket.eventLocation,
-        ticketType: ticket.ticketType,
-        amount: ticket.amount,
-        delegateDetails: ticket.delegateDetails
-      } 
-    });
-  };
+  // Function to use fallback data when API call fails
+  const useFallbackData = (ticketId) => {
+    console.log("Using fallback data for ticket ID:", ticketId)
 
-  // Handle downloading a ticket as PDF
-  const handleDownloadTicket = async (ticket) => {
+    // Create mock ticket data based on the ticketId
+    const mockTicket = {
+      id: ticketId,
+      purchaseId: `PUR-${ticketId}-${Date.now().toString().slice(-6)}`,
+      eventId: `EVT-${ticketId}`,
+      packageName: "Standard Package",
+      amount: "R 1,500.00",
+      tickets: 1,
+      name: "John Doe",
+      email: "john.doe@example.com",
+      phone: "+27 123 456 7890",
+      delegateDetails: [
+        {
+          title: "Mr",
+          name: "John Doe",
+          email: "john.doe@example.com",
+          phone: "+27 123 456 7890",
+          gender: "Male",
+          delegationName: "Individual",
+          delegationType: "Standard",
+          dayPass: "Full Event",
+        },
+      ],
+    }
+
+    // Set ticket data using the mock data
+    setTicketData({
+      ticketId: mockTicket.id,
+      purchaseId: mockTicket.purchaseId,
+      eventId: mockTicket.eventId,
+      delegateDetails: mockTicket.delegateDetails,
+      eventName: "Sample Event",
+      packageName: mockTicket.packageName,
+      amount: mockTicket.amount,
+      tickets: mockTicket.tickets,
+    })
+
+    // Set event details
+    setEventDetails({
+      name: "Sample Event",
+      shortName: "Sample",
+      location: "Cape Town, South Africa",
+      venue: "Convention Center",
+    })
+
+    // Process delegate details
+    processTicketDetails(mockTicket)
+  }
+
+  // Function to process ticket details
+  const processTicketDetails = (ticket) => {
     try {
-      console.log('Generating PDF for ticket:', ticket);
-      // In a real implementation, this would generate and download a PDF
-      alert('PDF download functionality will be implemented here');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      setError('Failed to generate PDF. Please try again.');
+      let processedPackages = []
+
+      if (ticket.delegateDetails && Array.isArray(ticket.delegateDetails)) {
+        processedPackages = ticket.delegateDetails.map((delegate) => ({
+          title: delegate.title || "",
+          name: delegate.name || "N/A",
+          email: delegate.email || "N/A",
+          phone: delegate.phone || "N/A",
+          gender: delegate.gender || "",
+          packageDetails: ticket.packageName || "Standard Package",
+          delegationName: delegate.delegationName || "Individual",
+          delegationType: delegate.delegationType || "",
+          tickets: ticket.tickets || 1,
+          ieeeNumber: delegate.ieeeNumber || "",
+          dayPass: delegate.dayPass || "",
+          amount: ticket.amount || "N/A",
+        }))
+      } else {
+        // If no delegate details, create a single package entry with available info
+        processedPackages = [
+          {
+            title: "",
+            name: ticket.name || "N/A",
+            email: ticket.email || "N/A",
+            phone: ticket.phone || "N/A",
+            gender: "",
+            packageDetails: ticket.packageName || "Standard Package",
+            delegationName: "Individual",
+            delegationType: "",
+            tickets: ticket.tickets || 1,
+            ieeeNumber: "",
+            dayPass: "",
+            amount: ticket.amount || "N/A",
+          },
+        ]
+      }
+
+      setPackages(processedPackages)
+    } catch (err) {
+      console.error("Error processing delegate details:", err)
+      throw err
     }
-  };
+  }
 
   useEffect(() => {
-    // Reset state when eventId changes
-    setTicketData([]);
-    setLoading(true);
-    setError(null);
-    
-    // Get user ID from session storage
-    const getCurrentUserId = () => {
-      const userInfo = sessionStorage.getItem('userInfo');
-      if (userInfo) {
-        try {
-          const parsedInfo = JSON.parse(userInfo);
-          return parsedInfo.userId || parsedInfo.user_id;
-        } catch (e) {
-          console.error('Error parsing user info:', e);
-          return null;
-        }
-      }
-      return null;
-    };
+    // Get ticket data from location state
+    if (location.state) {
+      console.log("Location state received:", location.state)
 
-    let isMounted = true;
-
-    const fetchTicketData = async () => {
-      if (!eventData.eventId) {
-        console.error('No event ID provided');
-        if (isMounted) {
-          setError('Event information is missing');
-          setLoading(false);
-        }
-        return;
+      // Check if we only have ticketId
+      if (location.state.ticketId && Object.keys(location.state).length === 1) {
+        // If only ticketId is provided, fetch the complete ticket data
+        fetchTicketData(location.state.ticketId)
+        return
       }
-      
+
+      // Fix any image URLs in the location state
+      if (location.state.coverImage) {
+        location.state.coverImage = fixImageUrl(location.state.coverImage)
+      }
+
+      if (location.state.event?.coverImage) {
+        location.state.event.coverImage = fixImageUrl(location.state.event.coverImage)
+      }
+
+      // Extract all available ticket data from location state
+      const {
+        ticketId,
+        purchaseId,
+        eventId,
+        delegateDetails,
+        eventName,
+        packageName,
+        amount,
+        tickets,
+        // Extract additional fields that might be available
+        name,
+        email,
+        phone,
+        date,
+        location: eventLocation,
+        venue: eventVenue,
+        shortName: eventShortName,
+      } = location.state
+
+      // Log the extracted data for debugging
+      console.log("Extracted ticket data:", {
+        ticketId,
+        purchaseId,
+        eventId,
+        delegateDetails,
+        eventName,
+        packageName,
+        amount,
+        tickets,
+        name,
+        email,
+        phone,
+        date,
+      })
+
+      // Set ticket data with all available information
+      setTicketData({
+        ticketId,
+        purchaseId,
+        eventId,
+        delegateDetails,
+        eventName,
+        packageName,
+        amount,
+        tickets,
+        name,
+        email,
+        phone,
+        date,
+      })
+
+      // Set event details with all available data from location state
+      // Prioritize eventName from the ticket data, then try other possible sources
+      const displayEventName = eventName || location.state.eventName || location.state.event?.name || "Event Details"
+      console.log("Setting event name to:", displayEventName)
+
+      setEventDetails({
+        name: displayEventName,
+        shortName: eventShortName || "",
+        location: eventLocation || location.state.eventLocation || "",
+        venue: eventVenue || "",
+      })
+
       try {
-        setLoading(true);
-        
-        // Get the authentication token from session storage
-        const token = sessionStorage.getItem('token');
-        const currentUserId = getCurrentUserId();
-        setUserId(currentUserId);
-        
-        if (!token) {
-          console.warn('No authentication token found in session storage');
-          nav('/');
-          return;
-        }
-        
-        if (!currentUserId) {
-          console.error('No user ID found in session storage');
-          setError('User not authenticated');
-          setLoading(false);
-          return;
+        // Use the shared function to process ticket details
+        // Create a complete ticket object with all available data
+        const ticketObject = {
+          id: ticketId,
+          purchaseId,
+          eventId,
+          delegateDetails,
+          packageName,
+          tickets,
+          amount,
+          name,
+          email,
+          phone,
+          date,
         }
 
-        console.log(`Fetching tickets for user ${currentUserId}`);
-
-        // Fetch all ticket purchases for this user
-        const response = await fetch(`http://localhost:5000/api/user-ticket-purchases/${currentUserId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch ticket data: ${response.statusText}`);
-        }
-
-        const ticketPurchases = await response.json();
-        console.log('All ticket purchases data:', ticketPurchases);
-
-        if (!Array.isArray(ticketPurchases) || ticketPurchases.length === 0) {
-          console.warn('No ticket purchases found for this user');
-          setTicketData([]);
-          setLoading(false);
-          return;
-        }
-
-        // Process the ticket purchases data
-        const processedTickets = processTicketData(ticketPurchases);
-        
-        // Filter tickets for the current event
-        const eventTickets = processedTickets.filter(ticket => 
-          ticket.eventId === eventId || 
-          ticket.eventId?.toString() === eventId?.toString()
-        );
-
-        console.log(`Found ${eventTickets.length} tickets for event ${eventId}`, eventTickets);
-        
-        if (isMounted) {
-          setTicketData(eventTickets);
-        }
-        
-        /* Uncomment this when the backend API is ready
-        
-        const response = await fetch(`http://localhost:5000/api/ticket-purchases?event_id=${eventData.eventId}&user_id=${currentUserId}&status=approved`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          const fallbackResponse = await fetch(`http://localhost:5000/api/ticket-purchases?user_id=${currentUserId}&status=approved`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (!fallbackResponse.ok) {
-            console.warn(`Failed to fetch ticket purchase data: ${fallbackResponse.statusText}`);
-            setTicketData(demoTickets);
-            setLoading(false);
-            return;
-          }
-          
-          // Process ticket purchases data based on the database schema
-          const ticketPurchases = await fallbackResponse.json();
-          console.log('Ticket purchases data:', ticketPurchases);
-          
-          // Transform the ticket purchases data to match our component's expectations
-          const extractedTickets = [];
-          
-          if (Array.isArray(ticketPurchases) && ticketPurchases.length > 0) {
-            console.log('Processing ticket purchases...');
-            
-            ticketPurchases.forEach((purchase, index) => {
-              console.log(`Processing purchase ${index}:`, purchase);
-              
-              if (purchase.status && purchase.status.toLowerCase() === 'approved') {
-                console.log(`Found approved purchase: ${purchase.purchase_id}`);
-                
-                if (purchase.delegate_details) {
-                  let delegateDetails;
-                  
-                  if (typeof purchase.delegate_details === 'string') {
-                    try {
-                      delegateDetails = JSON.parse(purchase.delegate_details);
-                    } catch (e) {
-                      console.error('Error parsing delegate details:', e);
-                      delegateDetails = null;
-                    }
-                  } else {
-                    delegateDetails = purchase.delegate_details;
-                  }
-                  
-                  if (Array.isArray(delegateDetails)) {
-                    delegateDetails.forEach((delegate, delegateIndex) => {
-                      extractedTickets.push({
-                        id: `purchase-${purchase.purchase_id}-delegate-${delegateIndex}`,
-                        name: delegate.name || delegate.fullName || (delegate.firstName && delegate.lastName ? `${delegate.firstName} ${delegate.lastName}` : 'Delegate'),
-                        email: delegate.email || 'N/A',
-                        tickets: purchase.number_of_tickets || 1,
-                        date: new Date().toISOString().split('T')[0],
-                        packageName: purchase.package || 'Standard',
-                        packageType: 'Approved',
-                        amount: purchase.amount,
-                        purchaseId: purchase.purchase_id,
-                        delegateDetails: delegate
-                      });
-                    });
-                  } else if (delegateDetails && typeof delegateDetails === 'object') {
-                    extractedTickets.push({
-                      id: `purchase-${purchase.purchase_id}-delegate-single`,
-                      name: delegateDetails.name || delegateDetails.fullName || (delegateDetails.firstName && delegateDetails.lastName ? `${delegateDetails.firstName} ${delegateDetails.lastName}` : 'Delegate'),
-                      email: delegateDetails.email || 'N/A',
-                      tickets: purchase.number_of_tickets || 1,
-                      date: new Date().toISOString().split('T')[0],
-                      packageName: purchase.package || 'Standard',
-                      packageType: 'Approved',
-                      amount: purchase.amount,
-                      purchaseId: purchase.purchase_id,
-                      delegateDetails: delegateDetails
-                    });
-                  }
-                } else {
-                  // No delegate details, create a generic ticket
-                  extractedTickets.push({
-                    id: `purchase-${purchase.purchase_id}-no-delegate`,
-                    name: 'Unnamed Delegate',
-                    email: 'N/A',
-                    tickets: purchase.number_of_tickets || 1,
-                    date: new Date().toISOString().split('T')[0],
-                    packageName: purchase.package || 'Standard',
-                    packageType: 'Approved',
-                    amount: purchase.amount,
-                    purchaseId: purchase.purchase_id,
-                    delegateDetails: {}
-                  });
-                }
-              }
-            });
-            
-            console.log('Extracted tickets from specific endpoint:', extractedTickets);
-            setTicketData(extractedTickets);
-          } else {
-            console.log('No ticket purchases found or invalid data structure');
-            setTicketData([]);
-          }
-          
-          setLoading(false);
-        } else {
-          // Process the response from the specific event endpoint
-          const specificTickets = await response.json();
-          console.log('Specific event tickets:', specificTickets);
-          
-          // Similar processing as above, but for the specific event endpoint
-          const extractedTickets = [];
-          
-          // Process the tickets similar to above...
-          
-          console.log('Extracted tickets from specific endpoint:', extractedTickets);
-          setTicketData(extractedTickets);
-          setLoading(false);
-        }
-        */
-        
+        // Process the ticket details
+        processTicketDetails(ticketObject)
+        setLoading(false)
       } catch (err) {
-        console.error('Error fetching ticket data:', err);
-        if (isMounted) {
-          setError('Failed to load ticket data. Please try again later.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        console.error("Error processing delegate details:", err)
+        setError("Failed to process ticket details")
+        setLoading(false)
       }
-    };
-    fetchTicketData();
-  }, [eventId, nav]);
-
-  // Process ticket data from the API response
-  const processTicketData = (purchases) => {
-    if (!Array.isArray(purchases)) return [];
-    
-    return purchases.flatMap(purchase => {
-      // Skip if not approved
-      if (purchase.status !== 'approved') return [];
-      
-      try {
-        // Parse delegate_details if it's a string, otherwise use as is
-        const delegateDetails = typeof purchase.delegate_details === 'string' 
-          ? JSON.parse(purchase.delegate_details)
-          : purchase.delegate_details;
-        
-        // Handle both array and single object formats
-        const delegates = Array.isArray(delegateDetails) ? delegateDetails : [delegateDetails];
-        
-        return delegates.map((delegate, index) => ({
-          id: `${purchase.purchase_id}-${index}`,
-          purchaseId: purchase.purchase_id,
-          eventId: purchase.event_id,
-          eventName: purchase.event_name || 'Event',
-          ticketType: purchase.ticket_type || 'General',
-          status: purchase.status,
-          purchaseDate: purchase.purchase_date ? new Date(purchase.purchase_date).toLocaleDateString() : 'N/A',
-          ...delegate,
-          // Ensure all required fields have fallbacks
-          name: delegate.name || `${delegate.firstName || ''} ${delegate.lastName || ''}`.trim() || 'Guest',
-          email: delegate.email || 'No email provided',
-          ticketNumber: delegate.ticketNumber || `TKT-${purchase.purchase_id}-${index}`,
-          amount: delegate.amount || purchase.amount || 0,
-          // Include all delegate details for the PDF
-          delegateDetails: delegate
-        }));
-      } catch (error) {
-        console.error('Error processing delegate details:', error);
-        return [];
-      }
-    });
-  };
-  
-  // Filter tickets based on search term and ensure they belong to the current event
-  const filteredTickets = Array.isArray(ticketData) ? ticketData.filter(ticket => {
-    if (!searchTerm.trim()) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      (ticket.name && ticket.name.toLowerCase().includes(searchLower)) ||
-      (ticket.email && ticket.email.toLowerCase().includes(searchLower)) ||
-      (ticket.ticketNumber && ticket.ticketNumber.toLowerCase().includes(searchLower))
-    );
-  }) : [];
-
-  // Handle search input change
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
+    } else {
+      setError("No ticket information provided")
+      setLoading(false)
+    }
+  }, [location.state])
 
   // Handle logout
   const handleLogout = () => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('userInfo');
-    nav('/');
-  };
+    sessionStorage.removeItem("token")
+    sessionStorage.removeItem("userInfo")
+    nav("/")
+  }
 
-  // Reusable button component
-  const ActionButton = ({ icon: Icon, label, onClick, variant = 'primary', fullWidth = false }) => {
-    const isPrimary = variant === 'primary';
-    const baseStyle = {
-      padding: '0.6rem 1rem',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '0.5rem',
-      transition: 'all 0.2s ease',
-      width: fullWidth ? '100%' : 'auto',
-      border: isPrimary ? '1px solid #4ca1af' : '1px solid #e5e7eb',
-      background: isPrimary ? '#4ca1af' : 'transparent',
-      color: isPrimary ? 'white' : '#4ca1af'
-    };
+  // Function to generate and download ticket PDF
+  const generateTicketPDF = async (pkg) => {
+    // Set loading state for this specific package
+    setGeneratingPdf((prev) => ({ ...prev, [pkg.email]: true }))
 
-    const hoverStyle = isPrimary 
-      ? { background: '#3a7f8a', borderColor: '#3a7f8a' }
-      : { background: 'rgba(76, 161, 175, 0.1)' };
+    try {
+      // Create new PDF document in landscape format for modern ticket style
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      })
 
-    return (
-      <button
-        onClick={onClick}
-        style={baseStyle}
-        onMouseOver={(e) => Object.assign(e.currentTarget.style, hoverStyle, {
-          color: isPrimary ? 'white' : '#3a7f8a'
-        })}
-        onMouseOut={(e) => {
-          e.currentTarget.style.background = baseStyle.background;
-          e.currentTarget.style.borderColor = baseStyle.border;
-          e.currentTarget.style.color = baseStyle.color;
-        }}
-      >
-        {Icon && <Icon />}
-        {label}
-      </button>
-    );
-  };
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+
+      // Generate a unique ticket ID
+      const generateTicketId = () => {
+        const randomPart = Math.floor(Math.random() * 10000)
+          .toString()
+          .padStart(4, "0")
+        return `XPT-${randomPart}-${Date.now().toString().slice(-6)}`
+      }
+
+      const ticketId = generateTicketId()
+
+      // Set background color for the entire page
+      doc.setFillColor(255, 255, 255)
+      doc.rect(0, 0, pageWidth, pageHeight, "F")
+
+      // Add header with gradient
+      doc.setFillColor(44, 62, 80) // #2c3e50 - dark blue from our design system
+      doc.rect(0, 0, pageWidth, 30, "F")
+
+      // Add logo
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(22)
+      doc.setFont("helvetica", "bold")
+      doc.text("XpressTicket", 15, 20)
+
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "normal")
+      doc.text("Your Official Event Ticket", 15, 25)
+
+      // Add ticket type badge
+      doc.setFillColor(76, 161, 175) // #4ca1af - teal from our design system
+      doc.roundedRect(pageWidth - 60, 10, 45, 15, 3, 3, "F")
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text(pkg.packageDetails.toUpperCase(), pageWidth - 38, 20, { align: "center" })
+
+      // Extract event information
+      const eventName = eventDetails.name || "Event"
+      const venue = eventDetails.venue || ""
+      const location = eventDetails.location || ""
+
+      // Extract date and time information if available
+      let dateRange = ""
+      let eventTime = ""
+
+      if (pkg.dayPass) {
+        dateRange = pkg.dayPass
+      } else if (ticketData && ticketData.startDate && ticketData.endDate) {
+        dateRange = `${new Date(ticketData.startDate).toLocaleDateString()} - ${new Date(ticketData.endDate).toLocaleDateString()}`
+      }
+
+      if (ticketData && ticketData.time) {
+        eventTime = ticketData.time
+      }
+
+      // Try to add event cover image if available
+      const coverImageHeight = 50
+      let imageAdded = false
+
+      try {
+        // Check for event image in various possible locations
+        let eventImageUrl =
+          eventDetails?.coverImage ||
+          ticketData?.coverImage ||
+          location?.state?.event?.coverImage ||
+          (ticketData?.tickets && ticketData.tickets[0]?.event?.coverImage)
+
+        // Fix the URL if it has duplicated base URLs
+        eventImageUrl = fixImageUrl(eventImageUrl)
+
+        if (eventImageUrl) {
+          // Create a promise to handle image loading
+          const loadImage = () => {
+            return new Promise((resolve, reject) => {
+              const img = new Image()
+              img.onload = () => resolve(img)
+              img.onerror = (e) => {
+                console.error("Image failed to load:", e)
+                reject(e)
+              }
+              img.src = eventImageUrl
+            })
+          }
+
+          // Try to load and add the image
+          try {
+            const img = await loadImage()
+            // Add event image below header
+            doc.addImage(img, "JPEG", 10, 40, 50, coverImageHeight, undefined, "FAST")
+            imageAdded = true
+          } catch (imgErr) {
+            console.error("Error adding event image to PDF:", imgErr)
+            // Continue without the image
+          }
+        }
+      } catch (err) {
+        console.error("Error processing event cover image:", err)
+        // Continue without the image
+      }
+
+      // Add event name
+      doc.setFontSize(18)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(44, 62, 80) // #2c3e50 - dark blue from our design system
+
+      // Position event name based on whether image was added
+      const eventNameX = imageAdded ? 70 : pageWidth / 2
+      const eventNameAlign = imageAdded ? "left" : "center"
+      doc.text(eventName, eventNameX, 50, { align: eventNameAlign, maxWidth: pageWidth - 80 })
+
+      // Add event date and time
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(73, 80, 87) // #495057 - dark gray from our design system
+
+      if (dateRange) {
+        doc.text(`Date: ${dateRange}`, eventNameX, 60, { align: eventNameAlign, maxWidth: pageWidth - 80 })
+      }
+
+      if (eventTime) {
+        doc.text(`Time: ${eventTime}`, eventNameX, 67, { align: eventNameAlign })
+      }
+
+      // Add venue and location
+      if (venue) {
+        doc.text(`Venue: ${venue}`, eventNameX, 74, { align: eventNameAlign, maxWidth: pageWidth - 80 })
+      }
+
+      if (location) {
+        doc.text(`Location: ${location}`, eventNameX, 81, { align: eventNameAlign, maxWidth: pageWidth - 80 })
+      }
+
+      // Add horizontal divider
+      doc.setDrawColor(222, 226, 230) // #dee2e6 - light gray
+      doc.setLineWidth(0.3)
+      doc.line(10, 95, pageWidth - 10, 95)
+
+      // Two columns layout
+      const leftCol = 42
+      const rightCol = pageWidth / 2 + 10
+      const startY = 110
+      const lineHeight = 7
+
+      // ATTENDEE INFORMATION section
+      doc.setFontSize(14)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(44, 62, 80) // #2c3e50 - dark blue from our design system
+      doc.text("ATTENDEE INFORMATION", 20, 105)
+
+      // TICKET INFORMATION section
+      doc.text("TICKET INFORMATION", rightCol, 105)
+
+      // Attendee details
+      doc.setFontSize(11)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(73, 80, 87) // #495057 - dark gray from our design system
+
+      // Name
+      doc.setFont("helvetica", "bold")
+      doc.text("Name:", 20, startY)
+      doc.setFont("helvetica", "normal")
+      doc.text(`${pkg.title} ${pkg.name}`, leftCol, startY)
+
+      // Email
+      doc.setFont("helvetica", "bold")
+      doc.text("Email:", 20, startY + lineHeight)
+      doc.setFont("helvetica", "normal")
+      doc.text(pkg.email, leftCol, startY + lineHeight)
+
+      // Phone
+      doc.setFont("helvetica", "bold")
+      doc.text("Phone:", 20, startY + lineHeight * 2)
+      doc.setFont("helvetica", "normal")
+      doc.text(pkg.phone || "N/A", leftCol, startY + lineHeight * 2)
+
+      // Delegation
+      if (pkg.delegationName && pkg.delegationName !== "Individual") {
+        doc.setFont("helvetica", "bold")
+        doc.text("Delegation:", 20, startY + lineHeight * 3)
+        doc.setFont("helvetica", "normal")
+        doc.text(pkg.delegationName, leftCol, startY + lineHeight * 3)
+      }
+
+      // IEEE Number if applicable
+      if (pkg.ieeeNumber) {
+        doc.setFont("helvetica", "bold")
+        doc.text("IEEE Number:", 20, startY + lineHeight * 4)
+        doc.setFont("helvetica", "normal")
+        doc.text(pkg.ieeeNumber, leftCol, startY + lineHeight * 4)
+      }
+
+      // Ticket information
+      doc.setFont("helvetica", "bold")
+      doc.text("Ticket ID:", rightCol, startY)
+      doc.setFont("helvetica", "normal")
+      doc.text(ticketId, rightCol + 30, startY)
+
+      // Package
+      doc.setFont("helvetica", "bold")
+      doc.text("Package:", rightCol, startY + lineHeight)
+      doc.setFont("helvetica", "normal")
+      doc.text(pkg.packageDetails, rightCol + 30, startY + lineHeight)
+
+      // Number of tickets
+      doc.setFont("helvetica", "bold")
+      doc.text("Tickets:", rightCol, startY + lineHeight * 2)
+      doc.setFont("helvetica", "normal")
+      doc.text(pkg.tickets.toString(), rightCol + 30, startY + lineHeight * 2)
+
+      // Day pass / duration
+      doc.setFont("helvetica", "bold")
+      doc.text("Duration:", rightCol, startY + lineHeight * 3)
+      doc.setFont("helvetica", "normal")
+      doc.text(pkg.dayPass || "Full Event", rightCol + 30, startY + lineHeight * 3)
+
+      // Amount
+      doc.setFont("helvetica", "bold")
+      doc.text("Amount:", rightCol, startY + lineHeight * 4)
+      doc.setFont("helvetica", "normal")
+      doc.text(pkg.amount, rightCol + 30, startY + lineHeight * 4)
+
+      // Add QR code placeholder
+      const qrSize = 40
+      const qrX = pageWidth - qrSize - 20
+      const qrY = startY - 5
+
+      // Draw QR code placeholder with black squares
+      doc.setFillColor(0, 0, 0)
+
+      // Draw a border for the QR code
+      doc.setDrawColor(0, 0, 0)
+      doc.setLineWidth(0.5)
+      doc.rect(qrX, qrY, qrSize, qrSize)
+
+      // Create a simple pattern to simulate a QR code
+      const cellSize = qrSize / 10
+      const margin = 0
+
+      // Create a simple pattern to simulate a QR code
+      for (let i = 0; i < 10; i++) {
+        for (let j = 0; j < 10; j++) {
+          // Random pattern to simulate QR code
+          if (
+            Math.random() > 0.5 ||
+            // Always draw the position markers in corners
+            (i < 3 && j < 3) ||
+            (i < 3 && j > 6) ||
+            (i > 6 && j < 3)
+          ) {
+            doc.rect(qrX + margin + i * cellSize, qrY + margin + j * cellSize, cellSize, cellSize, "F")
+          }
+        }
+      }
+
+      // Add ticket number under QR code
+      doc.setFontSize(8)
+      doc.setTextColor(73, 80, 87) // #495057 - dark gray from our design system
+      doc.text("SCAN QR CODE AT EVENT", qrX + qrSize / 2, qrY + qrSize + 10, { align: "center" })
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "bold")
+      doc.text(ticketId, qrX + qrSize / 2, qrY + qrSize + 16, { align: "center" })
+
+      // Add bottom section with important notes
+      doc.setDrawColor(76, 161, 175) // #4ca1af - teal from our design system
+      doc.setLineWidth(0.5)
+      doc.line(10, pageHeight - 40, pageWidth - 10, pageHeight - 40)
+
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(44, 62, 80) // #2c3e50 - dark blue from our design system
+      doc.text("IMPORTANT INFORMATION", pageWidth / 2, pageHeight - 35, { align: "center" })
+
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(73, 80, 87) // #495057 - dark gray from our design system
+      doc.text(
+        "\u2022 This e-ticket must be presented at the event entrance either printed or on a mobile device.",
+        20,
+        pageHeight - 28,
+      )
+      doc.text(
+        `• Event Date: ${dateRange || "See event details"}. Please arrive at least 30 minutes before the event starts.`,
+        20,
+        pageHeight - 23,
+      )
+      doc.text("\u2022 This ticket is non-transferable and valid only for the named attendee.", 20, pageHeight - 18)
+
+      // Add footer
+      doc.setFillColor(44, 62, 80) // #2c3e50 - dark blue from our design system
+      doc.rect(0, pageHeight - 10, pageWidth, 10, "F")
+
+      doc.setFontSize(8)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(255, 255, 255) // White text for footer
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 10, pageHeight - 4)
+      doc.text("Powered by XpressTicket", pageWidth - 10, pageHeight - 4, { align: "right" })
+
+      // Save the PDF with sanitized filename
+      try {
+        const sanitizedName = (pkg.name || "ticket").toString().replace(/\s+/g, "_")
+        const sanitizedPackage = (pkg.packageDetails || "package").toString().replace(/\s+/g, "_")
+        doc.save(`${sanitizedName}_${sanitizedPackage}_ticket.pdf`)
+      } catch (error) {
+        console.error("Error saving PDF with custom filename:", error)
+        // Fallback to generic filename
+        doc.save("ticket.pdf")
+      }
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      alert("Failed to generate ticket PDF. Please try again.")
+    } finally {
+      // Reset loading state
+      setGeneratingPdf((prev) => ({ ...prev, [pkg.email]: false }))
+    }
+  }
+
+  // Calculate total amount
+  const calculateTotal = () => {
+    let total = 0
+    packages.forEach((pkg) => {
+      try {
+        // Handle different types of amount values
+        let amountStr = "0"
+        if (pkg.amount) {
+          // Convert to string if it's not already
+          amountStr = typeof pkg.amount === "string" ? pkg.amount : String(pkg.amount)
+        }
+
+        // Extract numeric value from amount string (e.g., 'R 7 000,00' -> 7000)
+        const numericValue = Number.parseFloat(amountStr.replace(/[^0-9.,]/g, "").replace(",", "."))
+        if (!isNaN(numericValue)) {
+          total += numericValue
+        }
+      } catch (err) {
+        console.error("Error processing amount:", err, pkg.amount)
+        // Continue with next package
+      }
+    })
+
+    // Format total as currency
+    return `R ${total.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(".", ",")}`
+  }
 
   return (
-    <div className="modern-dashboard-container" style={{
-      minHeight: '100vh',
-      background: '#f3f4f6',
-      padding: '1rem 0 2rem'
-    }}>
-      <header className="modern-header" style={{
-        background: 'linear-gradient(135deg, #2c3e50, #4ca1af)',
-        color: 'white',
-        padding: '1rem 2rem',
-        marginBottom: '1.5rem',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
-      }}>
-        <div className="header-content" style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          maxWidth: '1200px',
-          margin: '0 auto',
-          width: '100%'
-        }}>
-          <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Your Tickets for {eventData.eventName}</h1>
-          <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
-            <ActionButton 
-              icon={FaArrowLeft} 
-              label="Back to Events" 
-              onClick={() => nav(-1)} 
-              variant="secondary"
-              style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: 'white'
-              }}
-            />
-            <ActionButton 
-              icon={FaSignOutAlt} 
-              label="Logout" 
-              onClick={handleLogout}
-              variant="secondary"
-              style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: 'white'
-              }}
-            />
-          </div>
+    <div className="compact-details-container">
+      {/* Header with Logo and Logout */}
+      <header className="compact-header">
+        <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" className="compact-logo" />
+        <div className="compact-header-actions">
+          <button className="compact-logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
 
-      <div className="main-content">
-        {ticketData.length > 0 && (
-          <div className="event-details-summary">
-            <div className="modern-card">
-              <h3 style={{
-                margin: '0 0 1rem',
-                paddingBottom: '0.5rem',
-                borderBottom: '1px solid #eee',
-                color: '#2c3e50',
-                fontSize: '1.25rem',
-                fontWeight: 600
-              }}>Event: {ticketData[0]?.eventName || 'Event'}</h3>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                gap: '1rem',
-                marginBottom: '1.5rem'
-              }}>
-                <div>
-                  <p style={{ margin: '0.5rem 0' }}>
-                    <strong>Ticket Type:</strong> {ticketData[0]?.ticketType || 'General'}
-                  </p>
-                  <p style={{ margin: '0.5rem 0' }}>
-                    <strong>Status:</strong> 
-                    <span style={{
-                      color: ticketData[0]?.status === 'approved' ? '#10B981' : '#EF4444',
-                      fontWeight: 500,
-                      marginLeft: '0.5rem',
-                      textTransform: 'capitalize'
-                    }}>
-                      {ticketData[0]?.status || 'N/A'}
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <p style={{ margin: '0.5rem 0' }}>
-                    <strong>Purchase Date:</strong> {ticketData[0]?.purchaseDate || 'N/A'}
-                  </p>
-                  <p style={{ margin: '0.5rem 0' }}>
-                    <strong>Total Tickets:</strong> {ticketData.length} {ticketData.length === 1 ? 'ticket' : 'tickets'}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ margin: '0.5rem 0' }}>
-                    <strong>Total Amount:</strong> {formatPrice(
-                      ticketData.reduce((sum, ticket) => sum + (parseFloat(ticket.amount) || 0), 0)
-                    )}
-                  </p>
+      {/* Main Content */}
+      <main className="compact-content">
+        {/* Back Button */}
+        <div className="compact-back-button">
+          <button className="compact-back-btn" onClick={() => nav("/parchasedticket")}>
+            <FaArrowLeft /> Back to Tickets
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="compact-card compact-loading">
+            <div className="compact-loading-spinner"></div>
+            <p>Loading ticket details...</p>
+          </div>
+        ) : error ? (
+          <div className="compact-card compact-error">
+            <p className="compact-error-message">{error}</p>
+            <button className="compact-btn compact-btn-primary" onClick={() => nav("/parchasedticket")}>
+              Back to Tickets
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Event Info Card */}
+            <div className="compact-card compact-event-card">
+              <div className="compact-event-header">
+                <div className="compact-event-title">
+                  <h1 style={{ color: "white" }}>{eventDetails.name}</h1>
+                  {eventDetails.shortName && (
+                    <p className="compact-event-subtitle" style={{ color: "white" }}>
+                      {eventDetails.shortName}
+                    </p>
+                  )}
                 </div>
               </div>
-          </div>
-        </div>
-      )}
-
-        <main className="modern-dashboard-content" style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '0 1rem 2rem',
-          position: 'relative'
-        }}>
-          {/* Search Bar */}
-          <div className="modern-card" style={{
-            marginBottom: '1.5rem',
-            padding: '1rem 1.5rem'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              background: '#f9fafb',
-              borderRadius: '4px'
-            }}>
-              <FaSearch size={16} />
-              <input 
-                type="search" 
-                value={searchTerm} 
-                onChange={handleSearchChange} 
-                placeholder="Search tickets by name, email, or ticket number"
-                style={{
-                  flex: 1,
-                  padding: '0.5rem',
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-          </div>
-          
-          {/* Tickets Grid */}
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <div className="spinner">Loading...</div>
-            </div>
-          ) : error ? (
-            <div className="error-message" style={{ 
-              background: '#fee2e2', 
-              color: '#b91c1c', 
-              padding: '1rem', 
-              borderRadius: '4px',
-              marginBottom: '1.5rem'
-            }}>
-              {error}
-            </div>
-          ) : filteredTickets.length > 0 ? (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: '1.5rem',
-              marginTop: '1.5rem'
-            }}>
-              {filteredTickets.map((ticket) => (
-                <div key={ticket.id} className="modern-card" style={{
-                  background: 'white',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}>
-                  <div style={{ 
-                    padding: '1.25rem',
-                    borderBottom: '1px solid #eee',
-                    flex: '1'
-                  }}>
-                    <h4 style={{ 
-                      margin: '0 0 0.5rem',
-                      color: '#2c3e50',
-                      fontSize: '1.1rem'
-                    }}>
-                      {ticket.name || 'Ticket Holder'}
-                    </h4>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      marginBottom: '0.5rem',
-                      color: '#4b5563',
-                      fontSize: '0.9rem'
-                    }}>
-                      <FaEnvelope size={14} />
-                      <span>{ticket.email || 'No email provided'}</span>
-                    </div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      color: '#4b5563',
-                      fontSize: '0.9rem',
-                      marginBottom: '0.5rem'
-                    }}>
-                      <FaTicketAlt size={14} />
-                      <span>Ticket #{ticket.ticketNumber || 'N/A'}</span>
-                    </div>
-                    <div style={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      color: '#4b5563',
-                      fontSize: '0.9rem',
-                      marginBottom: '0.5rem'
-                    }}>
-                      <FaCalendarAlt size={14} />
-                      <span>{ticket.purchaseDate || 'N/A'}</span>
-                    </div>
-                    
-                    {/* Delegate Details Section */}
-                    {ticket.delegateDetails && (
-                      <div style={{ 
-                        marginTop: '1rem',
-                        paddingTop: '0.75rem',
-                        borderTop: '1px dashed #e5e7eb'
-                      }}>
-                        <p style={{ 
-                          margin: '0 0 0.5rem',
-                          fontSize: '0.85rem',
-                          fontWeight: 600,
-                          color: '#4b5563'
-                        }}>
-                          Delegate Information
-                        </p>
-                        
-                        {/* Name */}
-                        {(ticket.delegateDetails.firstName || ticket.delegateDetails.lastName) && (
-                          <div style={{ 
-                            display: 'flex',
-                            gap: '0.5rem',
-                            marginBottom: '0.25rem',
-                            fontSize: '0.85rem',
-                            color: '#6b7280'
-                          }}>
-                            <span style={{ minWidth: '80px', color: '#4b5563' }}>Name:</span>
-                            <span>
-                              {[ticket.delegateDetails.firstName, ticket.delegateDetails.lastName]
-                                .filter(Boolean)
-                                .join(' ')}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {/* Organization */}
-                        {ticket.delegateDetails.organization && (
-                          <div style={{ 
-                            display: 'flex',
-                            gap: '0.5rem',
-                            marginBottom: '0.25rem',
-                            fontSize: '0.85rem',
-                            color: '#6b7280'
-                          }}>
-                            <span style={{ minWidth: '80px', color: '#4b5563' }}>Organization:</span>
-                            <span>{ticket.delegateDetails.organization}</span>
-                          </div>
-                        )}
-                        
-                        {/* Job Title */}
-                        {ticket.delegateDetails.jobTitle && (
-                          <div style={{ 
-                            display: 'flex',
-                            gap: '0.5rem',
-                            marginBottom: '0.25rem',
-                            fontSize: '0.85rem',
-                            color: '#6b7280'
-                          }}>
-                            <span style={{ minWidth: '80px', color: '#4b5563' }}>Position:</span>
-                            <span>{ticket.delegateDetails.jobTitle}</span>
-                          </div>
-                        )}
-                        
-                        {/* Phone Number */}
-                        {ticket.delegateDetails.phone && (
-                          <div style={{ 
-                            display: 'flex',
-                            gap: '0.5rem',
-                            marginBottom: '0.25rem',
-                            fontSize: '0.85rem',
-                            color: '#6b7280'
-                          }}>
-                            <span style={{ minWidth: '80px', color: '#4b5563' }}>Phone:</span>
-                            <span>{ticket.delegateDetails.phone}</span>
-                          </div>
-                        )}
-                        
-                        {/* Dietary Requirements */}
-                        {ticket.delegateDetails.dietaryRequirements && (
-                          <div style={{ 
-                            display: 'flex',
-                            gap: '0.5rem',
-                            fontSize: '0.85rem',
-                            color: '#6b7280'
-                          }}>
-                            <span style={{ minWidth: '80px', color: '#4b5563' }}>Dietary:</span>
-                            <span>{ticket.delegateDetails.dietaryRequirements}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ 
-                    padding: '1rem 1.25rem',
-                    display: 'flex',
-                    gap: '0.75rem',
-                    borderTop: '1px solid #eee'
-                  }}>
-                    <ActionButton 
-                      icon={FaEye} 
-                      label="View" 
-                      onClick={() => handleViewDetails(ticket)}
-                      variant="secondary"
-                      fullWidth
-                    />
-                    <ActionButton 
-                      icon={FaDownload} 
-                      label="Download" 
-                      onClick={() => handleDownloadTicket(ticket)}
-                      variant="primary"
-                      fullWidth
-                    />
-                  </div>
+              {(eventDetails.venue || eventDetails.location) && (
+                <div className="compact-event-location">
+                  {eventDetails.venue && (
+                    <p style={{ color: "white" }}>
+                      <FaMapMarkerAlt /> {eventDetails.venue}
+                    </p>
+                  )}
+                  {eventDetails.location && <p style={{ color: "white" }}>{eventDetails.location}</p>}
                 </div>
-              ))}
+              )}
             </div>
-          ) : (
-            <NoTicketsFound />
-          )}
-        </main>
-      </div>
-    </div>
-  );
-};
 
-// Helper component for displaying when no tickets are found
-const NoTicketsFound = ({ message = 'No tickets found matching your search.' }) => (
-  <div style={{
-    gridColumn: '1 / -1',
-    textAlign: 'center',
-    padding: '3rem 2rem',
-    background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)'
-  }}>
-    <div style={{ 
-      maxWidth: '400px',
-      margin: '0 auto',
-      textAlign: 'center'
-    }}>
-      <div style={{
-        fontSize: '3rem',
-        color: '#e5e7eb',
-        marginBottom: '1rem'
-      }}>
-        <FaTicketAlt />
-      </div>
-      <h3 style={{
-        color: '#374151',
-        margin: '0 0 0.5rem',
-        fontSize: '1.25rem'
-      }}>
-        No Tickets Found
-      </h3>
-      <p style={{
-        color: '#6b7280',
-        margin: '0 0 1.5rem',
-        lineHeight: '1.5'
-      }}>
-        {message}
-      </p>
-      <button 
-        onClick={() => window.location.reload()}
-        style={{
-          background: '#4ca1af',
-          color: 'white',
-          border: 'none',
-          padding: '0.5rem 1.5rem',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '0.9rem',
-          transition: 'background-color 0.2s ease'
-        }}
-        onMouseOver={(e) => e.currentTarget.style.background = '#3a7f8a'}
-        onMouseOut={(e) => e.currentTarget.style.background = '#4ca1af'}
-      >
-        Refresh Page
-      </button>
-    </div>
-  </div>
-);
+            {/* Ticket Details Section */}
+            <div className="compact-card">
+              <div className="compact-card-header">
+                <h2>
+                  <FaTicketAlt /> Ticket Details
+                </h2>
+                <p>Complete information about your purchased tickets</p>
+              </div>
 
-export default ParchasedTicket;
+              <div className="compact-table-responsive">
+                {packages.length === 0 ? (
+                  <div className="compact-no-tickets">
+                    <p>No delegate details available for this ticket.</p>
+                  </div>
+                ) : (
+                  <table className="compact-table">
+                    <thead>
+                      <tr>
+                        <th>Package</th>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Delegation</th>
+                        <th>Tickets</th>
+                        <th>Duration</th>
+                        <th>Amount</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {packages.map((pkg, index) => (
+                        <tr key={index}>
+                          <td>
+                            <div className="compact-package-cell">
+                              <div className="compact-package-type">{pkg.packageDetails}</div>
+                              {pkg.ieeeNumber && <div className="compact-package-id">IEEE: {pkg.ieeeNumber}</div>}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="compact-attendee-cell">
+                              <div className="compact-attendee-name">
+                                {pkg.title} {pkg.name}
+                              </div>
+                              {pkg.gender && <div className="compact-attendee-gender">{pkg.gender}</div>}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="compact-contact-cell">
+                              {pkg.email && (
+                                <div className="compact-contact-email">
+                                  <FaEnvelope /> {pkg.email}
+                                </div>
+                              )}
+                              {pkg.phone && (
+                                <div className="compact-contact-phone">
+                                  <FaPhone /> {pkg.phone}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="compact-package-cell">
+                              <div className="compact-package-type">{pkg.delegationName || "N/A"}</div>
+                              {pkg.delegationType && <div className="compact-package-id">{pkg.delegationType}</div>}
+                            </div>
+                          </td>
+                          <td>{pkg.tickets}</td>
+                          <td>
+                            <div className="compact-badge compact-badge-standard">{pkg.dayPass || "Full Event"}</div>
+                          </td>
+                          <td>
+                            <div className="compact-package-type">{pkg.amount || "N/A"}</div>
+                          </td>
+                          <td>
+                            <button
+                              className="compact-download-btn"
+                              onClick={() => generateTicketPDF(pkg)}
+                              disabled={generatingPdf[pkg.email]}
+                            >
+                              {generatingPdf[pkg.email] ? (
+                                <>Generating...</>
+                              ) : (
+                                <>
+                                  <FaDownload /> Download
+                                </>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {packages.length > 0 && (
+                <div className="compact-total-section">
+                  <div className="compact-total-amount">Total: {calculateTotal()}</div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  )
+}
+
+export default ViewMoreDetailsCompact

@@ -1,334 +1,548 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import "./ReviewParchase.css"
-import { useNavigate } from "react-router-dom"
-import "../shared/ModernDashboard.css"
-import { FaSignOutAlt, FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaClock, FaMoneyBillWave } from "react-icons/fa"
-import { DEFAULT_IMAGE_DATA_URI } from "../utils/imageUtils"
+import { useNavigate, useLocation } from "react-router-dom"
+import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaUsers } from "react-icons/fa"
 
-function ReviewParchase() {
-  const nav = useNavigate()
-  const [purchasedEvents, setPurchasedEvents] = useState([])
+const ReviewParchase = () => {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [purchasedTickets, setPurchasedTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Get event data from navigation state (not needed for this component)
+  // const eventData = location.state || {}
+  // const { eventId, eventName, eventImage, eventDate, eventLocation, eventDescription } = eventData
+
+  // console.log("ReviewPurchase - Event Data:", eventData)
+  // console.log("ReviewPurchase - Event ID:", eventId)
 
   useEffect(() => {
     const fetchPurchasedTickets = async () => {
       try {
         setLoading(true)
+        setError(null)
+
+        // Get user ID from session storage
+        const userInfo = sessionStorage.getItem("userInfo")
+        let currentUserId = null
+
+        if (userInfo) {
+          try {
+            const parsedInfo = JSON.parse(userInfo)
+            currentUserId = parsedInfo.userId || parsedInfo.user_id
+            console.log("Fetching purchased tickets for user ID:", currentUserId)
+          } catch (e) {
+            console.error("Error parsing user info:", e)
+            setError("Error parsing user info from session")
+            return
+          }
+        }
 
         const token = sessionStorage.getItem("token")
 
         if (!token) {
-          console.warn("No authentication token found in session storage")
-          nav("/login")
+          setError("No authentication token found")
+          navigate("/")
           return
         }
 
-        // Get user ID from token
-        let userId = null
-        try {
-          const tokenPayload = JSON.parse(atob(token.split(".")[1]))
-          if (tokenPayload && tokenPayload.userId) {
-            userId = tokenPayload.userId
-          } else {
-            throw new Error("User ID not found in token")
-          }
-        } catch (e) {
-          console.error("Could not parse token for user ID:", e)
-          nav("/login")
+        if (!currentUserId) {
+          setError("User not authenticated")
           return
         }
 
-        console.log("Fetching purchased tickets for user ID:", userId)
-
-        // Fetch user's approved ticket purchases
-        const ticketPurchasesResponse = await fetch(`http://localhost:5000/api/user-ticket-purchases/${userId}`, {
+        // Fetch user ticket purchases
+        const response = await fetch(`http://localhost:5000/api/user-ticket-purchases/${currentUserId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         })
 
-        if (!ticketPurchasesResponse.ok) {
-          throw new Error(`Failed to fetch ticket purchases: ${ticketPurchasesResponse.statusText}`)
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status} - ${response.statusText}`)
         }
 
-        const ticketPurchasesData = await ticketPurchasesResponse.json()
-        console.log("User ticket purchases data:", ticketPurchasesData)
+        const data = await response.json()
+        console.log("User ticket purchases data:", data)
 
-        // If no approved tickets, show empty state
-        if (!ticketPurchasesData || ticketPurchasesData.length === 0) {
-          setPurchasedEvents([])
-          return
-        }
-
-        // Group purchases by event_id for the logged-in user
-        const eventGroups = {}
-
-        // First, filter to only include purchases for the current user
-        const userPurchases = ticketPurchasesData.filter(purchase => 
-          purchase.user_id === userId || purchase.userId === userId
-        )
+        // Filter purchases for the current user
+        const userPurchases = data.filter((purchase) => purchase.user_id === currentUserId)
 
         console.log("Filtered user purchases:", userPurchases)
 
-        // Process each purchase for the current user
+        // Group purchases by event
+        const eventGroups = {}
         userPurchases.forEach((purchase) => {
           const eventId = purchase.event_id
-          const purchaseId = purchase.purchase_id
-          
-          // Initialize event group if it doesn't exist
           if (!eventGroups[eventId]) {
             eventGroups[eventId] = {
-              eventData: purchase,
+              eventId: eventId,
+              eventName: purchase.event_name,
               purchases: [],
-              purchaseMap: new Map(), // Track unique purchases by purchase_id
               totalTickets: 0,
               totalAmount: 0,
-              latestPurchaseDate: purchase.purchase_date,
             }
           }
-          
-          // Only process this purchase if we haven't seen this purchase_id before
-          if (!eventGroups[eventId].purchaseMap.has(purchaseId)) {
-            eventGroups[eventId].purchaseMap.set(purchaseId, true)
-            eventGroups[eventId].purchases.push(purchase)
-            
-            // Update latest purchase date if this one is more recent
-            if (new Date(purchase.purchase_date) > new Date(eventGroups[eventId].latestPurchaseDate)) {
-              eventGroups[eventId].latestPurchaseDate = purchase.purchase_date
-            }
-            
-            // Add to totals for this event
-            const tickets = parseInt(purchase.number_of_tickets, 10) || 1
-            eventGroups[eventId].totalTickets += tickets
-            
-            // Safely handle amount
-            let amount = 0
+
+          eventGroups[eventId].purchases.push(purchase)
+
+          // Parse delegate details to count tickets
+          let delegateCount = 1
+          if (purchase.delegate_details) {
             try {
-              if (purchase.amount !== null && purchase.amount !== undefined) {
-                const numericAmount = 
-                  typeof purchase.amount === "string" ? Number.parseFloat(purchase.amount) : purchase.amount
-                if (!isNaN(numericAmount)) {
-                  amount = numericAmount
-                }
+              const delegates =
+                typeof purchase.delegate_details === "string"
+                  ? JSON.parse(purchase.delegate_details)
+                  : purchase.delegate_details
+
+              if (Array.isArray(delegates)) {
+                delegateCount = delegates.length
               }
-            } catch (amountError) {
-              console.warn("Error processing amount for purchase:", purchase.purchase_id, amountError)
+            } catch (e) {
+              console.error("Error parsing delegate details:", e)
             }
-            
-            eventGroups[eventId].totalAmount += amount
           }
+
+          eventGroups[eventId].totalTickets += delegateCount
+          eventGroups[eventId].totalAmount += Number.parseFloat(purchase.amount) || 0
         })
 
-        // Convert grouped data to display format
-        const eventsWithPurchaseInfo = Object.values(eventGroups).map((group) => {
-          const purchase = group.eventData
-          const isPast = new Date(purchase.event_date) < new Date()
+        // Convert to array and sort by most recent
+        const groupedTickets = Object.values(eventGroups).sort((a, b) => {
+          const aDate = Math.max(...a.purchases.map((p) => new Date(p.purchase_date).getTime()))
+          const bDate = Math.max(...b.purchases.map((p) => new Date(p.purchase_date).getTime()))
+          return bDate - aDate
+        })
 
+        console.log("Grouped tickets by event:", groupedTickets)
+
+        // Log specific event info
+        groupedTickets.forEach((group) => {
           console.log(
-            `ReviewPurchase - Event ${purchase.event_id} (${purchase.event_name}) - Total tickets: ${group.totalTickets}, Total amount: ${group.totalAmount}`,
+            `ReviewPurchase - Event ${group.eventId} (${group.eventName}) - Total tickets: ${group.totalTickets}, Total amount: ${group.totalAmount}`,
           )
-
-          return {
-            _id: purchase.event_id,
-            id: purchase.event_id,
-            name: purchase.event_name,
-            location: purchase.location || "TBA",
-            date: purchase.event_date || "TBA",
-            time: purchase.event_time || "TBA",
-            description: purchase.description || "Event description not available",
-            capacity: purchase.capacity || 0,
-            event_type: purchase.event_type || "Event",
-            file_url: purchase.file_url || DEFAULT_IMAGE_DATA_URI,
-
-            // Aggregated purchase information
-            ticketId: `ticket-${purchase.purchase_id}`,
-            ticketType: purchase.package_type || "Standard",
-            ticketPrice: group.totalAmount.toFixed(2),
-            numberOfTickets: group.totalTickets,
-            purchaseDate: group.latestPurchaseDate || new Date().toISOString(),
-            purchaseId: purchase.purchase_id,
-            status: isPast ? "Past" : "Active",
-
-            // Store all purchases for this event (in case needed for detailed view)
-            allPurchases: group.purchases,
-          }
         })
 
-        // Sort by purchase date (most recent first)
-        eventsWithPurchaseInfo.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))
-
-        setPurchasedEvents(eventsWithPurchaseInfo)
+        setPurchasedTickets(groupedTickets)
       } catch (err) {
         console.error("Error fetching purchased tickets:", err)
-        setError(err.message)
+        setError(`Failed to load purchased tickets: ${err.message}`)
       } finally {
         setLoading(false)
       }
     }
 
     fetchPurchasedTickets()
-  }, [nav])
+  }, [navigate])
+
+  const handleViewTickets = (eventGroup) => {
+    console.log("ReviewPurchase - Navigating to tickets list for event:", eventGroup)
+    navigate("/ticketslist", {
+      state: {
+        eventId: eventGroup.eventId,
+        eventName: eventGroup.eventName,
+        totalTickets: eventGroup.totalTickets,
+        totalAmount: eventGroup.totalAmount,
+        purchases: eventGroup.purchases,
+      },
+    })
+  }
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("token")
+    sessionStorage.removeItem("userInfo")
+    navigate("/")
+  }
+
+  const formatPrice = (price) => {
+    const numPrice = Number.parseFloat(price)
+    return isNaN(numPrice) ? "R 0.00" : `R ${numPrice.toFixed(2)}`
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date not available"
+    try {
+      return new Date(dateString).toLocaleDateString("en-ZA", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    } catch (e) {
+      return "Date not available"
+    }
+  }
 
   return (
-    <div className="modern-dashboard-container">
-      <header className="modern-header">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="modern-logo" />
-        <div className="modern-header-actions">
-          <button className="modern-logout-btn" onClick={() => nav("/")}>
-            <FaSignOutAlt /> Logout
-          </button>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#f8f9fa",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      }}
+    >
+      {/* Header */}
+      <header
+        style={{
+          background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
+          color: "white",
+          padding: "15px 20px",
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            maxWidth: "1200px",
+            margin: "0 auto",
+          }}
+        >
+          <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.5)",
+                borderRadius: "4px",
+                padding: "5px 10px",
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <FaArrowLeft /> Back
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.5)",
+                borderRadius: "4px",
+                padding: "5px 10px",
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="modern-back-button">
-        <button className="modern-back-btn" onClick={() => nav("/customerdash")}>
-          <FaArrowLeft /> Back to Dashboard
-        </button>
-      </div>
+      {/* Main Content */}
+      <main
+        style={{
+          padding: "20px 15px",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
+        {/* Page Title */}
+        <div style={{ marginBottom: "30px" }}>
+          <h1
+            style={{
+              fontSize: "1.8rem",
+              color: "#2c3e50",
+              margin: "0 0 10px 0",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            <FaTicketAlt /> My Purchased Tickets
+          </h1>
+          <p
+            style={{
+              margin: "0",
+              color: "#6c757d",
+              fontSize: "1rem",
+            }}
+          >
+            View and manage all your event tickets
+          </p>
+        </div>
 
-      <main className="purchase-main-content">
-        <h1 className="purchase-page-title">My Purchased Tickets</h1>
-        <p className="purchase-page-description">View all events you've purchased tickets for</p>
-
-        <div className="purchase-card-grid">
-          {loading ? (
-            <div className="purchase-loading">
-              <p>Loading your tickets...</p>
+        {/* Content */}
+        {loading ? (
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "50px",
+                height: "50px",
+                border: "4px solid #f3f3f3",
+                borderTop: "4px solid #4ca1af",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+                margin: "0 auto 20px",
+              }}
+            ></div>
+            <p style={{ color: "#4ca1af", margin: "0", fontSize: "1.1rem" }}>Loading your tickets...</p>
+          </div>
+        ) : error ? (
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                backgroundColor: "#fee2e2",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                fontSize: "24px",
+                color: "#dc2626",
+              }}
+            >
+              ⚠️
             </div>
-          ) : error ? (
-            <div className="purchase-error">
-              <p>Error loading your tickets: {error}</p>
-              <button className="purchase-retry-btn" onClick={() => window.location.reload()}>
-                Retry
-              </button>
-            </div>
-          ) : purchasedEvents.length === 0 ? (
-            <div className="purchase-no-tickets">
-              <p>You haven't purchased any tickets yet.</p>
-              <button className="purchase-browse-btn" onClick={() => nav("/eventmenu")}>
-                Browse Events
-              </button>
-            </div>
-          ) : (
-            purchasedEvents.map((event, index) => (
+            <h3 style={{ color: "#dc2626", margin: "0 0 10px 0" }}>Error Loading Tickets</h3>
+            <p style={{ color: "#6b7280", margin: "0 0 20px 0" }}>{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                backgroundColor: "#4ca1af",
+                color: "white",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "1rem",
+              }}
+            >
+              Try Again
+            </button>
+          </div>
+        ) : purchasedTickets.length > 0 ? (
+          <div
+            style={{
+              display: "grid",
+              gap: "20px",
+              gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+            }}
+          >
+            {purchasedTickets.map((eventGroup) => (
               <div
-                className="purchase-event-container"
-                key={`event-${event.id}-${index}`}
-                onClick={() =>
-                  nav("/parchasedticket", {
-                    state: {
-                      eventId: event.id || event._id,
-                      eventName: event.name,
-                      eventDate: event.date,
-                      eventLocation: event.location,
-                      eventPrice: event.ticketPrice,
-                      numberOfTickets: event.numberOfTickets,
-                      ticketType: event.ticketType,
-                      purchaseDate: event.purchaseDate,
-                      purchaseId: event.purchaseId,
-                    },
-                  })
-                }
+                key={eventGroup.eventId}
+                style={{
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+                  overflow: "hidden",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)"
+                  e.currentTarget.style.boxShadow = "0 8px 25px rgba(0, 0, 0, 0.12)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)"
+                  e.currentTarget.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.08)"
+                }}
               >
-                <div className="purchase-event-card">
-                  <div
-                    className={`purchase-event-status ${event.status === "Past" ? "purchase-event-status-past" : ""}`}
+                {/* Event Header */}
+                <div
+                  style={{
+                    background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
+                    color: "white",
+                    padding: "20px",
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: "0 0 10px 0",
+                      fontSize: "1.3rem",
+                      fontWeight: "600",
+                    }}
                   >
-                    {event.status}
-                  </div>
-                  <div className="purchase-event-image-container">
-                    <img
-                      src={event.file_url || DEFAULT_IMAGE_DATA_URI}
-                      alt={event.name}
-                      className="purchase-event-image"
-                      onError={(e) => {
-                        if (e.target.src !== DEFAULT_IMAGE_DATA_URI) {
-                          console.warn(`Failed to load image for event ${event.id || event._id}: ${e.target.src}`)
-                          e.target.src = DEFAULT_IMAGE_DATA_URI
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="purchase-event-title-container">
-                    <h3 className="purchase-event-title">{event.name}</h3>
+                    {eventGroup.eventName}
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "15px",
+                      fontSize: "0.9rem",
+                      opacity: "0.9",
+                    }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <FaTicketAlt />
+                      {eventGroup.totalTickets} {eventGroup.totalTickets === 1 ? "ticket" : "tickets"}
+                    </span>
+                    <span>Total: {formatPrice(eventGroup.totalAmount)}</span>
                   </div>
                 </div>
 
-                <div className="purchase-event-details-card">
-                  <div className="purchase-event-detail-item">
-                    <FaMapMarkerAlt className="purchase-event-icon" />
-                    <span>{event.location || "TBA"}</span>
-                  </div>
-                  <div className="purchase-event-detail-item">
-                    <FaCalendarAlt className="purchase-event-icon" />
-                    <span>{event.date || "TBA"}</span>
-                  </div>
-                  <div className="purchase-event-detail-item">
-                    <FaClock className="purchase-event-icon" />
-                    <span>{event.time || "TBA"}</span>
-                  </div>
-                  <div className="purchase-event-detail-item purchase-event-price">
-                    <FaMoneyBillWave className="purchase-event-icon" />
-                    <span>R {event.ticketPrice || "N/A"}</span>
-                  </div>
-                  <div className="purchase-event-detail-item">
-                    <span className="purchase-ticket-count">
-                      {event.numberOfTickets} ticket{event.numberOfTickets !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="purchase-button-group">
-                    <button 
-                      className="purchase-view-tickets-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        nav("/parchasedticket", {
-                          state: {
-                            eventId: event.id || event._id,
-                            eventName: event.name,
-                            eventDate: event.date,
-                            eventLocation: event.location,
-                            eventPrice: event.ticketPrice,
-                            numberOfTickets: event.numberOfTickets,
-                            ticketType: event.ticketType,
-                            purchaseDate: event.purchaseDate,
-                            purchaseId: event.purchaseId,
-                          },
-                        });
+                {/* Event Details */}
+                <div style={{ padding: "20px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        color: "#6b7280",
+                        fontSize: "0.9rem",
                       }}
                     >
-                      View Tickets
-                    </button>
-                    <button
-                      className="purchase-invoice-btn"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        nav("/invoice", {
-                          state: {
-                            eventId: event.id || event._id,
-                            eventName: event.name,
-                            eventDate: event.date,
-                            eventLocation: event.location,
-                            eventPrice: `R ${event.ticketPrice || "N/A"}`,
-                            numberOfTickets: event.numberOfTickets,
-                            purchaseId: event.purchaseId,
-                            ticketType: event.ticketType,
-                          },
-                        })
+                      <FaCalendarAlt />
+                      <span>
+                        Latest Purchase:{" "}
+                        {formatDate(Math.max(...eventGroup.purchases.map((p) => new Date(p.purchase_date).getTime())))}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        color: "#6b7280",
+                        fontSize: "0.9rem",
                       }}
                     >
-                      Invoice
-                    </button>
+                      <FaUsers />
+                      <span>
+                        {eventGroup.purchases.length} purchase{eventGroup.purchases.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Action Button */}
+                  <button
+                    onClick={() => handleViewTickets(eventGroup)}
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#4ca1af",
+                      color: "white",
+                      border: "none",
+                      padding: "12px 20px",
+                      borderRadius: "8px",
+                      fontSize: "1rem",
+                      fontWeight: "500",
+                      cursor: "pointer",
+                      transition: "background-color 0.2s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = "#3d8e9c"
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = "#4ca1af"
+                    }}
+                  >
+                    <FaTicketAlt /> View Tickets
+                  </button>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                backgroundColor: "#f3f4f6",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                fontSize: "32px",
+                color: "#9ca3af",
+              }}
+            >
+              🎫
+            </div>
+            <h3 style={{ color: "#374151", margin: "0 0 10px 0", fontSize: "1.4rem" }}>No Tickets Found</h3>
+            <p style={{ color: "#6b7280", margin: "0 0 30px 0", fontSize: "1rem" }}>
+              You haven't purchased any tickets yet. Browse events to get started!
+            </p>
+            <button
+              onClick={() => navigate("/eventmenu")}
+              style={{
+                backgroundColor: "#4ca1af",
+                color: "white",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "8px",
+                fontSize: "1rem",
+                fontWeight: "500",
+                cursor: "pointer",
+                transition: "background-color 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = "#3d8e9c"
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = "#4ca1af"
+              }}
+            >
+              Browse Events
+            </button>
+          </div>
+        )}
       </main>
+
+      {/* Loading Animation Keyframes */}
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     </div>
   )
 }
