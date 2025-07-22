@@ -18,7 +18,7 @@ function NewCustomerDash() {
       title: "My Purchases",
       description: "View and manage your ticket purchases",
       image: "/Customer.jpg",
-      path: "/reviewparchase",
+      path: "/reviewpurchase",
       icon: <FaShoppingBag />
     }
   ];

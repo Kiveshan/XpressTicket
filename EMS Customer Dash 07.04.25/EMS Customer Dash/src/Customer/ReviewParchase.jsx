@@ -30,8 +30,13 @@ const ReviewPurchase = () => {
           } catch (e) {
             console.error("Error parsing user info:", e)
             setError("Error parsing user info from session")
+            setLoading(false)
             return
           }
+        } else {
+          setError("No user information found")
+          navigate("/")
+          return
         }
 
         const token = sessionStorage.getItem("token")
@@ -44,6 +49,7 @@ const ReviewPurchase = () => {
 
         if (!currentUserId) {
           setError("User not authenticated")
+          navigate("/")
           return
         }
 
@@ -53,10 +59,17 @@ const ReviewPurchase = () => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+          credentials: "include",
         })
 
         if (!response.ok) {
-          throw new Error(`API Error: ${response.status} - ${response.statusText}`)
+          if (response.status === 401) {
+            throw new Error("Unauthorized: Please log in again")
+          } else if (response.status === 403) {
+            throw new Error("Forbidden: You do not have permission to access this resource")
+          } else {
+            throw new Error(`API Error: ${response.status} - ${response.statusText}`)
+          }
         }
 
         const data = await response.json()
@@ -85,10 +98,10 @@ const ReviewPurchase = () => {
           if (!eventGroups[eventId]) {
             eventGroups[eventId] = {
               eventId: eventId,
-              eventName: purchase.event_name,
-              eventLocation: purchase.event_location,
-              eventDate: purchase.event_date,
-              eventImage: purchase.file_url || "/default-event-image.jpg", // Use file_url from backend
+              eventName: purchase.event_name || "Unknown Event",
+              eventLocation: purchase.event_location || "Location not specified",
+              eventDate: purchase.event_date || null,
+              eventImage: purchase.file_url || "/default-event-image.jpg",
               purchases: [],
               totalTickets: 0,
               totalAmount: 0,
@@ -182,6 +195,12 @@ const ReviewPurchase = () => {
         totalTickets: eventGroup.totalTickets,
         totalAmount: eventGroup.totalAmount,
         purchases: eventGroup.purchases,
+        eventInfo: {
+          eventName: eventGroup.eventName,
+          eventLocation: eventGroup.eventLocation,
+          eventDate: eventGroup.eventDate,
+          eventImage: eventGroup.eventImage,
+        },
       },
     })
   }
@@ -221,6 +240,8 @@ const ReviewPurchase = () => {
       e.target.classList.add("image-error")
     }
   }
+
+  console.log("Rendering ReviewPurchase", { purchasedTickets, loading, error })
 
   return (
     <div className="modern-dashboard-container">
@@ -332,7 +353,7 @@ const ReviewPurchase = () => {
             <h3 style={{ color: "#dc2626", margin: "0 0 10px 0" }}>Error Loading Tickets</h3>
             <p style={{ color: "#6b7280", margin: "0 0 20px 0" }}>{error}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => navigate("/customerdash")}
               style={{
                 backgroundColor: "#4ca1af",
                 color: "white",
@@ -343,7 +364,7 @@ const ReviewPurchase = () => {
                 fontSize: "1rem",
               }}
             >
-              Try Again
+              Back to Dashboard
             </button>
           </div>
         ) : purchasedTickets.length > 0 ? (
