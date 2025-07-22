@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaUsers, FaMapMarkerAlt } from "react-icons/fa"
 import "../shared/ModernDashboard.css"
 
 const ReviewPurchase = () => {
   const navigate = useNavigate()
-  const [purchases, setPurchases] = useState([])
+  const [purchasedTickets, setPurchasedTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -15,13 +15,23 @@ const ReviewPurchase = () => {
     fetchPurchases()
   }, [])
 
+  const getLatestPurchaseDate = (purchases) => {
+    if (!purchases || purchases.length === 0) return 0;
+    const dates = purchases.map(p => new Date(p.purchase_date || p.created_at || 0).getTime());
+    return Math.max(...dates);
+  }
+
   const fetchPurchases = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
       const userInfo = JSON.parse(sessionStorage.getItem("userInfo"))
       const token = sessionStorage.getItem("token")
 
       if (!userInfo || !token) {
         setError("Please log in to view your purchases")
+        setLoading(false)
         return
       }
 
@@ -43,99 +53,75 @@ const ReviewPurchase = () => {
       const data = await response.json()
       console.log("User ticket purchases data:", data)
 
-      if (Array.isArray(data)) {
-        // Filter to only show approved purchases
-        const approvedPurchases = data.filter((purchase) => purchase.purchase_status === "Approved")
-        console.log("Filtered approved purchases:", approvedPurchases)
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid data format received from server")
+      }
 
-        const data = await response.json()
-        console.log("User ticket purchases data:", data)
+      // Filter to only show approved purchases for the current user
+      const userPurchases = data.filter(
+        (purchase) => purchase.purchase_status === "Approved" && purchase.user_id === userId
+      )
 
-        // Filter purchases for the current user
-        const userPurchases = data.filter((purchase) => purchase.user_id === currentUserId)
+      console.log("Filtered user purchases:", userPurchases)
 
-        console.log("Filtered user purchases:", userPurchases)
+      // Remove duplicates based on purchase_id
+      const uniquePurchases = userPurchases.reduce((acc, current) => {
+        const existingPurchase = acc.find((item) => item.purchase_id === current.purchase_id)
+        return existingPurchase ? acc : [...acc, current]
+      }, [])
 
-        // Remove duplicates based on purchase_id
-        const uniquePurchases = userPurchases.reduce((acc, current) => {
-          const existingPurchase = acc.find((item) => item.purchase_id === current.purchase_id)
-          if (!existingPurchase) {
-            acc.push(current)
+      console.log("Unique purchases after deduplication:", uniquePurchases)
+
+      // Group purchases by event
+      const eventGroups = {}
+      uniquePurchases.forEach((purchase) => {
+        const eventId = purchase.event_id
+        if (!eventGroups[eventId]) {
+          eventGroups[eventId] = {
+            eventId: eventId,
+            eventName: purchase.event_name,
+            eventLocation: purchase.event_location,
+            eventDate: purchase.event_date,
+            eventImage: purchase.file_url || "/default-event-image.jpg",
+            purchases: [],
+            totalTickets: 0,
+            totalAmount: 0,
           }
-          return acc
-        }, [])
+        }
 
-        console.log("Unique purchases after deduplication:", uniquePurchases)
+        eventGroups[eventId].purchases.push(purchase)
 
-        // Group purchases by event
-        const eventGroups = {}
-        uniquePurchases.forEach((purchase) => {
-          const eventId = purchase.event_id
-          if (!eventGroups[eventId]) {
-            eventGroups[eventId] = {
-              eventId: eventId,
-              eventName: purchase.event_name,
-              eventLocation: purchase.event_location,
-              eventDate: purchase.event_date,
-              eventImage: purchase.file_url || "/default-event-image.jpg", // Use file_url from backend
-              purchases: [],
-              totalTickets: 0,
-              totalAmount: 0,
-            }
-          }
+        // Parse delegate details to count tickets
+        let delegateCount = 1
+        if (purchase.delegate_details) {
+          try {
+            const delegates =
+              typeof purchase.delegate_details === "string"
+                ? JSON.parse(purchase.delegate_details)
+                : purchase.delegate_details
 
-          eventGroups[eventId].purchases.push(purchase)
-
-          // Parse delegate details to count tickets
-          let delegateCount = 1
-          if (purchase.delegate_details) {
-            try {
-              const delegates =
-                typeof purchase.delegate_details === "string"
-                  ? JSON.parse(purchase.delegate_details)
-                  : purchase.delegate_details
-
-              if (Array.isArray(delegates)) {
-                delegateCount = delegates.length
-              } else if (typeof delegates === "object" && delegates !== null) {
-                delegateCount = 1
-              }
-            } catch (e) {
-              console.error("Error parsing delegate details:", e)
-              delegateCount = purchase.number_of_tickets || 1
-            }
-          } else {
+            delegateCount = Array.isArray(delegates) ? delegates.length : 1
+          } catch (e) {
+            console.error("Error parsing delegate details:", e)
             delegateCount = purchase.number_of_tickets || 1
           }
+        } else {
+          delegateCount = purchase.number_of_tickets || 1
+        }
 
-          eventGroups[eventId].totalTickets += delegateCount
-          eventGroups[eventId].totalAmount += Number.parseFloat(purchase.amount) || 0
-        })
+        eventGroups[eventId].totalTickets += delegateCount
+        eventGroups[eventId].totalAmount += Number.parseFloat(purchase.amount) || 0
+      })
 
-        // Convert to array and sort by most recent
-        const groupedTickets = Object.values(eventGroups).sort((a, b) => {
-          const aDate = getLatestPurchaseDate(a.purchases)
-          const bDate = getLatestPurchaseDate(b.purchases)
-          return bDate - aDate
-        })
+      // Convert to array and sort by most recent
+      const groupedTickets = Object.values(eventGroups).sort((a, b) => {
+        const aDate = getLatestPurchaseDate(a.purchases)
+        const bDate = getLatestPurchaseDate(b.purchases)
+        return bDate - aDate
+      })
 
-        console.log("Grouped tickets by event:", groupedTickets)
-
-        // Log specific event info
-        groupedTickets.forEach((group) => {
-          console.log(
-            `ReviewPurchase - Event ${group.eventId} (${group.eventName}) - Total tickets: ${group.totalTickets}, Total amount: ${group.totalAmount}`,
-          )
-          console.log(`Number of unique purchases: ${group.purchases.length}`)
-        })
-
-        setPurchasedTickets(groupedTickets)
-      } catch (err) {
-        console.error("Error fetching purchased tickets:", err)
-        setError(`Failed to load purchased tickets: ${err.message}`)
-      } finally {
-        setLoading(false)
-      }
+      console.log("Grouped tickets by event:", groupedTickets)
+      setPurchasedTickets(groupedTickets)
     } catch (err) {
       console.error("Error fetching purchases:", err)
       setError(`Failed to load purchases: ${err.message}`)
