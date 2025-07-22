@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -41,13 +42,10 @@ const ViewEventRequest = () => {
     try {
       console.log("ViewEventRequest formatDate input:", dateString);
       
-      // Handle both ISO timestamp and YYYY-MM-DD format
       if (dateString.includes('T')) {
-        // If it's an ISO string, extract just the YYYY-MM-DD part
         dateString = dateString.split('T')[0];
       }
 
-      // Handle cases where dateString might already be in DD/MM/YYYY format
       if (dateString.includes('/')) {
         const [day, month, year] = dateString.split('/');
         if (day && month && year) {
@@ -55,14 +53,12 @@ const ViewEventRequest = () => {
         }
       }
 
-      // Directly split the YYYY-MM-DD string (same as EventRequest.jsx)
       const [year, month, day] = dateString.split('-');
       
       if (!year || !month || !day || year.length !== 4) {
         throw new Error("Invalid date format");
       }
 
-      // Format as DD/MM/YYYY without creating a Date object
       return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
     } catch (error) {
       console.error("ViewEventRequest date formatting error:", error, "Input:", dateString);
@@ -115,8 +111,8 @@ const ViewEventRequest = () => {
 
         const data = await response.json()
         console.log("ViewEventRequest fetched event data:", JSON.stringify(data, null, 2))
+        console.log("Packages data:", data.packages)
 
-        // Map backend fields to frontend state with formatted dates
         setEventData({
           event_name: data.name || "",
           location: data.location || "",
@@ -148,7 +144,6 @@ const ViewEventRequest = () => {
     fetchEvent()
   }, [eventid, navigate])
 
-  // Section navigation handlers
   const showEventInfo = () => setCurrentSection("eventInfo")
   const showClientTypes = () => setCurrentSection("clientTypes")
   const showPackagesTabs = () => setCurrentSection("packagesTabs")
@@ -157,8 +152,38 @@ const ViewEventRequest = () => {
   if (loading) {
     return (
       <div className="modern-loading-overlay">
-        <div className="view-empty-state-icon">⏳</div>
-        <p>Loading event details...</p>
+        <header className="view-event-header">
+          <div className="header-left">
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="modern-logo"
+            />
+            <div className="view-section-nav">
+              <button
+                className="view-nav-button"
+                onClick={() => navigate("/event-request")}
+              >
+                <i className="fas fa-arrow-left"></i> Back to Events
+              </button>
+            </div>
+          </div>
+          <button
+            className="modern-button"
+            onClick={() => {
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("userId");
+              sessionStorage.removeItem("user");
+              navigate("/login");
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </header>
+        <div className="loading-content">
+          <div className="view-empty-state-icon">⏳</div>
+          <p>Loading event details...</p>
+        </div>
       </div>
     )
   }
@@ -166,6 +191,34 @@ const ViewEventRequest = () => {
   if (error) {
     return (
       <div className="view-event-container">
+        <header className="view-event-header">
+          <div className="header-left">
+            <img
+              src="/XPRESS TICKETS LOGO2.png"
+              alt="EventXpress Logo"
+              className="modern-logo"
+            />
+            <div className="view-section-nav">
+              <button
+                className="view-nav-button"
+                onClick={() => navigate("/event-request")}
+              >
+                <i className="fas fa-arrow-left"></i> Back to Events
+              </button>
+            </div>
+          </div>
+          <button
+            className="modern-button"
+            onClick={() => {
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("userId");
+              sessionStorage.removeItem("user");
+              navigate("/login");
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </header>
         <div className="view-event-card">
           <div className="view-empty-state">
             <div className="view-empty-state-icon">❌</div>
@@ -178,12 +231,20 @@ const ViewEventRequest = () => {
 
   return (
     <div className="view-event-container">
-      <div className="view-event-card">
-        <div className="view-event-header">
-          <button className="backbutton20" onClick={() => navigate("/event-request")}>
-            <i className="fas fa-arrow-left"></i> Back to Events
-          </button>
+      <header className="view-event-header">
+        <div className="header-left">
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="modern-logo"
+          />
           <div className="view-section-nav">
+            <button
+              className="view-nav-button"
+              onClick={() => navigate("/event-request")}
+            >
+              <i className="fas fa-arrow-left"></i> Back to Events
+            </button>
             <button
               className={`view-nav-button ${currentSection === "eventInfo" ? "active" : ""}`}
               onClick={showEventInfo}
@@ -210,7 +271,20 @@ const ViewEventRequest = () => {
             </button>
           </div>
         </div>
+        <button
+          className="modern-button"
+          onClick={() => {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("userId");
+            sessionStorage.removeItem("user");
+            navigate("/login");
+          }}
+        >
+          <i className="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </header>
 
+      <div className="view-event-card">
         <div className="view-section-content">
           {/* Section 1: Event Information */}
           {currentSection === "eventInfo" && (
@@ -376,50 +450,46 @@ const ViewEventRequest = () => {
                     <div className="view-packages-list">
                       {packages.map((pkg, idx) => (
                         <div key={idx} className="view-package-card">
-                          <div className="view-package-header">Package {idx + 1}</div>
+                          <div className="view-package-header">{pkg.name || `Package ${idx + 1}`}</div>
                           <div className="view-package-details">
                             <div className="view-package-grid">
                               <div className="view-package-item">
-                                <div className="view-package-item-label">Select Type</div>
-                                <div className="view-package-item-value">{pkg.selectType}</div>
+                                <div className="view-package-item-label">Name</div>
+                                <div className="view-package-item-value">{pkg.name || "N/A"}</div>
                               </div>
                               <div className="view-package-item">
-                                <div className="view-package-item-label">Package Type</div>
-                                <div className="view-package-item-value">{pkg.packageType}</div>
+                                <div className="view-package-item-label">Type</div>
+                                <div className="view-package-item-value">{pkg.type || "N/A"}</div>
                               </div>
                               <div className="view-package-item">
                                 <div className="view-package-item-label">Location</div>
-                                <div className="view-package-item-value">{pkg.location}</div>
+                                <div className="view-package-item-value">{pkg.location || "N/A"}</div>
                               </div>
                               <div className="view-package-item">
                                 <div className="view-package-item-label">Duration</div>
-                                <div className="view-package-item-value">{pkg.duration}</div>
+                                <div className="view-package-item-value">{pkg.duration || "N/A"}</div>
+                              </div>
+                              <div className="view-package-item">
+                                <div className="view-package-item-label">Pricing</div>
+                                <div className="view-package-item-value">R {pkg.price || "0.00"}</div>
                               </div>
                               <div className="view-package-item view-package-dates">
                                 <div className="view-package-item-label">Date Choices</div>
                                 <div className="view-package-date-range">
                                   <div className="view-package-date-item">
                                     <span className="view-package-date-label">Start Date:</span>
-                                    <span className="view-package-date-value">
-                                      {pkg.startDate ? formatDate(pkg.startDate) : "N/A"}
-                                    </span>
+                                    <span className="view-package-date-value">{pkg.startDate || "N/A"}</span>
                                   </div>
                                   <div className="view-package-date-item">
                                     <span className="view-package-date-label">End Date:</span>
-                                    <span className="view-package-date-value">
-                                      {pkg.endDate ? formatDate(pkg.endDate) : "N/A"}
-                                    </span>
+                                    <span className="view-package-date-value">{pkg.endDate || "N/A"}</span>
                                   </div>
                                 </div>
-                              </div>
-                              <div className="view-package-item">
-                                <div className="view-package-item-label">Pricing</div>
-                                <div className="view-package-item-value">R {pkg.pricing}</div>
                               </div>
                             </div>
                             <div className="view-package-description">
                               <div className="view-package-description-title">Package Details</div>
-                              <div className="view-package-description-text">{pkg.details}</div>
+                              <div className="view-package-description-text">{pkg.details || "No details provided"}</div>
                             </div>
                           </div>
                         </div>

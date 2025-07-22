@@ -8,55 +8,26 @@
   border-bottom: 1px solid #e9ecef;
 }
 
-/* Action buttons container */
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 /* Button variants */
 .primary-button {
-  background: linear-gradient(135deg, #2c3e50, #4ca1af); /* Blue gradient from previous response */
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 12px 24px;
   border-radius: 6px;
   font-weight: 600;
+  font-size: 1rem;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   transition: all 0.2s ease;
+  margin: 1rem auto;
+  display: block;
+  max-width: 300px;
 }
 
 .primary-button:hover {
-  background-color: #2c3e50; /* Darker blue on hover */
+  background: #2c3e50;
   transform: translateY(-2px);
-}
-
-.info-button {
-  background-color: #17a2b8;
-  color: white;
-}
-
-.info-button:hover {
-  background-color: #138496;
-}
-
-.success-button {
-  background-color: #28a745; /* Green from previous response */
-  color: white;
-}
-
-.success-button:hover {
-  background-color: #218838; /* Darker green on hover */
-}
-
-.danger-button {
-  background-color: #dc3545;
-  color: white;
-}
-
-.danger-button:hover {
-  background-color: #c82333;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
 
 /* Ticket count badge */
@@ -78,6 +49,43 @@
   font-size: 1rem;
 }
 
+/* Custom button container for centering */
+.button-container {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+/* Table styles */
+.tickets-request-table {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.tickets-request-table th {
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  color: white;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.tickets-request-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+  color: #4a5568;
+}
+
+.tickets-request-table tr:hover {
+  background: #f1f5f9;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .modern-card-header {
@@ -85,46 +93,46 @@
     align-items: flex-start;
     gap: 15px;
   }
-  
-  .action-buttons {
-    flex-direction: column;
-    width: 100%;
+
+  .tickets-request-table {
+    width: 95%;
   }
-  
-  .action-buttons .modern-button {
+
+  .primary-button {
     width: 100%;
-    margin-bottom: 5px;
+    max-width: 250px;
   }
 }
 
-/* Custom button container for centering */
-.button-container {
-  text-align: center;
-  margin: 1rem 0;
+@media (max-width: 640px) {
+  .tickets-request-table th,
+  .tickets-request-table td {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
 }
 
-/* Existing styles remain unchanged, adding only the new border styling */
-
-/* View Proof Button with Green Border */
-.view-proof-button {
-  background-color: #ffffff; /* Default background to contrast with border */
-  color: #28a745; /* Green text to match border */
-  border: 2px solid #28a745; /* Green border */
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
+/* Loading and error states */
+.modern-loading-overlay {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: white;
+  padding: 20px;
 }
 
-.view-proof-button:hover {
-  background-color: #e6f7e6; /* Light green background on hover */
-  color: #218838; /* Darker green text on hover */
-  border-color: #218838; /* Darker green border on hover */
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.loading-content,
+.error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
 }
 
-/* Ensure other existing styles are preserved */
-/* ... (rest of your existing CSS, e.g., table, container styles) ... */
+.view-empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+  color: #4ca1af;
+}

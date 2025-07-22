@@ -5,7 +5,7 @@ import { format } from "date-fns"
 import "./RehostEventDetails.css"
 
 const RehostEventDetails = () => {
-  const nav = useNavigate()
+  const navigate = useNavigate()
   const location = useLocation()
   const { eventid } = location.state || {}
   const [event, setEvent] = useState(null)
@@ -79,7 +79,7 @@ const RehostEventDetails = () => {
         const token = sessionStorage.getItem("token")
         if (!token) {
           setError("No authentication token found. Please log in.")
-          nav("/login")
+          navigate("/login")
           return
         }
 
@@ -102,7 +102,7 @@ const RehostEventDetails = () => {
             sessionStorage.removeItem("token")
             sessionStorage.removeItem("userId")
             sessionStorage.removeItem("user")
-            nav("/login")
+            navigate("/login")
             return
           }
           throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`)
@@ -140,7 +140,7 @@ const RehostEventDetails = () => {
       setError("No event ID provided.")
       setLoading(false)
     }
-  }, [eventid, nav])
+  }, [eventid, navigate])
 
   const handleInputChange = (e, index = null) => {
     const { name, value } = e.target
@@ -177,7 +177,7 @@ const RehostEventDetails = () => {
       const token = sessionStorage.getItem("token")
       if (!token) {
         setSubmitError("No authentication token found. Please log in.")
-        nav("/login")
+        navigate("/login")
         return
       }
 
@@ -287,7 +287,7 @@ const RehostEventDetails = () => {
       setSubmitSuccess("Event rehost request submitted successfully. Awaiting admin approval.")
 
       setTimeout(() => {
-        nav("/rehost-event")
+        navigate("/rehost-event")
       }, 3000)
     } catch (err) {
       console.error("Submit error:", err)
@@ -302,22 +302,22 @@ const RehostEventDetails = () => {
       <div className="container12">
         <header className="modern-header">
           <div className="header-left">
-            <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+            <button className="backbutton20" onClick={() => navigate("/rehost-event")}>
               Back
             </button>
             <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
           </div>
           <div className="profile-section">
             <button
-              className="backbutton22"
+              className="modern-button"
               onClick={() => {
                 sessionStorage.removeItem("token")
                 sessionStorage.removeItem("userId")
                 sessionStorage.removeItem("user")
-                nav("/login")
+                navigate("/login")
               }}
             >
-              LogOut
+              <i className="fas fa-sign-out-alt"></i> Logout
             </button>
           </div>
         </header>
@@ -334,22 +334,22 @@ const RehostEventDetails = () => {
       <div className="container12">
         <header className="modern-header">
           <div className="header-left">
-            <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+            <button className="backbutton20" onClick={() => navigate("/rehost-event")}>
               Back
             </button>
             <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
           </div>
           <div className="profile-section">
             <button
-              className="backbutton22"
+              className="modern-button"
               onClick={() => {
                 sessionStorage.removeItem("token")
                 sessionStorage.removeItem("userId")
-                sessionStorage.removeUser("user")
-                nav("/login")
+                sessionStorage.removeItem("user")
+                navigate("/login")
               }}
             >
-              LogOut
+              <i className="fas fa-sign-out-alt"></i> Logout
             </button>
           </div>
         </header>
@@ -379,22 +379,22 @@ const RehostEventDetails = () => {
       <div className="container12">
         <header className="modern-header">
           <div className="header-left">
-            <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+            <button className="backbutton20" onClick={() => navigate("/rehost-event")}>
               Back
             </button>
             <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
           </div>
           <div className="profile-section">
             <button
-              className="backbutton22"
+              className="modern-button"
               onClick={() => {
                 sessionStorage.removeItem("token")
                 sessionStorage.removeItem("userId")
                 sessionStorage.removeItem("user")
-                nav("/login")
+                navigate("/login")
               }}
             >
-              LogOut
+              <i className="fas fa-sign-out-alt"></i> Logout
             </button>
           </div>
         </header>
@@ -409,22 +409,22 @@ const RehostEventDetails = () => {
     <div className="container12">
       <header className="modern-header">
         <div className="header-left">
-          <button className="backbutton20" onClick={() => nav("/rehost-event")}>
+          <button className="backbutton20" onClick={() => navigate("/rehost-event")}>
             Back
           </button>
           <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="header-logo" />
         </div>
         <div className="profile-section">
           <button
-            className="backbutton22"
+            className="modern-button"
             onClick={() => {
               sessionStorage.removeItem("token")
               sessionStorage.removeItem("userId")
               sessionStorage.removeItem("user")
-              nav("/login")
+              navigate("/login")
             }}
           >
-            LogOut
+            <i className="fas fa-sign-out-alt"></i> Logout
           </button>
         </div>
       </header>

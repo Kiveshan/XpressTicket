@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaEye } from "react-icons/fa"
+import { useNavigate, useLocation } from "react-router-dom"
+import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaUsers, FaMapMarkerAlt } from "react-icons/fa"
+import "../shared/ModernDashboard.css"
 
 const ReviewPurchase = () => {
   const navigate = useNavigate()
@@ -47,8 +48,16 @@ const ReviewPurchase = () => {
         const approvedPurchases = data.filter((purchase) => purchase.purchase_status === "Approved")
         console.log("Filtered approved purchases:", approvedPurchases)
 
+        const data = await response.json()
+        console.log("User ticket purchases data:", data)
+
+        // Filter purchases for the current user
+        const userPurchases = data.filter((purchase) => purchase.user_id === currentUserId)
+
+        console.log("Filtered user purchases:", userPurchases)
+
         // Remove duplicates based on purchase_id
-        const uniquePurchases = approvedPurchases.reduce((acc, current) => {
+        const uniquePurchases = userPurchases.reduce((acc, current) => {
           const existingPurchase = acc.find((item) => item.purchase_id === current.purchase_id)
           if (!existingPurchase) {
             acc.push(current)
@@ -57,10 +66,75 @@ const ReviewPurchase = () => {
         }, [])
 
         console.log("Unique purchases after deduplication:", uniquePurchases)
-        setPurchases(uniquePurchases)
-      } else {
-        console.error("Expected array but got:", typeof data, data)
-        setError("Invalid data format received from server")
+
+        // Group purchases by event
+        const eventGroups = {}
+        uniquePurchases.forEach((purchase) => {
+          const eventId = purchase.event_id
+          if (!eventGroups[eventId]) {
+            eventGroups[eventId] = {
+              eventId: eventId,
+              eventName: purchase.event_name,
+              eventLocation: purchase.event_location,
+              eventDate: purchase.event_date,
+              eventImage: purchase.file_url || "/default-event-image.jpg", // Use file_url from backend
+              purchases: [],
+              totalTickets: 0,
+              totalAmount: 0,
+            }
+          }
+
+          eventGroups[eventId].purchases.push(purchase)
+
+          // Parse delegate details to count tickets
+          let delegateCount = 1
+          if (purchase.delegate_details) {
+            try {
+              const delegates =
+                typeof purchase.delegate_details === "string"
+                  ? JSON.parse(purchase.delegate_details)
+                  : purchase.delegate_details
+
+              if (Array.isArray(delegates)) {
+                delegateCount = delegates.length
+              } else if (typeof delegates === "object" && delegates !== null) {
+                delegateCount = 1
+              }
+            } catch (e) {
+              console.error("Error parsing delegate details:", e)
+              delegateCount = purchase.number_of_tickets || 1
+            }
+          } else {
+            delegateCount = purchase.number_of_tickets || 1
+          }
+
+          eventGroups[eventId].totalTickets += delegateCount
+          eventGroups[eventId].totalAmount += Number.parseFloat(purchase.amount) || 0
+        })
+
+        // Convert to array and sort by most recent
+        const groupedTickets = Object.values(eventGroups).sort((a, b) => {
+          const aDate = getLatestPurchaseDate(a.purchases)
+          const bDate = getLatestPurchaseDate(b.purchases)
+          return bDate - aDate
+        })
+
+        console.log("Grouped tickets by event:", groupedTickets)
+
+        // Log specific event info
+        groupedTickets.forEach((group) => {
+          console.log(
+            `ReviewPurchase - Event ${group.eventId} (${group.eventName}) - Total tickets: ${group.totalTickets}, Total amount: ${group.totalAmount}`,
+          )
+          console.log(`Number of unique purchases: ${group.purchases.length}`)
+        })
+
+        setPurchasedTickets(groupedTickets)
+      } catch (err) {
+        console.error("Error fetching purchased tickets:", err)
+        setError(`Failed to load purchased tickets: ${err.message}`)
+      } finally {
+        setLoading(false)
       }
     } catch (err) {
       console.error("Error fetching purchases:", err)
@@ -94,175 +168,12 @@ const ReviewPurchase = () => {
     }
   }
 
-  const formatPrice = (price) => {
-    const numPrice = Number.parseFloat(price)
-    return isNaN(numPrice) ? "R 0.00" : `R ${numPrice.toFixed(2)}`
-  }
-
-  const groupTicketsByEvent = (purchases) => {
-    const grouped = purchases.reduce((acc, purchase) => {
-      const eventId = purchase.event_id
-      if (!acc[eventId]) {
-        acc[eventId] = {
-          eventId,
-          eventName: purchase.event_name || purchase.eventName || "Unknown Event",
-          eventDate: purchase.event_date || purchase.eventDate,
-          eventLocation: purchase.location || purchase.event_location || purchase.eventLocation,
-          eventImage: purchase.file_url || purchase.coverimage || purchase.eventImage,
-          purchases: [],
-          totalAmount: 0,
-          totalTickets: 0,
-        }
-      }
-      acc[eventId].purchases.push(purchase)
-      acc[eventId].totalAmount += Number.parseFloat(purchase.amount || purchase.total_amount || purchase.price || 0)
-
-      // Count tickets from number_of_tickets or delegate details
-      const ticketCount = purchase.number_of_tickets || 1
-      acc[eventId].totalTickets += ticketCount
-
-      return acc
-    }, {})
-
-    const groupedArray = Object.values(grouped)
-    console.log("Grouped tickets by event:", groupedArray)
-
-    groupedArray.forEach((event) => {
-      console.log(
-        `ReviewPurchase - Event ${event.eventId} (${event.eventName}) - Total tickets: ${event.totalTickets}, Total amount: ${event.totalAmount}`,
-      )
-    })
-
-    console.log("Number of unique purchases:", purchases.length)
-    return groupedArray
-  }
-
-  const processTicketsForEvent = (eventGroup) => {
-    console.log("Processing tickets for event group:", eventGroup)
-    const processedTickets = []
-
-    eventGroup.purchases.forEach((purchase, purchaseIndex) => {
-      console.log(`Processing purchase ${purchaseIndex}:`, purchase)
-
-      // Parse delegate details
-      let delegates = []
-      try {
-        if (purchase.delegate_details) {
-          console.log("Raw delegate_details:", purchase.delegate_details)
-          if (typeof purchase.delegate_details === "string") {
-            delegates = JSON.parse(purchase.delegate_details)
-          } else {
-            delegates = purchase.delegate_details
-          }
-          console.log("Parsed delegates:", delegates)
-        }
-      } catch (e) {
-        console.error("Error parsing delegate details:", e)
-        delegates = []
-      }
-
-      // Ensure delegates is an array
-      if (!Array.isArray(delegates)) {
-        if (typeof delegates === "object" && delegates !== null) {
-          delegates = [delegates]
-        } else {
-          delegates = []
-        }
-      }
-
-      // If no delegates, create one from customer info
-      if (delegates.length === 0) {
-        console.log("No delegates found, creating from customer info")
-        delegates = [
-          {
-            name: purchase.firstname || "N/A",
-            surname: purchase.surname || "",
-            email: purchase.email || "N/A",
-            phone: purchase.cellnumber || "N/A",
-            institution: purchase.institution || "N/A",
-          },
-        ]
-        console.log("Created delegate from customer info:", delegates[0])
-      }
-
-      // Parse package information
-      let packageInfo = "General Admission"
-      try {
-        if (purchase.package && typeof purchase.package === "string") {
-          const parsedPackage = JSON.parse(purchase.package)
-          packageInfo =
-            parsedPackage.selectType || parsedPackage.packageType || parsedPackage.name || "General Admission"
-        } else if (purchase.package && typeof purchase.package === "object") {
-          packageInfo =
-            purchase.package.selectType || purchase.package.packageType || purchase.package.name || "General Admission"
-        }
-      } catch (e) {
-        console.warn("Could not parse package info:", purchase.package)
-        packageInfo = purchase.package || "General Admission"
-      }
-
-      // Create individual tickets for each delegate
-      delegates.forEach((delegate, delegateIndex) => {
-        const ticket = {
-          id: `${purchase.purchase_id}-${delegateIndex}`,
-          purchaseId: purchase.purchase_id,
-          eventId: purchase.event_id,
-          eventName: purchase.event_name || eventGroup.eventName,
-          eventDate: purchase.event_date || eventGroup.eventDate,
-          eventLocation: purchase.location || eventGroup.eventLocation,
-          eventImage: purchase.file_url || purchase.coverimage || eventGroup.eventImage,
-          ticketType: packageInfo,
-          price: Number.parseFloat(purchase.amount || 0) / delegates.length, // Divide price by number of delegates
-          status: purchase.purchase_status || "Active",
-          purchaseDate: purchase.created_at || purchase.purchase_date,
-          delegate: {
-            name: delegate.name || "N/A",
-            surname: delegate.surname || "",
-            email: delegate.email || "N/A",
-            phone: delegate.phone || delegate.cellnumber || "N/A",
-            institution: delegate.institution || "N/A",
-          },
-          qrCode: `QR-${purchase.purchase_id}-${delegateIndex}`,
-          barcode: `BC-${purchase.purchase_id}-${delegateIndex}`,
-          originalPurchase: purchase,
-          delegateIndex: delegateIndex,
-          totalDelegates: delegates.length,
-        }
-
-        console.log(`Created ticket ${delegateIndex} for purchase ${purchase.purchase_id}:`, ticket)
-        processedTickets.push(ticket)
-      })
-    })
-
-    console.log("Final processed tickets being passed to TicketsList:", processedTickets)
-    console.log("Number of processed tickets:", processedTickets.length)
-    return processedTickets
-  }
-
-  const handleViewTickets = (eventGroup) => {
-    console.log("ReviewPurchase - Navigating to tickets list for event:", eventGroup)
-
-    // Process the tickets for this event
-    const processedTickets = processTicketsForEvent(eventGroup)
-
-    const navigationState = {
-      eventInfo: {
-        eventId: eventGroup.eventId,
-        eventName: eventGroup.eventName,
-        eventDate: eventGroup.eventDate,
-        eventLocation: eventGroup.eventLocation,
-        eventImage: eventGroup.eventImage,
-      },
-      tickets: processedTickets,
-      originalData: { purchases },
+  const handleImageError = (e) => {
+    if (e.target.src !== "/default-event-image.jpg") {
+      console.warn(`Failed to load image: ${e.target.src}`)
+      e.target.src = "/default-event-image.jpg"
+      e.target.classList.add("image-error")
     }
-
-    console.log("About to navigate with tickets:", processedTickets)
-    console.log("Navigation state being passed:", navigationState)
-
-    navigate("/ticketslist", {
-      state: navigationState,
-    })
   }
 
   if (loading) {
@@ -492,70 +403,29 @@ const ReviewPurchase = () => {
   const eventGroups = groupTicketsByEvent(purchases)
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f8f9fa",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      }}
-    >
-      <header
-        style={{
-          background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-          color: "white",
-          padding: "15px 20px",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            maxWidth: "1200px",
-            margin: "0 auto",
-          }}
-        >
-          <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <button
-              onClick={handleBackToDashboard}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaArrowLeft /> Back to Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaSignOutAlt /> Logout
-            </button>
-          </div>
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
 
+      {/* Back Button */}
+      <div className="modern-back-button-container">
+        <button className="modern-back-btn" onClick={handleBackToDashboard}>
+          <FaArrowLeft /> Back
+        </button>
+      </div>
+
+      {/* Main Content */}
       <main
         style={{
           padding: "30px 20px",
@@ -636,6 +506,37 @@ const ReviewPurchase = () => {
                     position: "relative",
                   }}
                 >
+                  <img
+                    src={eventGroup.eventImage}
+                    alt={eventGroup.eventName}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      transition: "transform 0.3s ease",
+                    }}
+                    onError={handleImageError}
+                  />
+                  {!eventGroup.eventImage && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "0",
+                        left: "0",
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#f3f4f6",
+                        color: "#6b7280",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      <span>No Image</span>
+                    </div>
+                  )}
+                  {/* Ticket Count Badge */}
                   <div
                     style={{
                       position: "absolute",
@@ -762,6 +663,9 @@ const ReviewPurchase = () => {
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+          }
+          .image-error {
+            opacity: 0.6;
           }
         `}
       </style>

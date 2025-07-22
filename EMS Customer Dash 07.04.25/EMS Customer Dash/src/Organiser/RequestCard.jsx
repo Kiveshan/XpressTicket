@@ -1,11 +1,10 @@
-// RequestCard.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import "../Organiser/OrganiserDash.css";
 import "./RequestCard.css";
 
 const RequestCard = () => {
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
   const cards = [
     { label: "Host Request", image: "/wedding-wedding-day-marriage-marry-161018.jpeg", path: "/event-request" },
@@ -17,9 +16,9 @@ const RequestCard = () => {
       {/* Modern Header with Gradient */}
       <header className="modern-header">
         <div className="header-left">
-      <button className="modern-button" onClick={() => nav("/organiser-dash")}>
-  <i className="fas fa-arrow-left"></i> Back
-</button>
+          <button className="modern-button" onClick={() => navigate("/organiser-dash")}>
+            <i className="fas fa-arrow-left"></i> Back
+          </button>
           <img
             src="/XPRESS TICKETS LOGO2.png"
             alt="EventXpress Logo"
@@ -27,8 +26,16 @@ const RequestCard = () => {
           />
         </div>
         <h1 className="header-title">Request Actions</h1>
-        <button className="modern-button" onClick={() => nav("/")}>
-          <span className="button-icon">↩</span> Logout
+        <button
+          className="modern-button"
+          onClick={() => {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("userId");
+            sessionStorage.removeItem("user");
+            navigate("/");
+          }}
+        >
+          <i className="fas fa-sign-out-alt"></i> Logout
         </button>
       </header>
       <br></br>
@@ -44,7 +51,7 @@ const RequestCard = () => {
               <div
                 className="modern-action-card"
                 key={index}
-                onClick={() => nav(card.path)}
+                onClick={() => navigate(card.path)}
               >
                 <div className="modern-action-card-image-container">
                   <img src={card.image} alt={card.label} className="modern-action-card-image" />
