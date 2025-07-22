@@ -1,73 +1,54 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
-import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaUsers, FaMapMarkerAlt } from "react-icons/fa"
+import { useNavigate } from "react-router-dom"
+import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaEye } from "react-icons/fa"
 
-const ReviewParchase = () => {
+const ReviewPurchase = () => {
   const navigate = useNavigate()
-  const location = useLocation()
-  const [purchasedTickets, setPurchasedTickets] = useState([])
+  const [purchases, setPurchases] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    const fetchPurchasedTickets = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+    fetchPurchases()
+  }, [])
 
-        // Get user ID from session storage
-        const userInfo = sessionStorage.getItem("userInfo")
-        let currentUserId = null
+  const fetchPurchases = async () => {
+    try {
+      const userInfo = JSON.parse(sessionStorage.getItem("userInfo"))
+      const token = sessionStorage.getItem("token")
 
-        if (userInfo) {
-          try {
-            const parsedInfo = JSON.parse(userInfo)
-            currentUserId = parsedInfo.userId || parsedInfo.user_id
-            console.log("Fetching purchased tickets for user ID:", currentUserId)
-          } catch (e) {
-            console.error("Error parsing user info:", e)
-            setError("Error parsing user info from session")
-            return
-          }
-        }
+      if (!userInfo || !token) {
+        setError("Please log in to view your purchases")
+        return
+      }
 
-        const token = sessionStorage.getItem("token")
+      const userId = userInfo.userId || userInfo.user_id || userInfo.id
+      console.log("Fetching purchased tickets for user ID:", userId)
 
-        if (!token) {
-          setError("No authentication token found")
-          navigate("/")
-          return
-        }
+      const response = await fetch(`http://localhost:5000/api/user-ticket-purchases/${userId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
 
-        if (!currentUserId) {
-          setError("User not authenticated")
-          return
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-        // Fetch user ticket purchases
-        const response = await fetch(`http://localhost:5000/api/user-ticket-purchases/${currentUserId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        })
+      const data = await response.json()
+      console.log("User ticket purchases data:", data)
 
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.status} - ${response.statusText}`)
-        }
+      if (Array.isArray(data)) {
+        // Filter to only show approved purchases
+        const approvedPurchases = data.filter((purchase) => purchase.purchase_status === "Approved")
+        console.log("Filtered approved purchases:", approvedPurchases)
 
-        const data = await response.json()
-        console.log("User ticket purchases data:", data)
-
-        // Filter purchases for the current user
-        const userPurchases = data.filter((purchase) => purchase.user_id === currentUserId)
-
-        console.log("Filtered user purchases:", userPurchases)
-
-        // Remove duplicates based on purchase_id (in case API returns duplicates)
-        const uniquePurchases = userPurchases.reduce((acc, current) => {
+        // Remove duplicates based on purchase_id
+        const uniquePurchases = approvedPurchases.reduce((acc, current) => {
           const existingPurchase = acc.find((item) => item.purchase_id === current.purchase_id)
           if (!existingPurchase) {
             acc.push(current)
@@ -76,114 +57,17 @@ const ReviewParchase = () => {
         }, [])
 
         console.log("Unique purchases after deduplication:", uniquePurchases)
-
-        // Group purchases by event
-        const eventGroups = {}
-        uniquePurchases.forEach((purchase) => {
-          const eventId = purchase.event_id
-          if (!eventGroups[eventId]) {
-            eventGroups[eventId] = {
-              eventId: eventId,
-              eventName: purchase.event_name,
-              eventLocation: purchase.event_location,
-              eventDate: purchase.event_date,
-              eventImage: purchase.event_image,
-              purchases: [],
-              totalTickets: 0,
-              totalAmount: 0,
-            }
-          }
-
-          eventGroups[eventId].purchases.push(purchase)
-
-          // Parse delegate details to count tickets
-          let delegateCount = 1
-          if (purchase.delegate_details) {
-            try {
-              const delegates =
-                typeof purchase.delegate_details === "string"
-                  ? JSON.parse(purchase.delegate_details)
-                  : purchase.delegate_details
-
-              if (Array.isArray(delegates)) {
-                delegateCount = delegates.length
-              } else if (typeof delegates === "object" && delegates !== null) {
-                delegateCount = 1
-              }
-            } catch (e) {
-              console.error("Error parsing delegate details:", e)
-              delegateCount = purchase.number_of_tickets || 1
-            }
-          } else {
-            // Fallback to number_of_tickets if delegate_details is not available
-            delegateCount = purchase.number_of_tickets || 1
-          }
-
-          eventGroups[eventId].totalTickets += delegateCount
-          eventGroups[eventId].totalAmount += Number.parseFloat(purchase.amount) || 0
-        })
-
-        // Convert to array and sort by most recent
-        const groupedTickets = Object.values(eventGroups).sort((a, b) => {
-          const aDate = getLatestPurchaseDate(a.purchases)
-          const bDate = getLatestPurchaseDate(b.purchases)
-          return bDate - aDate
-        })
-
-        console.log("Grouped tickets by event:", groupedTickets)
-
-        // Log specific event info
-        groupedTickets.forEach((group) => {
-          console.log(
-            `ReviewPurchase - Event ${group.eventId} (${group.eventName}) - Total tickets: ${group.totalTickets}, Total amount: ${group.totalAmount}`,
-          )
-          console.log(`Number of unique purchases: ${group.purchases.length}`)
-        })
-
-        setPurchasedTickets(groupedTickets)
-      } catch (err) {
-        console.error("Error fetching purchased tickets:", err)
-        setError(`Failed to load purchased tickets: ${err.message}`)
-      } finally {
-        setLoading(false)
+        setPurchases(uniquePurchases)
+      } else {
+        console.error("Expected array but got:", typeof data, data)
+        setError("Invalid data format received from server")
       }
+    } catch (err) {
+      console.error("Error fetching purchases:", err)
+      setError(`Failed to load purchases: ${err.message}`)
+    } finally {
+      setLoading(false)
     }
-
-    fetchPurchasedTickets()
-  }, [navigate])
-
-  // Helper function to get the latest purchase date safely
-  const getLatestPurchaseDate = (purchases) => {
-    const validDates = purchases
-      .map((p) => {
-        const date = new Date(p.purchase_date)
-        return isNaN(date.getTime()) ? null : date.getTime()
-      })
-      .filter((date) => date !== null)
-
-    return validDates.length > 0 ? Math.max(...validDates) : 0
-  }
-
-  // Helper function to format the latest purchase date
-  const getFormattedLatestDate = (purchases) => {
-    const latestTimestamp = getLatestPurchaseDate(purchases)
-    if (latestTimestamp === 0) {
-      return "Date not available"
-    }
-    return formatDate(new Date(latestTimestamp).toISOString())
-  }
-
-  const handleViewTickets = (eventGroup) => {
-    console.log("ReviewPurchase - Navigating to tickets list for event:", eventGroup)
-    navigate("/ticketslist", {
-      state: {
-        eventId: eventGroup.eventId,
-        eventName: eventGroup.eventName,
-        totalTickets: eventGroup.totalTickets,
-        totalAmount: eventGroup.totalAmount,
-        purchases: eventGroup.purchases,
-      },
-    })
   }
 
   const handleBackToDashboard = () => {
@@ -196,15 +80,11 @@ const ReviewParchase = () => {
     navigate("/")
   }
 
-  const formatPrice = (price) => {
-    const numPrice = Number.parseFloat(price)
-    return isNaN(numPrice) ? "R 0.00" : `R ${numPrice.toFixed(2)}`
-  }
-
   const formatDate = (dateString) => {
     if (!dateString) return "Date not available"
     try {
       return new Date(dateString).toLocaleDateString("en-ZA", {
+        weekday: "long",
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -214,17 +94,402 @@ const ReviewParchase = () => {
     }
   }
 
-  const getEventImageUrl = (eventImage) => {
-    if (!eventImage) return "/placeholder.svg?height=200&width=400"
+  const formatPrice = (price) => {
+    const numPrice = Number.parseFloat(price)
+    return isNaN(numPrice) ? "R 0.00" : `R ${numPrice.toFixed(2)}`
+  }
 
-    // If it's already a full URL, return as is
-    if (eventImage.startsWith("http://") || eventImage.startsWith("https://")) {
-      return eventImage
+  const groupTicketsByEvent = (purchases) => {
+    const grouped = purchases.reduce((acc, purchase) => {
+      const eventId = purchase.event_id
+      if (!acc[eventId]) {
+        acc[eventId] = {
+          eventId,
+          eventName: purchase.event_name || purchase.eventName || "Unknown Event",
+          eventDate: purchase.event_date || purchase.eventDate,
+          eventLocation: purchase.location || purchase.event_location || purchase.eventLocation,
+          eventImage: purchase.file_url || purchase.coverimage || purchase.eventImage,
+          purchases: [],
+          totalAmount: 0,
+          totalTickets: 0,
+        }
+      }
+      acc[eventId].purchases.push(purchase)
+      acc[eventId].totalAmount += Number.parseFloat(purchase.amount || purchase.total_amount || purchase.price || 0)
+
+      // Count tickets from number_of_tickets or delegate details
+      const ticketCount = purchase.number_of_tickets || 1
+      acc[eventId].totalTickets += ticketCount
+
+      return acc
+    }, {})
+
+    const groupedArray = Object.values(grouped)
+    console.log("Grouped tickets by event:", groupedArray)
+
+    groupedArray.forEach((event) => {
+      console.log(
+        `ReviewPurchase - Event ${event.eventId} (${event.eventName}) - Total tickets: ${event.totalTickets}, Total amount: ${event.totalAmount}`,
+      )
+    })
+
+    console.log("Number of unique purchases:", purchases.length)
+    return groupedArray
+  }
+
+  const processTicketsForEvent = (eventGroup) => {
+    console.log("Processing tickets for event group:", eventGroup)
+    const processedTickets = []
+
+    eventGroup.purchases.forEach((purchase, purchaseIndex) => {
+      console.log(`Processing purchase ${purchaseIndex}:`, purchase)
+
+      // Parse delegate details
+      let delegates = []
+      try {
+        if (purchase.delegate_details) {
+          console.log("Raw delegate_details:", purchase.delegate_details)
+          if (typeof purchase.delegate_details === "string") {
+            delegates = JSON.parse(purchase.delegate_details)
+          } else {
+            delegates = purchase.delegate_details
+          }
+          console.log("Parsed delegates:", delegates)
+        }
+      } catch (e) {
+        console.error("Error parsing delegate details:", e)
+        delegates = []
+      }
+
+      // Ensure delegates is an array
+      if (!Array.isArray(delegates)) {
+        if (typeof delegates === "object" && delegates !== null) {
+          delegates = [delegates]
+        } else {
+          delegates = []
+        }
+      }
+
+      // If no delegates, create one from customer info
+      if (delegates.length === 0) {
+        console.log("No delegates found, creating from customer info")
+        delegates = [
+          {
+            name: purchase.firstname || "N/A",
+            surname: purchase.surname || "",
+            email: purchase.email || "N/A",
+            phone: purchase.cellnumber || "N/A",
+            institution: purchase.institution || "N/A",
+          },
+        ]
+        console.log("Created delegate from customer info:", delegates[0])
+      }
+
+      // Parse package information
+      let packageInfo = "General Admission"
+      try {
+        if (purchase.package && typeof purchase.package === "string") {
+          const parsedPackage = JSON.parse(purchase.package)
+          packageInfo =
+            parsedPackage.selectType || parsedPackage.packageType || parsedPackage.name || "General Admission"
+        } else if (purchase.package && typeof purchase.package === "object") {
+          packageInfo =
+            purchase.package.selectType || purchase.package.packageType || purchase.package.name || "General Admission"
+        }
+      } catch (e) {
+        console.warn("Could not parse package info:", purchase.package)
+        packageInfo = purchase.package || "General Admission"
+      }
+
+      // Create individual tickets for each delegate
+      delegates.forEach((delegate, delegateIndex) => {
+        const ticket = {
+          id: `${purchase.purchase_id}-${delegateIndex}`,
+          purchaseId: purchase.purchase_id,
+          eventId: purchase.event_id,
+          eventName: purchase.event_name || eventGroup.eventName,
+          eventDate: purchase.event_date || eventGroup.eventDate,
+          eventLocation: purchase.location || eventGroup.eventLocation,
+          eventImage: purchase.file_url || purchase.coverimage || eventGroup.eventImage,
+          ticketType: packageInfo,
+          price: Number.parseFloat(purchase.amount || 0) / delegates.length, // Divide price by number of delegates
+          status: purchase.purchase_status || "Active",
+          purchaseDate: purchase.created_at || purchase.purchase_date,
+          delegate: {
+            name: delegate.name || "N/A",
+            surname: delegate.surname || "",
+            email: delegate.email || "N/A",
+            phone: delegate.phone || delegate.cellnumber || "N/A",
+            institution: delegate.institution || "N/A",
+          },
+          qrCode: `QR-${purchase.purchase_id}-${delegateIndex}`,
+          barcode: `BC-${purchase.purchase_id}-${delegateIndex}`,
+          originalPurchase: purchase,
+          delegateIndex: delegateIndex,
+          totalDelegates: delegates.length,
+        }
+
+        console.log(`Created ticket ${delegateIndex} for purchase ${purchase.purchase_id}:`, ticket)
+        processedTickets.push(ticket)
+      })
+    })
+
+    console.log("Final processed tickets being passed to TicketsList:", processedTickets)
+    console.log("Number of processed tickets:", processedTickets.length)
+    return processedTickets
+  }
+
+  const handleViewTickets = (eventGroup) => {
+    console.log("ReviewPurchase - Navigating to tickets list for event:", eventGroup)
+
+    // Process the tickets for this event
+    const processedTickets = processTicketsForEvent(eventGroup)
+
+    const navigationState = {
+      eventInfo: {
+        eventId: eventGroup.eventId,
+        eventName: eventGroup.eventName,
+        eventDate: eventGroup.eventDate,
+        eventLocation: eventGroup.eventLocation,
+        eventImage: eventGroup.eventImage,
+      },
+      tickets: processedTickets,
+      originalData: { purchases },
     }
 
-    // If it's a relative path, construct the full URL
-    return `http://localhost:5000${eventImage.startsWith("/") ? "" : "/"}${eventImage}`
+    console.log("About to navigate with tickets:", processedTickets)
+    console.log("Navigation state being passed:", navigationState)
+
+    navigate("/ticketslist", {
+      state: navigationState,
+    })
   }
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        }}
+      >
+        <header
+          style={{
+            background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
+            color: "white",
+            padding: "15px 20px",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              maxWidth: "1200px",
+              margin: "0 auto",
+            }}
+          >
+            <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+              <button
+                onClick={handleBackToDashboard}
+                style={{
+                  background: "transparent",
+                  color: "white",
+                  border: "1px solid rgba(255, 255, 255, 0.5)",
+                  borderRadius: "4px",
+                  padding: "5px 10px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
+                <FaArrowLeft /> Back to Dashboard
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: "transparent",
+                  color: "white",
+                  border: "1px solid rgba(255, 255, 255, 0.5)",
+                  borderRadius: "4px",
+                  padding: "5px 10px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
+                <FaSignOutAlt /> Logout
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "calc(100vh - 70px)",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "50px",
+                height: "50px",
+                border: "4px solid #f3f3f3",
+                borderTop: "4px solid #4ca1af",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+                margin: "0 auto 20px",
+              }}
+            ></div>
+            <p style={{ color: "#4ca1af", margin: "0", fontSize: "1.1rem" }}>Loading your purchases...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        }}
+      >
+        <header
+          style={{
+            background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
+            color: "white",
+            padding: "15px 20px",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              maxWidth: "1200px",
+              margin: "0 auto",
+            }}
+          >
+            <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+              <button
+                onClick={handleBackToDashboard}
+                style={{
+                  background: "transparent",
+                  color: "white",
+                  border: "1px solid rgba(255, 255, 255, 0.5)",
+                  borderRadius: "4px",
+                  padding: "5px 10px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
+                <FaArrowLeft /> Back to Dashboard
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: "transparent",
+                  color: "white",
+                  border: "1px solid rgba(255, 255, 255, 0.5)",
+                  borderRadius: "4px",
+                  padding: "5px 10px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
+                <FaSignOutAlt /> Logout
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "calc(100vh - 70px)",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
+              maxWidth: "500px",
+            }}
+          >
+            <h3 style={{ color: "#dc2626", margin: "0 0 15px 0" }}>Error Loading Purchases</h3>
+            <p style={{ color: "#6b7280", margin: "0 0 30px 0" }}>{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                backgroundColor: "#4ca1af",
+                color: "white",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "1rem",
+                marginRight: "10px",
+              }}
+            >
+              Try Again
+            </button>
+            <button
+              onClick={handleBackToDashboard}
+              style={{
+                backgroundColor: "#6b7280",
+                color: "white",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "1rem",
+              }}
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const eventGroups = groupTicketsByEvent(purchases)
 
   return (
     <div
@@ -234,7 +499,6 @@ const ReviewParchase = () => {
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       }}
     >
-      {/* Header */}
       <header
         style={{
           background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
@@ -292,42 +556,36 @@ const ReviewParchase = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main
         style={{
-          padding: "20px 15px",
+          padding: "30px 20px",
           maxWidth: "1200px",
           margin: "0 auto",
-          width: "100%",
         }}
       >
-        {/* Page Title */}
         <div style={{ marginBottom: "30px" }}>
           <h1
             style={{
-              fontSize: "1.8rem",
+              fontSize: "2.5rem",
+              fontWeight: "600",
               color: "#2c3e50",
               margin: "0 0 10px 0",
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
             }}
           >
-            <FaTicketAlt /> My Purchased Tickets
+            Your Ticket Purchases
           </h1>
           <p
             style={{
+              fontSize: "1.1rem",
+              color: "#6b7280",
               margin: "0",
-              color: "#6c757d",
-              fontSize: "1rem",
             }}
           >
-            View and manage all your event tickets
+            Review and manage your event tickets
           </p>
         </div>
 
-        {/* Content */}
-        {loading ? (
+        {eventGroups.length === 0 ? (
           <div
             style={{
               backgroundColor: "white",
@@ -337,71 +595,19 @@ const ReviewParchase = () => {
               textAlign: "center",
             }}
           >
-            <div
-              style={{
-                width: "50px",
-                height: "50px",
-                border: "4px solid #f3f3f3",
-                borderTop: "4px solid #4ca1af",
-                borderRadius: "50%",
-                animation: "spin 1s linear infinite",
-                margin: "0 auto 20px",
-              }}
-            ></div>
-            <p style={{ color: "#4ca1af", margin: "0", fontSize: "1.1rem" }}>Loading your tickets...</p>
+            <FaTicketAlt style={{ fontSize: "4rem", color: "#d1d5db", marginBottom: "20px" }} />
+            <h3 style={{ color: "#374151", margin: "0 0 10px 0" }}>No Purchases Found</h3>
+            <p style={{ color: "#6b7280", margin: "0" }}>You haven't purchased any tickets yet.</p>
           </div>
-        ) : error ? (
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
-              padding: "60px",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "60px",
-                height: "60px",
-                backgroundColor: "#fee2e2",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 20px",
-                fontSize: "24px",
-                color: "#dc2626",
-              }}
-            >
-              ⚠️
-            </div>
-            <h3 style={{ color: "#dc2626", margin: "0 0 10px 0" }}>Error Loading Tickets</h3>
-            <p style={{ color: "#6b7280", margin: "0 0 20px 0" }}>{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                backgroundColor: "#4ca1af",
-                color: "white",
-                border: "none",
-                padding: "12px 24px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
-              Try Again
-            </button>
-          </div>
-        ) : purchasedTickets.length > 0 ? (
+        ) : (
           <div
             style={{
               display: "grid",
-              gap: "20px",
               gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))",
+              gap: "25px",
             }}
           >
-            {purchasedTickets.map((eventGroup) => (
+            {eventGroups.map((eventGroup) => (
               <div
                 key={eventGroup.eventId}
                 style={{
@@ -410,7 +616,6 @@ const ReviewParchase = () => {
                   boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
                   overflow: "hidden",
                   transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                  cursor: "pointer",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-2px)"
@@ -425,130 +630,79 @@ const ReviewParchase = () => {
                 <div
                   style={{
                     height: "200px",
-                    overflow: "hidden",
+                    backgroundImage: `url(${eventGroup.eventImage ? `http://localhost:5000${eventGroup.eventImage.startsWith("/") ? "" : "/"}${eventGroup.eventImage}` : "/placeholder.svg?height=200&width=400"})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
                     position: "relative",
                   }}
                 >
-                  <img
-                    src={getEventImageUrl(eventGroup.eventImage) || "/placeholder.svg"}
-                    alt={eventGroup.eventName}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      transition: "transform 0.3s ease",
-                    }}
-                    onError={(e) => {
-                      e.target.src = "/placeholder.svg?height=200&width=400"
-                    }}
-                  />
-                  {/* Ticket Count Badge */}
                   <div
                     style={{
                       position: "absolute",
-                      top: "15px",
-                      right: "15px",
-                      backgroundColor: "rgba(76, 161, 175, 0.9)",
+                      bottom: "0",
+                      left: "0",
+                      right: "0",
+                      background: "linear-gradient(transparent, rgba(0, 0, 0, 0.7))",
                       color: "white",
-                      padding: "8px 12px",
-                      borderRadius: "20px",
-                      fontSize: "0.85rem",
-                      fontWeight: "600",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      backdropFilter: "blur(10px)",
+                      padding: "20px",
                     }}
                   >
-                    <FaTicketAlt />
-                    {eventGroup.totalTickets} {eventGroup.totalTickets === 1 ? "ticket" : "tickets"}
+                    <h3
+                      style={{
+                        margin: "0",
+                        fontSize: "1.3rem",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {eventGroup.eventName}
+                    </h3>
                   </div>
                 </div>
 
-                {/* Event Content */}
                 <div style={{ padding: "20px" }}>
-                  {/* Event Title */}
-                  <h3
-                    style={{
-                      margin: "0 0 15px 0",
-                      fontSize: "1.4rem",
-                      fontWeight: "600",
-                      color: "#2c3e50",
-                      lineHeight: "1.3",
-                    }}
-                  >
-                    {eventGroup.eventName}
-                  </h3>
-
-                  {/* Event Details */}
                   <div
                     style={{
                       display: "flex",
-                      flexDirection: "column",
-                      gap: "10px",
-                      marginBottom: "20px",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "12px",
+                      color: "#6b7280",
                     }}
                   >
-                    {eventGroup.eventDate && (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          color: "#6b7280",
-                          fontSize: "0.9rem",
-                        }}
-                      >
-                        <FaCalendarAlt style={{ color: "#4ca1af" }} />
-                        <span>Event Date: {formatDate(eventGroup.eventDate)}</span>
-                      </div>
-                    )}
-
-                    {eventGroup.eventLocation && (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          color: "#6b7280",
-                          fontSize: "0.9rem",
-                        }}
-                      >
-                        <FaMapMarkerAlt style={{ color: "#4ca1af" }} />
-                        <span>Location: {eventGroup.eventLocation}</span>
-                      </div>
-                    )}
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        color: "#6b7280",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      <FaCalendarAlt style={{ color: "#4ca1af" }} />
-                      <span>Latest Purchase: {getFormattedLatestDate(eventGroup.purchases)}</span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        color: "#6b7280",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      <FaUsers style={{ color: "#4ca1af" }} />
-                      <span>
-                        {eventGroup.purchases.length} purchase{eventGroup.purchases.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
+                    <FaCalendarAlt style={{ color: "#4ca1af" }} />
+                    <span>{formatDate(eventGroup.eventDate)}</span>
                   </div>
 
-                  {/* Price and Action */}
+                  {eventGroup.eventLocation && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "12px",
+                        color: "#6b7280",
+                      }}
+                    >
+                      <FaMapMarkerAlt style={{ color: "#4ca1af" }} />
+                      <span>{eventGroup.eventLocation}</span>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "15px",
+                      color: "#6b7280",
+                    }}
+                  >
+                    <FaUsers style={{ color: "#4ca1af" }} />
+                    <span>
+                      {eventGroup.totalTickets} ticket{eventGroup.totalTickets !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
                   <div
                     style={{
                       display: "flex",
@@ -558,103 +712,51 @@ const ReviewParchase = () => {
                       borderTop: "1px solid #e5e7eb",
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: "1.2rem",
-                        fontWeight: "600",
-                        color: "#059669",
-                      }}
-                    >
-                      Total: {formatPrice(eventGroup.totalAmount)}
+                    <div>
+                      <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>Total Amount</div>
+                      <div
+                        style={{
+                          fontSize: "1.5rem",
+                          fontWeight: "600",
+                          color: "#059669",
+                        }}
+                      >
+                        {formatPrice(eventGroup.totalAmount)}
+                      </div>
                     </div>
-
                     <button
                       onClick={() => handleViewTickets(eventGroup)}
                       style={{
                         backgroundColor: "#4ca1af",
                         color: "white",
                         border: "none",
-                        padding: "10px 20px",
-                        borderRadius: "8px",
+                        padding: "12px 20px",
+                        borderRadius: "6px",
                         fontSize: "0.9rem",
                         fontWeight: "500",
                         cursor: "pointer",
-                        transition: "background-color 0.2s ease",
                         display: "flex",
                         alignItems: "center",
-                        gap: "6px",
+                        gap: "8px",
+                        transition: "background-color 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = "#3d8e9c"
+                        e.target.style.backgroundColor = "#3d8b96"
                       }}
                       onMouseLeave={(e) => {
                         e.target.style.backgroundColor = "#4ca1af"
                       }}
                     >
-                      <FaTicketAlt /> View Tickets
+                      <FaEye /> View Tickets
                     </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        ) : (
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
-              padding: "60px",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "80px",
-                height: "80px",
-                backgroundColor: "#f3f4f6",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 20px",
-                fontSize: "32px",
-                color: "#9ca3af",
-              }}
-            >
-              🎫
-            </div>
-            <h3 style={{ color: "#374151", margin: "0 0 10px 0", fontSize: "1.4rem" }}>No Tickets Found</h3>
-            <p style={{ color: "#6b7280", margin: "0 0 30px 0", fontSize: "1rem" }}>
-              You haven't purchased any tickets yet. Browse events to get started!
-            </p>
-            <button
-              onClick={() => navigate("/eventmenu")}
-              style={{
-                backgroundColor: "#4ca1af",
-                color: "white",
-                border: "none",
-                padding: "12px 24px",
-                borderRadius: "8px",
-                fontSize: "1rem",
-                fontWeight: "500",
-                cursor: "pointer",
-                transition: "background-color 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "#3d8e9c"
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "#4ca1af"
-              }}
-            >
-              Browse Events
-            </button>
-          </div>
         )}
       </main>
 
-      {/* Loading Animation Keyframes */}
       <style>
         {`
           @keyframes spin {
@@ -667,4 +769,4 @@ const ReviewParchase = () => {
   )
 }
 
-export default ReviewParchase
+export default ReviewPurchase
