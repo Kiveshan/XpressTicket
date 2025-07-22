@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './EventApproval.css';
 import '../shared/ModernDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
+import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaSignOutAlt } from 'react-icons/fa';
 import useFixCardHeight from '../hooks/useFixCardHeight';
 import { DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
 import './EventApproval.override.css';
@@ -99,28 +99,31 @@ const EventApproval = () => {
 
   return (
     <div className="modern-dashboard-container">
-      <header className="modern-header">
-        <div className="modern-header-logo">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="modern-logo"
-            onError={(e) => {
-              console.error('Failed to load logo');
-              e.target.src = '/fallback-logo.png';
-            }}
-          />
+      {/* Modern Header */}
+      <header className="modern-header no-print">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+          onError={(e) => {
+            console.error('Failed to load logo');
+            e.target.src = '/fallback-logo.png';
+          }}
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
-        <button className="modern-logout-btn" onClick={() => nav('/')}>
-          Log Out
-        </button>
       </header>
 
-      <div className="modern-back-button">
+      {/* Back Button */}
+      <div className="modern-back-button-container no-print">
         <button className="modern-back-btn" onClick={() => nav('/admin-dash')}>
           <FaArrowLeft /> Back
         </button>
       </div>
+
       <h2 className="modern-page-title">Events Pending Approval</h2>
 
       {error && <div className="modern-error"><p>{error}</p></div>}

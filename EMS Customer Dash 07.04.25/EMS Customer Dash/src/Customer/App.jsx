@@ -5,7 +5,7 @@ import InformationForm from "./InformationForm"
 import NewMenupage from "./NewMenupage"
 import NewCustomerDash from "./NewCustomerDash"
 import EventMenu from "./EventMenu"
-import ReviewParchase from "./ReviewParchase"
+import ReviewPurchase from "./ReviewParchase"
 import ParchasedTicket from "./ParchasedTicket"
 import CustomerViewEvent from "./CustomerViewEvent"
 import EventTicketPackage from "./EventTicketPackage"
@@ -67,7 +67,7 @@ function App() {
           <Route path="/mainmenu" element={<NewMenupage />} />
           <Route path="/customerdash" element={<NewCustomerDash />} />
           <Route path="/eventmenu" element={<EventMenu />} />
-          <Route path="/reviewparchase" element={<ReviewParchase />} />
+          <Route path="/reviewpurchase" element={<ReviewPurchase />} />
           <Route path="/parchasedticket" element={<ParchasedTicket />} />
           <Route path="/view-more-details" element={<ViewMoreDetailsCompact />} />
           <Route path="/viewmoredetails/:id" element={<ViewMoreDetailsCompact />} />
@@ -94,12 +94,11 @@ function App() {
           <Route path="/tickets-event-list" element={<TicketsEventList />} />
           <Route path="/event-form" element={<EventForm />} />
           <Route path="/event-request" element={<EventRequest />} />
-          <Route path="/viewerequest" element={<ViewEventRequest />} />
+          <Route path="/viewereventrequest" element={<ViewEventRequest />} />
           <Route path="/event-list" element={<EventList />} />
           <Route path="/event-guest/:eventId" element={<EventGuestList />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/ticketspaymentlist" element={<TicketsPaymentList />} />
-          <Route path="/ticketspayment/:purchaseId" element={<TicketPayment />} />
           <Route path="/ticketspayment/:purchaseId" element={<TicketPayment />} />
           <Route path="/rehost-event" element={<RehostEventForm />} />
           <Route path="/view-past-event" element={<RehostEventDetails />} />

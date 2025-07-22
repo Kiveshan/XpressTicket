@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './EventApproval.css';
 import '../shared/ModernDashboard.css';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
-// Import a custom hook to fix card heights
+import { FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt, FaMoneyBillWave, FaSignOutAlt } from 'react-icons/fa';
 import useFixCardHeight from '../hooks/useFixCardHeight';
 import { DEFAULT_IMAGE_DATA_URI } from '../utils/imageUtils';
-// Import override CSS last to ensure it takes precedence
 import './EventApproval.override.css';
 
 const EventsHistory = () => {
@@ -16,16 +14,15 @@ const EventsHistory = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const eventsPerPage = 6; // Limit number of events per page
-  
-  // Use our custom hook to fix card heights
+  const eventsPerPage = 6;
+
   useFixCardHeight();
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        setError(null); // Reset error state on new fetch
+        setError(null);
         const token = sessionStorage.getItem('token');
         if (!token) {
           console.error('No token found in sessionStorage');
@@ -61,12 +58,9 @@ const EventsHistory = () => {
 
         const eventsWithStatus = data.map((event) => ({
           ...event,
-          // Map backend field names to frontend expectations for backward compatibility
-          // Ensure we capture event ID consistently across backend variations
           eventid: event.eventid || event.event_id || event.id,
           event_name: event.event_name || event.name || 'Untitled Event',
           status: event.status || 'Pending',
-          // Friendly display fields
           date: event.start_date || event.date || null,
           time: event.start_time || event.time || null,
           price: (() => {
@@ -75,53 +69,42 @@ const EventsHistory = () => {
             return null;
           })(),
           file_url: (() => {
-            // Find first non-empty image field
             const candidateImgs = [
               event.file_url,
-              event.cover_image_url, // backend snake_case
-              event.coverimage, // legacy camelcase without underscore
-              event.cover_image, // possible underscore variant
-              event.coverImageUrl // camelCase
+              event.cover_image_url,
+              event.coverimage,
+              event.cover_image,
+              event.coverImageUrl
             ];
             let img = candidateImgs.find((c) => typeof c === 'string' && c.trim());
-            // Ignore non-image URLs (pdf, jiff etc.)
             if (img && /\.(pdf|jiff?)$/i.test(img)) {
               img = null;
             }
-            // Fallback to a publicly hosted placeholder image so it always resolves
-            if (!img)
+            if (!img) {
               return (
                 'data:image/svg+xml;utf8,' +
                 encodeURIComponent(
                   `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"><rect width="100%" height="100%" fill="%23cccccc"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23666" font-size="20">No Image</text></svg>`
                 )
               );
-            // Normalize backslashes to forward slashes for browser compatibility
+            }
             if (img) {
               img = img.replace(/\\/g, '/');
             }
-            // If path is root-relative (starts with '/') or begins with 'uploads/', prefix with API host
             if (/^\//.test(img) || img.startsWith('uploads/')) {
               img = `http://localhost:5000/${img.replace(/^\/+/, '')}`;
             }
-            
-            // Fix double-encoded S3 URLs
             if (img && img.includes('xpressticket.s3')) {
-              // Check if URL is double-encoded (contains the S3 domain twice)
               if (img.includes('xpressticket.s3') && img.includes('https%3A//xpressticket.s3')) {
                 try {
-                  // Extract the actual URL path after the domain
                   const urlMatch = img.match(/https%3A\/\/xpressticket\.s3\.af-south-1\.amazonaws\.com\/(.+)/);
                   if (urlMatch && urlMatch[1]) {
-                    // Reconstruct the URL properly
                     img = `https://xpressticket.s3.af-south-1.amazonaws.com/${urlMatch[1]}`;
                   }
                 } catch (err) {
                   console.error('Error fixing double-encoded S3 URL:', err);
                 }
               }
-              
-              // Correct common S3 host typos (missing ".s3.")
               try {
                 const url = new URL(img);
                 if (url.hostname.endsWith('.af-south-1.amazonaws.com') && !url.hostname.includes('.s3.')) {
@@ -132,12 +115,10 @@ const EventsHistory = () => {
                 // ignore malformed url
               }
             }
-            
             return img;
           })(),
         }));
 
-        // Filter to only show events that are NOT pending (approved or rejected)
         const processedEvents = eventsWithStatus.filter(event => 
           event.status.toLowerCase() !== 'pending' && 
           event.status.toLowerCase() !== 'awaiting approval' && 
@@ -154,19 +135,17 @@ const EventsHistory = () => {
     };
 
     fetchEvents();
-    const interval = setInterval(fetchEvents, 10 * 60 * 1000); // Refresh every 10 minutes
+    const interval = setInterval(fetchEvents, 10 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [nav]);
 
-  // Load more events
   const loadMoreEvents = () => {
     if (hasMore) {
       setPage(prevPage => prevPage + 1);
     }
   };
 
-  // Reset pagination
   const resetPagination = () => {
     setPage(1);
     setEvents([]);
@@ -175,28 +154,31 @@ const EventsHistory = () => {
 
   return (
     <div className="modern-dashboard-container">
-      <header className="modern-header">
-        <div className="modern-header-logo">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="modern-logo"
-            onError={(e) => {
-              console.error('Failed to load logo');
-              e.target.src = '/fallback-logo.png';
-            }}
-          />
+      {/* Modern Header */}
+      <header className="modern-header no-print">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+          onError={(e) => {
+            console.error('Failed to load logo');
+            e.target.src = '/fallback-logo.png';
+          }}
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={() => nav('/')}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
-        <button className="modern-logout-btn" onClick={() => nav('/')}>
-          Log Out
-        </button>
       </header>
 
-      <div className="modern-back-button">
+      {/* Back Button */}
+      <div className="modern-back-button-container no-print">
         <button className="modern-back-btn" onClick={() => nav('/admin-dash')}>
           <FaArrowLeft /> Back
         </button>
       </div>
+
       <h2 className="modern-page-title">Events History</h2>
 
       {error && <div className="modern-error"><p>{error}</p></div>}
@@ -223,7 +205,6 @@ const EventsHistory = () => {
             
             <div className="events-table-body">
               {events.map((event) => {
-                // Format date properly
                 let formattedDate = 'N/A';
                 try {
                   if (event.date && event.date !== 'N/A') {
@@ -240,7 +221,6 @@ const EventsHistory = () => {
                   console.error('Date formatting error:', e);
                 }
                 
-                // Get status class
                 const getStatusClass = (status) => {
                   const statusLower = (status || '').toLowerCase();
                   if (statusLower === 'approved' || statusLower === 'active') {

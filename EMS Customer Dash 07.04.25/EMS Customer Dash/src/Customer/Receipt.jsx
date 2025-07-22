@@ -462,12 +462,16 @@ const Receipt = () => {
 
   return (
     <div className="modern-dashboard-container" style={{ overflowX: "hidden" }}>
-      {/* Header Section */}
-      <header className="modern-dashboard-header">
-        <div className="header-content">
-          <h1>{isPaid ? "Receipt" : "Complete Your Purchase"}</h1>
+      {/* Modern Header */}
+      <header className="modern-header no-print">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
           <button
-            className="logout-button"
+            className="modern-logout-btn"
             onClick={() => {
               sessionStorage.removeItem("token")
               sessionStorage.removeItem("userId")
@@ -475,15 +479,15 @@ const Receipt = () => {
               nav("/login")
             }}
           >
-            <FaSignOutAlt style={{ marginRight: "8px" }} /> Logout
+            <FaSignOutAlt /> Logout
           </button>
         </div>
       </header>
 
       {/* Back Button */}
-      <div className="back-button-container">
-        <button className="back-button" onClick={() => nav("/customerdash")}>
-          <FaArrowLeft style={{ marginRight: "8px" }} /> Back to Dashboard
+      <div className="modern-back-button-container no-print">
+        <button className="modern-back-btn" onClick={() => nav("/customerdash")}>
+          <FaArrowLeft /> Back to Dashboard
         </button>
       </div>
 

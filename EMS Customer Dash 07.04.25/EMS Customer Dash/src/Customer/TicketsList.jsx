@@ -14,6 +14,7 @@ import {
   FaFileInvoice,
   FaEye,
 } from "react-icons/fa"
+import "../shared/ModernDashboard.css"
 
 const TicketsList = () => {
   const navigate = useNavigate()
@@ -44,6 +45,10 @@ const TicketsList = () => {
       setLoading(false)
     }
   }, [location.state])
+
+  const handleBackToReview = () => {
+    navigate("/reviewpurchase")
+  }
 
   const handleViewTicket = (ticket) => {
     console.log("TicketsList - Viewing ticket:", ticket)
@@ -110,16 +115,7 @@ const TicketsList = () => {
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#f8f9fa",
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div className="modern-dashboard-container">
         <div
           style={{
             backgroundColor: "white",
@@ -148,50 +144,27 @@ const TicketsList = () => {
 
   if (error || tickets.length === 0) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#f8f9fa",
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        }}
-      >
-        <header
-          style={{
-            background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-            color: "white",
-            padding: "15px 20px",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              maxWidth: "1200px",
-              margin: "0 auto",
-            }}
-          >
-            <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
-            <button
-              onClick={handleLogout}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
+      <div className="modern-dashboard-container">
+        {/* Modern Header */}
+        <header className="modern-header">
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="modern-logo"
+          />
+          <div className="modern-header-actions">
+            <button className="modern-logout-btn" onClick={handleLogout}>
               <FaSignOutAlt /> Logout
             </button>
           </div>
         </header>
+
+        {/* Back Button */}
+        <div className="modern-back-button-container">
+          <button className="modern-back-btn" onClick={handleBackToReview}>
+            <FaArrowLeft /> Back
+          </button>
+        </div>
 
         <div
           style={{
@@ -234,70 +207,29 @@ const TicketsList = () => {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f8f9fa",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      }}
-    >
-      <header
-        style={{
-          background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-          color: "white",
-          padding: "15px 20px",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            maxWidth: "1200px",
-            margin: "0 auto",
-          }}
-        >
-          <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <button
-              onClick={handleBackToPurchases}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaArrowLeft /> Back to Purchases
-            </button>
-            <button
-              onClick={handleLogout}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaSignOutAlt /> Logout
-            </button>
-          </div>
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
 
+      {/* Back Button */}
+      <div className="modern-back-button-container">
+        <button className="modern-back-btn" onClick={handleBackToReview}>
+          <FaArrowLeft /> Back
+        </button>
+      </div>
+
+      {/* Main Content */}
       <main
         style={{
           padding: "30px 20px",
@@ -312,9 +244,18 @@ const TicketsList = () => {
               backgroundColor: "white",
               borderRadius: "12px",
               boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
-              padding: "20px",
-              marginBottom: "30px",
-              display: "flex",
+              padding: "60px",
+              textAlign: "center",
+            }}
+          >
+            <h3 style={{ color: "#6b7280", margin: "0 0 10px 0" }}>No Tickets Found</h3>
+            <p style={{ color: "#9ca3af", margin: "0" }}>There are n tickets to display.</p>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
               gap: "20px",
               alignItems: "center",
             }}

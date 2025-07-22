@@ -128,6 +128,26 @@ const ReviewPurchase = () => {
     } finally {
       setLoading(false)
     }
+    return formatDate(new Date(latestTimestamp).toISOString())
+  }
+
+  const handleViewTickets = (eventGroup) => {
+    console.log("ReviewPurchase - Navigating to tickets list for event:", eventGroup)
+    navigate("/ticketslist", {
+      state: {
+        eventId: eventGroup.eventId,
+        eventName: eventGroup.eventName,
+        totalTickets: eventGroup.totalTickets,
+        totalAmount: eventGroup.totalAmount,
+        purchases: eventGroup.purchases,
+        eventInfo: {
+          eventName: eventGroup.eventName,
+          eventLocation: eventGroup.eventLocation,
+          eventDate: eventGroup.eventDate,
+          eventImage: eventGroup.eventImage,
+        },
+      },
+    })
   }
 
   const handleBackToDashboard = () => {
@@ -162,231 +182,7 @@ const ReviewPurchase = () => {
     }
   }
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#f8f9fa",
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        }}
-      >
-        <header
-          style={{
-            background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-            color: "white",
-            padding: "15px 20px",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              maxWidth: "1200px",
-              margin: "0 auto",
-            }}
-          >
-            <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-              <button
-                onClick={handleBackToDashboard}
-                style={{
-                  background: "transparent",
-                  color: "white",
-                  border: "1px solid rgba(255, 255, 255, 0.5)",
-                  borderRadius: "4px",
-                  padding: "5px 10px",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <FaArrowLeft /> Back to Dashboard
-              </button>
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: "transparent",
-                  color: "white",
-                  border: "1px solid rgba(255, 255, 255, 0.5)",
-                  borderRadius: "4px",
-                  padding: "5px 10px",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <FaSignOutAlt /> Logout
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: "calc(100vh - 70px)",
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
-              padding: "60px",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "50px",
-                height: "50px",
-                border: "4px solid #f3f3f3",
-                borderTop: "4px solid #4ca1af",
-                borderRadius: "50%",
-                animation: "spin 1s linear infinite",
-                margin: "0 auto 20px",
-              }}
-            ></div>
-            <p style={{ color: "#4ca1af", margin: "0", fontSize: "1.1rem" }}>Loading your purchases...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#f8f9fa",
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        }}
-      >
-        <header
-          style={{
-            background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-            color: "white",
-            padding: "15px 20px",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              maxWidth: "1200px",
-              margin: "0 auto",
-            }}
-          >
-            <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-              <button
-                onClick={handleBackToDashboard}
-                style={{
-                  background: "transparent",
-                  color: "white",
-                  border: "1px solid rgba(255, 255, 255, 0.5)",
-                  borderRadius: "4px",
-                  padding: "5px 10px",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <FaArrowLeft /> Back to Dashboard
-              </button>
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: "transparent",
-                  color: "white",
-                  border: "1px solid rgba(255, 255, 255, 0.5)",
-                  borderRadius: "4px",
-                  padding: "5px 10px",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <FaSignOutAlt /> Logout
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: "calc(100vh - 70px)",
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
-              padding: "60px",
-              textAlign: "center",
-              maxWidth: "500px",
-            }}
-          >
-            <h3 style={{ color: "#dc2626", margin: "0 0 15px 0" }}>Error Loading Purchases</h3>
-            <p style={{ color: "#6b7280", margin: "0 0 30px 0" }}>{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                backgroundColor: "#4ca1af",
-                color: "white",
-                border: "none",
-                padding: "12px 24px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "1rem",
-                marginRight: "10px",
-              }}
-            >
-              Try Again
-            </button>
-            <button
-              onClick={handleBackToDashboard}
-              style={{
-                backgroundColor: "#6b7280",
-                color: "white",
-                border: "none",
-                padding: "12px 24px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
-              Go Back
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const eventGroups = groupTicketsByEvent(purchases)
+  console.log("Rendering ReviewPurchase", { purchasedTickets, loading, error })
 
   return (
     <div className="modern-dashboard-container">
@@ -455,7 +251,50 @@ const ReviewPurchase = () => {
             <h3 style={{ color: "#374151", margin: "0 0 10px 0" }}>No Purchases Found</h3>
             <p style={{ color: "#6b7280", margin: "0" }}>You haven't purchased any tickets yet.</p>
           </div>
-        ) : (
+        ) : error ? (
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                backgroundColor: "#fee2e2",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                fontSize: "24px",
+                color: "#dc2626",
+              }}
+            >
+              ⚠️
+            </div>
+            <h3 style={{ color: "#dc2626", margin: "0 0 10px 0" }}>Error Loading Tickets</h3>
+            <p style={{ color: "#6b7280", margin: "0 0 20px 0" }}>{error}</p>
+            <button
+              onClick={() => navigate("/customerdash")}
+              style={{
+                backgroundColor: "#4ca1af",
+                color: "white",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "1rem",
+              }}
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        ) : purchasedTickets.length > 0 ? (
           <div
             style={{
               display: "grid",

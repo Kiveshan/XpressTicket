@@ -1,46 +1,51 @@
-/* form */
-
 .auth-container {
     display: flex;
     height: 100vh;
     margin-top: -30px;
-    flex-direction: row-reverse; /* Reverses the order of flex items */
-  }
-  .left-side {
+    flex-direction: row; /* Changed to row to swap sides */
+}
+
+.left-side {
     flex: 1;
-    background-color: #a7ede7; /* Swapped with right-side color */
+    background-color: #f9f9f9; /* Swapped with right-side color */
     display: flex;
     align-items: center;
     justify-content: center;
     max-width: auto;
-  }
-  .form-card {
+}
+
+.form-card {
     background-color: #fff;
     padding: 40px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     width: 80%;
     max-width: 400px;
-  }
-  .form-title {
+}
+
+.form-title {
     font-size: 24px;
     font-weight: bold;
     margin-bottom: 20px;
-  }
-  .form-group {
+}
+
+.form-group {
     margin-bottom: 15px;
-  }
-  .form-group label {
+}
+
+.form-group label {
     display: block;
     margin-bottom: 5px;
-  }
-  input {
+}
+
+input {
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
-  }
-  .submit-button {
+}
+
+.submit-button {
     width: 100%;
     padding: 10px;
     background-color: #20c997;
@@ -49,11 +54,13 @@
     border-radius: 4px;
     margin-top: 20px;
     cursor: pointer;
-  }
-  .submit-button:hover {
+}
+
+.submit-button:hover {
     background-color: #0d4c39;
-  }
-  .admin{
+}
+
+.admin {
     width: 100%;
     padding: 10px;
     background-color: #c65252;
@@ -62,27 +69,32 @@
     border-radius: 4px;
     margin-top: 20px;
     cursor: pointer;
-  }
-  .admin:hover {
+}
+
+.admin:hover {
     background-color: #9b2c2c;
-  }
-  .toggle-text {
+}
+
+.toggle-text {
     text-align: center;
     margin-top: 15px;
-  }
-  .toggle-link {
+}
+
+.toggle-link {
     color: #20c997;
     cursor: pointer;
     text-decoration: underline;
-  }
-  .right-side {
+}
+
+.right-side {
     flex: 1;
-    background-color: #f9f9f9; /* Swapped with left-side color */
+    background-color: #a7ede7; /* Swapped with left-side color */
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  .logo {
+}
+
+.logo {
     max-width: 600px;
     height: 300px;
-  }
+}

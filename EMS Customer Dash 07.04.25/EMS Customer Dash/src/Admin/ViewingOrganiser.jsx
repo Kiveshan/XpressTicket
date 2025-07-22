@@ -25,16 +25,16 @@ const ViewingOrganiser = () => {
   
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Define the API base URL
-    const API_BASE_URL = 'http://localhost:5000'; // Server is running on port 5000
+    const API_BASE_URL = 'http://localhost:5000';
     
     const fetchUserData = async () => {
       try {
         console.log('Fetching user data for ID:', userId);
         setLoading(true);
-        setError(null); // Clear any previous errors
+        setError(null);
         
         if (!userId) {
           setError('No user ID provided. Cannot fetch user data.');
@@ -42,7 +42,6 @@ const ViewingOrganiser = () => {
           return;
         }
         
-        // Fetch user profile data
         const userResponse = await axios.get(`${API_BASE_URL}/api/user-profile/${userId}`);
         const userData = userResponse.data;
         console.log('User data received:', userData);
@@ -66,14 +65,12 @@ const ViewingOrganiser = () => {
         }
         
         try {
-          // Fetch events hosted by this user
           console.log(`Fetching events for user ID: ${userId}`);
           const eventsResponse = await axios.get(`${API_BASE_URL}/api/user-events/${userId}`);
           const eventsData = eventsResponse.data;
           console.log('Events data:', eventsData);
           
           if (Array.isArray(eventsData) && eventsData.length > 0) {
-            // For each event, get the payment amount
             const eventsWithPayments = await Promise.all(eventsData.map(async (event) => {
               try {
                 const paymentResponse = await axios.get(`${API_BASE_URL}/api/event-payment/${event.event_id}`);
@@ -121,33 +118,39 @@ const ViewingOrganiser = () => {
       fetchUserData();
     } else {
       console.error('No userId provided in location state');
-      // Redirect back to users list with an alert
       setTimeout(() => {
         alert('Error: No user ID provided. Redirecting to users list.');
         nav('/users');
       }, 100);
     }
     
-    // Cleanup function
-    return () => {
-      // Any cleanup needed
-    }
+    return () => {};
   }, [userId, nav]);
 
-  // Error state for data loading problems
-  const [error, setError] = useState(null);
-  
-  // Loading state - this is now handled with an overlay
   if (loading && !error) {
     return (
       <div className="modern-dashboard-container">
-        <header className="modern-header">
+        <header className="modern-header no-print">
           <img
             src="/XPRESS TICKETS LOGO2.png"
             alt="EventXpress Logo"
             className="modern-logo"
+            onError={(e) => {
+              console.error("Failed to load logo");
+              e.target.src = "/fallback-logo.png";
+            }}
           />
+          <div className="modern-header-actions">
+            <button className="modern-logout-btn" onClick={() => nav('/')}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
         </header>
+        <div className="modern-back-button-container no-print">
+          <button className="modern-back-btn" onClick={() => nav("/users")}>
+            <FaArrowLeft /> Back
+          </button>
+        </div>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -179,11 +182,15 @@ const ViewingOrganiser = () => {
   return (
     <div className="modern-dashboard-container">
       {/* Modern Header */}
-      <header className="modern-header">
+      <header className="modern-header no-print">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
           className="modern-logo"
+          onError={(e) => {
+            console.error("Failed to load logo");
+            e.target.src = "/fallback-logo.png";
+          }}
         />
         <div className="modern-header-actions">
           <button className="modern-logout-btn" onClick={() => nav('/')}>
@@ -192,56 +199,52 @@ const ViewingOrganiser = () => {
         </div>
       </header>
       
-      {/* Error message display */}
-      {error && (
-        <div style={{
-          margin: '10px 20px',
-          padding: '10px 15px',
-          backgroundColor: '#f8d7da',
-          color: '#721c24',
-          borderRadius: '4px',
-          border: '1px solid #f5c6cb',
-          fontSize: '0.9rem'
-        }}>
-          {error}
-          <button 
-            style={{
-              marginLeft: '10px',
-              padding: '2px 8px',
-              fontSize: '0.8rem',
-              background: 'transparent',
-              border: '1px solid #721c24',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              color: '#721c24'
-            }}
-            onClick={() => {
-              setError(null);
-              if (userId) fetchUserData();
-            }}
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
       {/* Back Button */}
-      <div className="modern-back-button">
-        <button className="modern-btn" onClick={() => nav("/users")}>
-          <FaArrowLeft /> Back to Users
+      <div className="modern-back-button-container no-print">
+        <button className="modern-back-btn" onClick={() => nav("/users")}>
+          <FaArrowLeft /> Back
         </button>
       </div>
 
       {/* Main Content */}
       <main className="modern-main-content">
-        <h1 className="modern-page-title">Organiser Profile</h1>
+        <h2 className="modern-page-title">Organiser Profile</h2>
         
+        {error && (
+          <div style={{
+            margin: '10px 20px',
+            padding: '10px 15px',
+            backgroundColor: '#f8d7da',
+            color: '#721c24',
+            borderRadius: '4px',
+            border: '1px solid #f5c6cb',
+            fontSize: '0.9rem'
+          }}>
+            {error}
+            <button 
+              style={{
+                marginLeft: '10px',
+                padding: '2px 8px',
+                fontSize: '0.8rem',
+                background: 'transparent',
+                border: '1px solid #721c24',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                color: '#721c24'
+              }}
+              onClick={() => {
+                setError(null);
+                if (userId) fetchUserData();
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         <div className="modern-profile-container">
-          {/* Profile Information - Complete redesign with compact table-like layout */}
           <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', width: '100%', marginBottom: '15px'}}>
-            {/* Left column */}
             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-              {/* Personal Information */}
               <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
                 <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
                   <span style={{fontSize: '11px', fontWeight: 500}}><FaUser size={10} style={{marginRight: '4px'}} /> Personal Information</span>
@@ -283,9 +286,7 @@ const ViewingOrganiser = () => {
               </div>
             </div>
             
-            {/* Right column */}
             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-              {/* Institution Details - ONLY section in right column */}
               <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
                 <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
                   <span style={{fontSize: '11px', fontWeight: 500}}><FaBuilding size={10} style={{marginRight: '4px'}} /> Institution Details</span>
@@ -307,11 +308,9 @@ const ViewingOrganiser = () => {
                   </tbody>
                 </table>
               </div>
-              {/* NO OTHER SECTIONS IN RIGHT COLUMN */}
             </div>
           </div>
 
-          {/* Events Table */}
           <div style={{marginTop: '15px', border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
             <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
               <span style={{fontSize: '11px', fontWeight: 500}}>Events Hosted</span>
