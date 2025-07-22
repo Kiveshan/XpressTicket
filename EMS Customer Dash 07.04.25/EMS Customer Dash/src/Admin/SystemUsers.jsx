@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import "../shared/ModernDashboard.css"
-import { FaSignOutAlt, FaEye, FaCheck, FaBan, FaSearch } from "react-icons/fa"
+import { FaSignOutAlt, FaEye, FaCheck, FaBan, FaSearch, FaArrowLeft } from "react-icons/fa"
 
 const SystemUsers = () => {
   const nav = useNavigate()
@@ -19,23 +19,19 @@ const SystemUsers = () => {
   const [filteredGeneralUsers, setFilteredGeneralUsers] = useState([])
 
   useEffect(() => {
-    // Define the API base URL
-    const API_BASE_URL = "http://localhost:5000" // Server is running on port 5000
+    const API_BASE_URL = "http://localhost:5000"
 
-    // Get token from sessionStorage (where it's stored during login)
     const storedToken = sessionStorage.getItem("token")
     if (storedToken) {
       console.log("Token found in sessionStorage")
       setToken(storedToken)
     } else {
       console.log("No token found in sessionStorage")
-      // If no token is found, redirect to login
       alert("Please log in to access this page")
       nav("/")
       return
     }
 
-    // Fetch organizers with events
     const fetchOrganisers = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/api/users-with-events`, {
@@ -43,7 +39,6 @@ const SystemUsers = () => {
             Authorization: `Bearer ${storedToken}`,
           },
         })
-        // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setOrganisers(response.data)
         } else {
@@ -56,7 +51,6 @@ const SystemUsers = () => {
       }
     }
 
-    // Fetch general users (users without events)
     const fetchGeneralUsers = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/api/users-without-events`, {
@@ -64,7 +58,6 @@ const SystemUsers = () => {
             Authorization: `Bearer ${storedToken}`,
           },
         })
-        // Ensure response.data is an array
         if (Array.isArray(response.data)) {
           setGeneralUsers(response.data)
         } else {
@@ -80,9 +73,8 @@ const SystemUsers = () => {
     fetchOrganisers()
     fetchGeneralUsers()
     setLoading(false)
-  }, [])
+  }, [nav])
 
-  // Effect to filter data based on search term
   useEffect(() => {
     if (organisers.length > 0) {
       const filtered = organisers.filter((organiser) => {
@@ -109,13 +101,11 @@ const SystemUsers = () => {
     }
   }, [searchTerm, organisers, generalUsers])
 
-  // Function to toggle user's disabled status
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       setLoading(true)
       const API_BASE_URL = "http://localhost:5000"
 
-      // Get the token from sessionStorage where it's stored during login
       const currentToken = sessionStorage.getItem("token")
 
       if (!currentToken) {
@@ -136,10 +126,13 @@ const SystemUsers = () => {
         },
       )
 
-      // Refresh user lists after toggling status
       const fetchOrganisers = async () => {
         try {
-          const response = await axios.get(`${API_BASE_URL}/api/users-with-events`)
+          const response = await axios.get(`${API_BASE_URL}/api/users-with-events`, {
+            headers: {
+              Authorization: `Bearer ${currentToken}`,
+            },
+          })
           if (Array.isArray(response.data)) {
             setOrganisers(response.data)
           }
@@ -150,7 +143,11 @@ const SystemUsers = () => {
 
       const fetchGeneralUsers = async () => {
         try {
-          const response = await axios.get(`${API_BASE_URL}/api/users-without-events`)
+          const response = await axios.get(`${API_BASE_URL}/api/users-without-events`, {
+            headers: {
+              Authorization: `Bearer ${currentToken}`,
+            },
+          })
           if (Array.isArray(response.data)) {
             setGeneralUsers(response.data)
           }
@@ -167,7 +164,6 @@ const SystemUsers = () => {
     } catch (error) {
       console.error("Error toggling user status:", error)
 
-      // Check if it's an authentication error
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         alert("Your session has expired. Please log in again.")
         sessionStorage.removeItem("token")
@@ -307,8 +303,16 @@ const SystemUsers = () => {
   return (
     <div className="modern-dashboard-container">
       {/* Modern Header */}
-      <header className="modern-header">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="modern-logo" />
+      <header className="modern-header no-print">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+          onError={(e) => {
+            console.error("Failed to load logo")
+            e.target.src = "/fallback-logo.png"
+          }}
+        />
         <div className="modern-header-actions">
           <button className="modern-logout-btn" onClick={() => nav("/")}>
             <FaSignOutAlt /> Logout
@@ -316,16 +320,16 @@ const SystemUsers = () => {
         </div>
       </header>
 
-      {/* Back Button - Original Style */}
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => nav("/admin-dash")}>
-          Back
+      {/* Back Button */}
+      <div className="modern-back-button-container no-print">
+        <button className="modern-back-btn" onClick={() => nav("/admin-dash")}>
+          <FaArrowLeft /> Back
         </button>
       </div>
 
       {/* Main Content */}
       <main className="modern-main-content">
-        <h1 className="modern-page-title">System Users</h1>
+        <h2 className="modern-page-title">System Users</h2>
 
         {/* Search Input */}
         <div className="modern-search-filter">

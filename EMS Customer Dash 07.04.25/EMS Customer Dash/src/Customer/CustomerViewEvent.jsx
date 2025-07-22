@@ -11,7 +11,6 @@ import {
   FaMapMarkerAlt,
   FaInfoCircle,
 } from "react-icons/fa";
-import EventImage from "../utils/EventImage";
 
 const CustomerViewEvent = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -82,7 +81,6 @@ const CustomerViewEvent = () => {
   };
 
   const handleSelectPackage = (pkg, index) => {
-    // Format data for CustomerFillinTicketPack1.jsx
     const ticketDetailsData = {
       event: {
         event_id: event.event_id,
@@ -90,7 +88,7 @@ const CustomerViewEvent = () => {
         location: event.location || "TBA",
         start_date: event.start_date || "TBA",
         start_time: event.start_time || "TBA",
-        coverimage: event.coverimage || "",
+        coverimage: event.coverimage || "/default-event-image.jpg",
         event_type: event.event_type || "Conference",
         description: event.description || "",
         terms_and_conditions: event.terms_and_conditions || "",
@@ -106,6 +104,14 @@ const CustomerViewEvent = () => {
     };
     console.log("Navigating to ticket details with ticketDetailsData:", ticketDetailsData);
     nav(`/customerticketdetails1/${eventId}/${index}`, { state: { ticketDetailsData } });
+  };
+
+  const handleImageError = (e) => {
+    if (e.target.src !== "/default-event-image.jpg") {
+      console.warn(`Failed to load image: ${e.target.src}`);
+      e.target.src = "/default-event-image.jpg";
+      e.target.classList.add("image-error");
+    }
   };
 
   if (loading) {
@@ -125,8 +131,8 @@ const CustomerViewEvent = () => {
           <h2>Event Not Found</h2>
           <p>{error}</p>
           <div className="button-group">
-            <button onClick={() => nav(-1)} className="back-button">
-              <FaArrowLeft /> Go Back
+            <button onClick={() => nav(-1)} className="modern-back-btn">
+              <FaArrowLeft /> Back
             </button>
             <button onClick={() => nav("/events")} className="primary-button">
               <FaHome /> Browse Events
@@ -139,27 +145,48 @@ const CustomerViewEvent = () => {
 
   return (
     <div className="customer-view-event">
-      <header className="event-header">
-        <div className="container">
-          <div className="header-content">
-            <button onClick={() => nav(-1)} className="back-button">
-              <FaArrowLeft /> Back
-            </button>
-            <h1>{event.name}</h1>
-            <button onClick={handleLogout} className="logout-button">
-              <FaSignOutAlt /> Logout
-            </button>
-          </div>
+      {/* Modern Header */}
+      <header className="modern-header">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
+
+      <br />
+      <br />
+
+      {/* Back Button */}
+      <div className="modern-back-button-container">
+        <button className="modern-back-btn" onClick={() => nav("/customerdash")}>
+          <FaArrowLeft /> Back
+        </button>
+      </div>
 
       <main className="event-main">
         <div className="container">
           <div className="event-image-container">
-            <EventImage eventType={event.event_type} className="event-image" />
+            <img
+              src={event.coverimage || "/default-event-image.jpg"}
+              alt={event.name}
+              className="event-image"
+              onError={handleImageError}
+            />
+            {!event.coverimage && (
+              <div className="image-placeholder">
+                <span>No Image</span>
+              </div>
+            )}
           </div>
 
           <div className="event-details">
+            <h1>{event.name}</h1>
             <div className="event-meta">
               <div className="meta-item">
                 <FaCalendarAlt className="meta-icon" />
@@ -209,7 +236,7 @@ const CustomerViewEvent = () => {
                     </div>
                   )}
                 </div>
-              ) : activeTab == 1 ? (
+              ) : activeTab === 1 ? (
                 <div className="packages-tab">
                   {packages.length > 0 ? (
                     <div className="packages-grid">

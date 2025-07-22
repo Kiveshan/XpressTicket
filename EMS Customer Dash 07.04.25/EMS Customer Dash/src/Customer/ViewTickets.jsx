@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { FaArrowLeft, FaSignOutAlt, FaCalendarAlt, FaUser, FaDownload, FaPrint, FaQrcode } from "react-icons/fa"
+import "../shared/ModernDashboard.css"
 
 const ViewTickets = () => {
   const navigate = useNavigate()
@@ -103,15 +104,7 @@ const ViewTickets = () => {
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#f8f9fa",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div className="modern-dashboard-container">
         <div style={{ textAlign: "center" }}>
           <div
             style={{
@@ -132,145 +125,108 @@ const ViewTickets = () => {
 
   if (error || !ticket) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#f8f9fa",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div className="modern-dashboard-container">
+        {/* Modern Header */}
+        <header className="modern-header no-print">
+          <img
+            src="/XPRESS TICKETS LOGO2.png"
+            alt="EventXpress Logo"
+            className="modern-logo"
+          />
+          <div className="modern-header-actions">
+            <button className="modern-logout-btn" onClick={handleLogout}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
+        </header>
+
+        {/* Back Button */}
+        <div className="modern-back-button-container no-print">
+          <button className="modern-back-btn" onClick={handleBackToTickets}>
+            <FaArrowLeft /> Back
+          </button>
+        </div>
+
         <div
           style={{
-            backgroundColor: "white",
-            borderRadius: "12px",
-            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
-            padding: "60px",
-            textAlign: "center",
+            padding: "20px 15px",
             maxWidth: "400px",
+            margin: "0 auto",
+            width: "100%",
           }}
         >
           <div
             style={{
-              width: "60px",
-              height: "60px",
-              backgroundColor: "#fee2e2",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
-              fontSize: "24px",
-              color: "#dc2626",
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
             }}
           >
-            ⚠️
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                backgroundColor: "#fee2e2",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                fontSize: "24px",
+                color: "#dc2626",
+              }}
+            >
+              ⚠️
+            </div>
+            <h3 style={{ color: "#dc2626", margin: "0 0 10px 0" }}>Error Loading Ticket</h3>
+            <p style={{ color: "#6b7280", margin: "0 0 20px 0" }}>{error || "Ticket not found"}</p>
+            <button
+              onClick={handleBackToTickets}
+              style={{
+                backgroundColor: "#4ca1af",
+                color: "white",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "1rem",
+              }}
+            >
+              Go Back
+            </button>
           </div>
-          <h3 style={{ color: "#dc2626", margin: "0 0 10px 0" }}>Error Loading Ticket</h3>
-          <p style={{ color: "#6b7280", margin: "0 0 20px 0" }}>{error || "Ticket not found"}</p>
-          <button
-            onClick={handleBackToTickets}
-            style={{
-              backgroundColor: "#4ca1af",
-              color: "white",
-              border: "none",
-              padding: "12px 24px",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "1rem",
-            }}
-          >
-            Go Back
-          </button>
         </div>
       </div>
     )
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f8f9fa",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      }}
-    >
-      {/* Header */}
-      <header
-        style={{
-          background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-          color: "white",
-          padding: "15px 20px",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        }}
-        className="no-print"
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            maxWidth: "1200px",
-            margin: "0 auto",
-          }}
-        >
-          <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <button
-              onClick={handleBackToTickets}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaArrowLeft /> Back
-            </button>
-            <button
-              onClick={handlePrint}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaPrint /> Print
-            </button>
-            <button
-              onClick={handleLogout}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaSignOutAlt /> Logout
-            </button>
-          </div>
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header no-print">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
+
+      {/* Back and Print Buttons */}
+      <div className="modern-back-button-container no-print">
+        <button className="modern-back-btn" onClick={handleBackToTickets}>
+          <FaArrowLeft /> Back
+        </button>
+        <button className="modern-back-btn" onClick={handlePrint}>
+          <FaPrint /> Print
+        </button>
+      </div>
 
       {/* Main Content */}
       <main

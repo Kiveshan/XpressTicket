@@ -16,6 +16,7 @@ import {
   FaCheck,
   FaPencilAlt,
   FaTimes,
+  FaSignOutAlt,
 } from "react-icons/fa"
 import { MdEventAvailable } from "react-icons/md"
 import { DEFAULT_IMAGE_DATA_URI } from "../utils/imageUtils"
@@ -334,29 +335,32 @@ const AdminViewEventRequest = () => {
 
   return (
     <div className="modern-dashboard-container">
-      <div className="modern-header">
-        <div className="modern-header-logo">
-          <img
-            src="/XPRESS TICKETS LOGO2.png"
-            alt="EventXpress Logo"
-            className="modern-logo"
-            style={{ maxHeight: "45px", width: "auto" }}
-            onError={(e) => {
-              console.error("Failed to load logo")
-              e.target.src = "/fallback-logo.png"
-            }}
-          />
-          <h1>Event Request Review</h1>
-        </div>
+      {/* Modern Header */}
+      <header className="modern-header no-print">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+          onError={(e) => {
+            console.error("Failed to load logo")
+            e.target.src = "/fallback-logo.png"
+          }}
+        />
         <div className="modern-header-actions">
-          <button className="modern-btn modern-btn-outline" onClick={() => nav("/event-approval")}>
-            <FaArrowLeft /> Back to Events
-          </button>
           <button className="modern-logout-btn" onClick={() => nav("/login")}>
-            Logout
+            <FaSignOutAlt /> Logout
           </button>
         </div>
+      </header>
+
+      {/* Back Button */}
+      <div className="modern-back-button-container no-print">
+        <button className="modern-back-btn" onClick={() => nav("/event-approval")}>
+          <FaArrowLeft /> Back
+        </button>
       </div>
+
+      <h2 className="modern-page-title">Event Request Review</h2>
 
       <div style={{ marginBottom: "12px" }}>
         <h3 style={{ fontSize: "0.95rem", margin: "8px 0", color: "#2d3748" }}>Event Overview</h3>

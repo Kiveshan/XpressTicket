@@ -294,15 +294,15 @@ const RehostEventForm = () => {
           <div className="profile-section">
             {!isAuthError && (
               <button
-                className="backbutton22"
+                className="modern-button"
                 onClick={() => {
                   sessionStorage.removeItem('token');
                   sessionStorage.removeItem('userId');
                   sessionStorage.removeItem('user');
-                  navigate('/login');
+                  navigate('/');
                 }}
               >
-                LogOut
+                <i className="fas fa-sign-out-alt"></i> Logout
               </button>
             )}
           </div>
@@ -364,15 +364,15 @@ const RehostEventForm = () => {
         </div>
         <div className="profile-section">
           <button
-            className="backbutton22"
+            className="modern-button"
             onClick={() => {
               sessionStorage.removeItem('token');
               sessionStorage.removeItem('userId');
               sessionStorage.removeItem('user');
-              navigate('/login');
+              navigate('/');
             }}
           >
-            LogOut
+            <i className="fas fa-sign-out-alt"></i> Logout
           </button>
         </div>
       </header>
@@ -422,7 +422,7 @@ const RehostEventForm = () => {
                 <p>
                   📍 {event.location} <br />
                   📅 {formatDate(event.date)} <br />
-                  💰 {event.price} <br />
+              
                   ⏰ {event.time}
                 </p>
               </div>

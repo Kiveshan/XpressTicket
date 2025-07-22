@@ -3,7 +3,6 @@ import "./TicketsPayment.css";
 import { useNavigate } from "react-router-dom";
 import "../shared/ModernDashboard.css";
 import {
-  FaSignOutAlt,
   FaSearch,
   FaFilter,
   FaEye,
@@ -45,7 +44,7 @@ const paymentData = [
 ];
 
 const TickectPaymentList = () => {
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
@@ -69,8 +68,8 @@ const TickectPaymentList = () => {
       <header className="modern-header">
         <div className="header-left">
           <button
-            className="backbutton20"
-            onClick={() => nav("/organiser-dash")}
+            className="modern-button"
+            onClick={() => navigate("/organiser-dash")}
           >
             <i className="fas fa-arrow-left"></i> Back
           </button>
@@ -81,8 +80,16 @@ const TickectPaymentList = () => {
           />
         </div>
         <div className="modern-header-actions">
-          <button className="modern-logout-btn" onClick={() => nav("/")}>
-            <FaSignOutAlt /> Logout
+          <button
+            className="modern-button"
+            onClick={() => {
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("userId");
+              sessionStorage.removeItem("user");
+              navigate("/");
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Logout
           </button>
         </div>
       </header>
@@ -156,7 +163,7 @@ const TickectPaymentList = () => {
                   <td>
                     <button
                       className="modern-action-btn"
-                      onClick={() => nav("/ticketspayment")}
+                      onClick={() => navigate("/ticketspayment")}
                       title="View payment details"
                     >
                       <FaEye />

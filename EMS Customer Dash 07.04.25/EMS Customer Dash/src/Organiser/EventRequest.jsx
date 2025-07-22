@@ -7,7 +7,7 @@ import { ClipLoader } from "react-spinners"
 import logo from "/XPRESS TICKETS LOGO2.png"
 
 const EventRequest = () => {
-  const nav = useNavigate()
+  const navigate = useNavigate()
   const [events, setEvents] = useState([])
   const [filteredEvents, setFilteredEvents] = useState([])
   const [error, setError] = useState(null)
@@ -18,7 +18,7 @@ const EventRequest = () => {
     sessionStorage.removeItem("token")
     sessionStorage.removeItem("userId")
     sessionStorage.removeItem("user")
-    nav("/login")
+    navigate("/login")
   }
 
   // Helper function to format date as DD/MM/YYYY
@@ -109,7 +109,7 @@ const EventRequest = () => {
         sessionStorage.removeItem("token")
         sessionStorage.removeItem("userId")
         sessionStorage.removeItem("user")
-        nav("/login")
+        navigate("/login")
         return
       }
 
@@ -129,7 +129,7 @@ const EventRequest = () => {
         sessionStorage.removeItem("token")
         sessionStorage.removeItem("userId")
         sessionStorage.removeItem("user")
-        nav("/login")
+        navigate("/login")
         return
       }
 
@@ -150,7 +150,7 @@ const EventRequest = () => {
           sessionStorage.removeItem("token")
           sessionStorage.removeItem("userId")
           sessionStorage.removeItem("user")
-          nav("/login")
+          navigate("/login")
           return
         }
         throw new Error(errorData.message || `Server error: ${response.status} ${response.statusText}`)
@@ -195,7 +195,7 @@ const EventRequest = () => {
       isMounted = false
       clearInterval(interval)
     }
-  }, [nav])
+  }, [navigate])
 
   useEffect(() => {
     if (statusFilter === "all") {
@@ -222,14 +222,22 @@ const EventRequest = () => {
       <div className="modern-container">
         <header className="modern-header">
           <div className="header-left">
-            <button className="backbutton20" onClick={() => nav("/requestcard")}>
+            <button className="backbutton20" onClick={() => navigate("/requestcard")}>
               <i className="fas fa-arrow-left"></i> Back
             </button>
             <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
           <h1 className="header-title"></h1>
-          <button className="modern-button" onClick={handleLogout}>
-            <span className="button-icon">↩</span> Logout
+          <button
+            className="modern-button"
+            onClick={() => {
+              sessionStorage.removeItem("token")
+              sessionStorage.removeItem("userId")
+              sessionStorage.removeItem("user")
+              navigate("/login")
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Logout
           </button>
         </header>
         <div className="loading-container">
@@ -246,15 +254,23 @@ const EventRequest = () => {
       <div className="modern-container">
         <header className="modern-header">
           <div className="header-left">
-            <button className="backbutton20" onClick={() => (isAuthError ? nav("/login") : nav("/requestcard"))}>
+            <button className="backbutton20" onClick={() => (isAuthError ? navigate("/login") : navigate("/requestcard"))}>
               <i className="fas fa-arrow-left"></i> {isAuthError ? "Go to Login" : "Back"}
             </button>
             <img src={logo} alt="EventXpress Logo" className="header-logo" />
           </div>
           <h1 className="header-title"></h1>
           {!isAuthError && (
-            <button className="modern-button" onClick={handleLogout}>
-              <span className="button-icon">↩</span> Logout
+            <button
+              className="modern-button"
+              onClick={() => {
+                sessionStorage.removeItem("token")
+                sessionStorage.removeItem("userId")
+                sessionStorage.removeItem("user")
+                navigate("/login")
+              }}
+            >
+              <i className="fas fa-sign-out-alt"></i> Logout
             </button>
           )}
         </header>
@@ -268,7 +284,7 @@ const EventRequest = () => {
                 className="primary-button"
                 onClick={() => {
                   sessionStorage.clear()
-                  nav("/login")
+                  navigate("/login")
                 }}
               >
                 Go to Login
@@ -296,14 +312,22 @@ const EventRequest = () => {
     <div className="modern-container">
       <header className="modern-header">
         <div className="header-left">
-          <button className="backbutton20" onClick={() => nav("/requestcard")}>
+          <button className="backbutton20" onClick={() => navigate("/requestcard")}>
             <i className="fas fa-arrow-left"></i> Back
           </button>
           <img src={logo} alt="EventXpress Logo" className="header-logo" />
         </div>
         <h1 className="header-title"></h1>
-        <button className="modern-button" onClick={handleLogout}>
-          <span className="button-icon">↩</span> Logout
+        <button
+          className="modern-button"
+          onClick={() => {
+            sessionStorage.removeItem("token")
+            sessionStorage.removeItem("userId")
+            sessionStorage.removeItem("user")
+            navigate("/login")
+          }}
+        >
+          <i className="fas fa-sign-out-alt"></i> Logout
         </button>
       </header>
 
@@ -330,7 +354,7 @@ const EventRequest = () => {
             No events found{statusFilter !== "all" ? ` with status "${statusFilter}"` : ""}. Create your first event to
             get started!
           </p>
-          <button className="primary-button" onClick={() => nav("/create-event")}>
+          <button className="primary-button" onClick={() => navigate("/create-event")}>
             Create New Event
           </button>
         </div>
@@ -364,7 +388,7 @@ const EventRequest = () => {
                 <span className={`status ${event.status.replace(" ", "-").toLowerCase()}`}>
                   Status: {event.status}
                 </span>
-                <button className="view-btn" onClick={() => nav("/viewerequest", { state: { eventid: event.id } })}>
+                <button className="view-btn" onClick={() => navigate("/viewerequest", { state: { eventid: event.id } })}>
                   View
                 </button>
               </div>

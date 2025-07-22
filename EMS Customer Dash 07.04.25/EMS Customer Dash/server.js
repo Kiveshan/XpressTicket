@@ -57,9 +57,9 @@ for (const envVar of requiredEnvVars) {
 const pool = new Pool({
   user: "postgres",
   host: "localhost",
-  database: "XPRT2",
-  password: "1234567890",
-  port: 5432,
+  database: "xpress-1",
+  password: "123456",
+  port: 5433,
   timezone: "UTC", // Ensure PostgreSQL uses UTC
 })
 
@@ -3418,46 +3418,49 @@ app.get("/api/events/:eventId", authenticateToken, async (req, res) => {
 
     const parsedTabs = event.tabs
       ? event.tabs.map((tab) => {
-        try {
-          return JSON.parse(tab);
-        } catch (e) {
-          console.warn(`Failed to parse tab: ${tab}`, e);
-          return {};
-        }
-      })
+          try {
+            return JSON.parse(tab);
+          } catch (e) {
+            console.warn(`Failed to parse tab: ${tab}`, e);
+            return {};
+          }
+        })
       : [];
 
     const parsedPackages = event.packages
       ? event.packages.map((pkg) => {
-        try {
-          // Handle double-encoded JSON
-          let parsedPkg = pkg;
-          if (typeof pkg === "string") {
-            parsedPkg = JSON.parse(pkg); // First parse
-            if (typeof parsedPkg === "string") {
-              parsedPkg = JSON.parse(parsedPkg); // Second parse for double-encoded JSON
+          try {
+            let parsedPkg = pkg;
+            if (typeof pkg === "string") {
+              parsedPkg = JSON.parse(pkg);
+              if (typeof parsedPkg === "string") {
+                parsedPkg = JSON.parse(parsedPkg);
+              }
             }
+            return {
+              name: parsedPkg.selectType || parsedPkg.packageType || "Unnamed Package",
+              type: parsedPkg.packageType || parsedPkg.selectType || "N/A",
+              details: parsedPkg.details || "No details provided",
+              price: parsedPkg.pricing ? parseFloat(parsedPkg.pricing) : 0,
+              startDate: parsedPkg.startDate ? formatDate(parsedPkg.startDate) : "N/A",
+              endDate: parsedPkg.endDate ? formatDate(parsedPkg.endDate) : "N/A",
+              location: parsedPkg.location || "N/A",
+              duration: parsedPkg.duration || "N/A",
+            };
+          } catch (e) {
+            console.warn(`Failed to parse package: ${pkg}`, e);
+            return {
+              name: "Error",
+              type: "N/A",
+              details: "Failed to parse package data",
+              price: 0,
+              startDate: "N/A",
+              endDate: "N/A",
+              location: "N/A",
+              duration: "N/A",
+            };
           }
-          return {
-            name: parsedPkg.selectType || parsedPkg.packageType || "Unnamed Package",
-            type: parsedPkg.packageType || parsedPkg.selectType || "N/A",
-            details: parsedPkg.details || "No details provided",
-            price: parsedPkg.pricing ? parseFloat(parsedPkg.pricing) : 0,
-            startDate: parsedPkg.startDate ? formatDate(parsedPkg.startDate) : "N/A",
-            endDate: parsedPkg.endDate ? formatDate(parsedPkg.endDate) : "N/A",
-          };
-        } catch (e) {
-          console.warn(`Failed to parse package: ${pkg}`, e);
-          return {
-            name: "Error",
-            type: "N/A",
-            details: "Failed to parse package data",
-            price: 0,
-            startDate: "N/A",
-            endDate: "N/A",
-          };
-        }
-      })
+        })
       : [];
 
     const responseEvent = {
@@ -3497,7 +3500,6 @@ function formatDate(dateString) {
     return "N/A"
   }
 }
-
 // API endpoint for saving ticket purchases
 app.post("/api/ticket-purchases", authenticateToken, async (req, res) => {
   try {
@@ -3662,17 +3664,17 @@ app.post("/api/update-ticket-status", authenticateToken, async (req, res) => {
 
 // Get user's approved ticket purchases with event details
 app.get("/api/user-ticket-purchases/:userId", authenticateToken, async (req, res) => {
-  const client = await pool.connect()
+  const client = await pool.connect();
   try {
-    const { userId } = req.params
-    const requestingUserId = req.user.userId
+    const { userId } = req.params;
+    const requestingUserId = req.user.userId;
 
     // Ensure user can only access their own ticket purchases (unless admin)
     if (requestingUserId !== Number.parseInt(userId) && req.user.role !== "Admin") {
-      return res.status(403).json({ error: "Access denied. You can only view your own ticket purchases." })
+      return res.status(403).json({ error: "Access denied. You can only view your own ticket purchases." });
     }
 
-    console.log(`Fetching approved ticket purchases for user ID: ${userId}`)
+    console.log(`Fetching approved ticket purchases for user ID: ${userId}`);
 
     const query = `
       SELECT 
@@ -3685,7 +3687,7 @@ app.get("/api/user-ticket-purchases/:userId", authenticateToken, async (req, res
         tp.status as purchase_status,
         tp.delegate_details,
         e.name as event_name,
-        e.location,
+        e.location as event_location,
         e.startdate::text as event_date,
         e.time::text as event_time,
         e.description,
@@ -3697,46 +3699,46 @@ app.get("/api/user-ticket-purchases/:userId", authenticateToken, async (req, res
         up.email
       FROM ticket_purchases tp
       JOIN events e ON tp.event_id = e.event_id
-      JOIN user_profiles up ON tp.user_id = e.user_id
+      JOIN user_profiles up ON tp.user_id = up.user_id
       WHERE tp.user_id = $1 AND tp.status = 'Approved'
       ORDER BY e.startdate DESC
-    `
+    `;
 
-    const result = await client.query(query, [userId])
+    const result = await client.query(query, [userId]);
 
-    console.log(`Found ${result.rows.length} approved ticket purchases for user ${userId}`)
+    console.log(`Found ${result.rows.length} approved ticket purchases for user ${userId}`);
 
-    // Generate presigned URLs for event images and add additional processing
+    // Generate presigned URLs for event images
     const purchasesWithUrls = await Promise.all(
       result.rows.map(async (purchase) => {
-        let file_url = "/default-event-image.png"
+        let file_url = "/default-event-image.jpg";
 
         if (purchase.coverimage && purchase.coverimage.trim() !== "") {
           try {
             const coverKey = purchase.coverimage.startsWith("https://")
               ? purchase.coverimage.split("/").slice(3).join("/")
-              : purchase.coverimage
-            const presignedUrl = await generatePresignedUrl(coverKey)
+              : purchase.coverimage;
+            const presignedUrl = await generatePresignedUrl(coverKey);
             if (presignedUrl) {
-              file_url = presignedUrl
+              file_url = presignedUrl;
             }
           } catch (err) {
-            console.error(`Error generating presigned URL for event ${purchase.event_id}:`, err)
+            console.error(`Error generating presigned URL for event ${purchase.event_id}:`, err);
           }
         }
 
-        // Parse package information if it's a JSON string
-        let packageInfo = "Standard"
+        // Parse package information
+        let packageInfo = "Standard";
         try {
           if (typeof purchase.package === "string" && purchase.package.startsWith("{")) {
-            const parsedPackage = JSON.parse(purchase.package)
-            packageInfo = parsedPackage.selectType || parsedPackage.packageType || "Standard"
+            const parsedPackage = JSON.parse(purchase.package);
+            packageInfo = parsedPackage.selectType || parsedPackage.packageType || "Standard";
           } else {
-            packageInfo = purchase.package || "Standard"
+            packageInfo = purchase.package || "Standard";
           }
         } catch (e) {
-          console.warn("Could not parse package info:", purchase.package)
-          packageInfo = purchase.package || "Standard"
+          console.warn("Could not parse package info:", purchase.package);
+          packageInfo = purchase.package || "Standard";
         }
 
         return {
@@ -3744,21 +3746,21 @@ app.get("/api/user-ticket-purchases/:userId", authenticateToken, async (req, res
           file_url,
           package_type: packageInfo,
           purchaser_name: `${purchase.firstname} ${purchase.surname}`.trim(),
-        }
+        };
       }),
-    )
+    );
 
-    res.json(purchasesWithUrls)
+    res.json(purchasesWithUrls);
   } catch (error) {
-    console.error("Error fetching user ticket purchases:", error)
+    console.error("Error fetching user ticket purchases:", error);
     res.status(500).json({
       error: "Failed to fetch ticket purchases",
       details: error.message,
-    })
+    });
   } finally {
-    client.release()
+    client.release();
   }
-})
+});
 
 // Get single event by ID
 // app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
