@@ -2,209 +2,141 @@
 
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import "./CustomerUploadPOP.css"
+import {
+  FaArrowLeft,
+  FaSignOutAlt,
+  FaEye,
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaUser,
+  FaTicketAlt,
+  FaDownload,
+} from "react-icons/fa"
 
 const TicketsList = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [ticketData, setTicketData] = useState([])
-  const [eventInfo, setEventInfo] = useState(null)
+  const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Get data passed from ReviewPurchase component
-  const passedData = location.state || {}
-  const { eventId, eventName, purchases = [] } = passedData
-
   useEffect(() => {
-    const fetchEventAndProcessTickets = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+    try {
+      setLoading(true)
+      setError(null)
 
-        console.log("Processing ticket data for event:", eventId)
-        console.log("Purchases data:", purchases)
+      // Get data from navigation state
+      const { purchases, eventInfo } = location.state || {}
 
-        // Fetch fresh event details from database
-        const token = sessionStorage.getItem("token")
-        if (!token) {
-          setError("No authentication token found")
-          return
-        }
+      console.log("TicketsList - Received state:", { purchases, eventInfo })
 
-        // Fetch event information
-        let eventData = null
-        if (eventId) {
-          try {
-            const eventResponse = await fetch(`http://localhost:5000/api/events/${eventId}`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            })
-
-            if (eventResponse.ok) {
-              eventData = await eventResponse.json()
-              setEventInfo({
-                name: eventData.name,
-                coverimage: eventData.coverimage,
-                location: eventData.location,
-                date: eventData.start_date,
-                description: eventData.description,
-              })
-            } else {
-              console.warn("Could not fetch event details, using passed data")
-              setEventInfo({
-                name: eventName || "Event Details",
-                coverimage: null,
-                location: null,
-                date: null,
-              })
-            }
-          } catch (err) {
-            console.error("Error fetching event details:", err)
-            setEventInfo({
-              name: eventName || "Event Details",
-              coverimage: null,
-              location: null,
-              date: null,
-            })
-          }
-        }
-
-        // Process purchases to extract individual tickets/delegates
-        const allTickets = []
-
-        purchases.forEach((purchase, purchaseIndex) => {
-          console.log(`Processing purchase ${purchaseIndex + 1}:`, purchase)
-
-          // Parse delegate details from JSONB
-          let delegates = []
-          if (purchase.delegate_details) {
-            try {
-              const delegateData =
-                typeof purchase.delegate_details === "string"
-                  ? JSON.parse(purchase.delegate_details)
-                  : purchase.delegate_details
-
-              if (Array.isArray(delegateData)) {
-                delegates = delegateData
-              } else if (typeof delegateData === "object" && delegateData !== null) {
-                // If it's a single object, convert to array
-                delegates = [delegateData]
-              }
-
-              console.log("Parsed delegates for purchase:", delegates)
-            } catch (e) {
-              console.error("Error parsing delegate details:", e, purchase.delegate_details)
-              // Create a default delegate entry if parsing fails
-              delegates = [
-                {
-                  name: "Unknown Delegate",
-                  email: "N/A",
-                  phone: "N/A",
-                  title: "N/A",
-                  gender: "N/A",
-                  delegation: "N/A",
-                  ieeeNumber: "N/A",
-                },
-              ]
-            }
-          }
-
-          // If no delegates found, create default entries
-          if (delegates.length === 0) {
-            const ticketCount = purchase.number_of_tickets || 1
-            for (let i = 0; i < ticketCount; i++) {
-              delegates.push({
-                name: `Ticket Holder ${i + 1}`,
-                email: "N/A",
-                phone: "N/A",
-                title: "N/A",
-                gender: "N/A",
-                delegation: "N/A",
-                ieeeNumber: "N/A",
-              })
-            }
-          }
-
-          // Parse package information
-          let packageInfo = "Standard Package"
-          try {
-            if (purchase.package) {
-              if (typeof purchase.package === "string") {
-                // Try to parse as JSON first
-                try {
-                  const parsedPackage = JSON.parse(purchase.package)
-                  packageInfo =
-                    parsedPackage.selectType ||
-                    parsedPackage.packageType ||
-                    parsedPackage.name ||
-                    parsedPackage.type ||
-                    "Standard Package"
-                } catch {
-                  // If not JSON, use as string
-                  packageInfo = purchase.package
-                }
-              } else if (typeof purchase.package === "object") {
-                packageInfo =
-                  purchase.package.selectType ||
-                  purchase.package.packageType ||
-                  purchase.package.name ||
-                  purchase.package.type ||
-                  "Standard Package"
-              }
-            }
-          } catch (e) {
-            console.warn("Could not parse package info:", purchase.package)
-            packageInfo = "Standard Package"
-          }
-
-          // Add each delegate as a separate ticket entry
-          delegates.forEach((delegate, delegateIndex) => {
-            allTickets.push({
-              id: `${purchase.purchase_id}-${delegateIndex}`,
-              purchaseId: purchase.purchase_id,
-              packageDetails: packageInfo,
-              title: delegate.title || "N/A",
-              name: delegate.name || "N/A",
-              gender: delegate.gender || "N/A",
-              email: delegate.email || "N/A",
-              phone: delegate.phone || "N/A",
-              delegation: delegate.delegation || "N/A",
-              ieeeNumber: delegate.ieeeNumber || "N/A",
-              dayPass: delegate.dayPass || "N/A",
-              purchaseAmount: purchase.amount,
-              purchaseStatus: purchase.purchase_status,
-              purchaseDate: purchase.purchase_date,
-            })
-          })
-        })
-
-        console.log("Processed tickets:", allTickets)
-        setTicketData(allTickets)
-      } catch (err) {
-        console.error("Error processing ticket data:", err)
-        setError(`Failed to process ticket data: ${err.message}`)
-      } finally {
-        setLoading(false)
+      if (!purchases || !Array.isArray(purchases)) {
+        setError("No purchase data found")
+        return
       }
-    }
 
-    if (purchases.length > 0) {
-      fetchEventAndProcessTickets()
-    } else {
-      setError("No ticket purchase data available")
+      // Process purchases into individual tickets
+      const processedTickets = []
+
+      purchases.forEach((purchase) => {
+        if (purchase.delegates && Array.isArray(purchase.delegates)) {
+          purchase.delegates.forEach((delegate, index) => {
+            const ticket = {
+              id: `${purchase.id}-${index + 1}`,
+              purchaseId: purchase.id,
+              eventName: purchase.eventName || eventInfo?.eventName || "Event",
+              eventDate: purchase.eventDate || eventInfo?.eventDate,
+              eventLocation: purchase.eventLocation || eventInfo?.eventLocation,
+              eventImage: purchase.eventImage || eventInfo?.eventImage,
+              ticketType: purchase.ticketType || "General Admission",
+              price: purchase.price || purchase.totalAmount || 0,
+              status: purchase.status || "Active",
+              purchaseDate: purchase.purchaseDate || purchase.createdAt,
+              delegate: {
+                name: delegate.name || "N/A",
+                surname: delegate.surname || "N/A",
+                email: delegate.email || "N/A",
+                phone: delegate.phone || "N/A",
+              },
+              qrCode: `QR-${purchase.id}-${index + 1}-${Date.now()}`,
+              barcode: `BC${purchase.id}${String(index + 1).padStart(3, "0")}`,
+            }
+            processedTickets.push(ticket)
+          })
+        } else {
+          // Handle purchases without delegate array (fallback)
+          const ticket = {
+            id: purchase.id,
+            purchaseId: purchase.id,
+            eventName: purchase.eventName || eventInfo?.eventName || "Event",
+            eventDate: purchase.eventDate || eventInfo?.eventDate,
+            eventLocation: purchase.eventLocation || eventInfo?.eventLocation,
+            eventImage: purchase.eventImage || eventInfo?.eventImage,
+            ticketType: purchase.ticketType || "General Admission",
+            price: purchase.price || purchase.totalAmount || 0,
+            status: purchase.status || "Active",
+            purchaseDate: purchase.purchaseDate || purchase.createdAt,
+            delegate: {
+              name: purchase.customerName || "N/A",
+              surname: purchase.customerSurname || "N/A",
+              email: purchase.customerEmail || "N/A",
+              phone: purchase.customerPhone || "N/A",
+            },
+            qrCode: `QR-${purchase.id}-${Date.now()}`,
+            barcode: `BC${purchase.id}000`,
+          }
+          processedTickets.push(ticket)
+        }
+      })
+
+      console.log("TicketsList - Processed tickets:", processedTickets)
+      setTickets(processedTickets)
+    } catch (err) {
+      console.error("Error processing tickets:", err)
+      setError(`Failed to process tickets: ${err.message}`)
+    } finally {
       setLoading(false)
     }
-  }, [eventId, eventName, purchases])
+  }, [location.state])
+
+  const handleBackToReview = () => {
+    navigate("/reviewparchase")
+  }
 
   const handleViewTicket = (ticket) => {
-    console.log("Viewing ticket:", ticket)
+    console.log("TicketsList - Viewing ticket:", ticket)
     navigate("/viewtickets", {
       state: {
-        ticketData: ticket,
-        eventInfo: eventInfo,
+        ticket,
+        eventInfo: location.state?.eventInfo,
+        originalData: location.state,
+      },
+    })
+  }
+
+  const handleViewInvoice = (ticket) => {
+    console.log("TicketsList - Viewing invoice for ticket:", ticket)
+    navigate("/invoice", {
+      state: {
+        eventId: ticket.purchaseId,
+        eventName: ticket.eventName,
+        eventDate: ticket.eventDate,
+        eventLocation: ticket.eventLocation,
+        eventImage: ticket.eventImage,
+        eventPrice: formatPrice(ticket.price),
+        ticketData: [
+          {
+            type: ticket.ticketType,
+            name: ticket.delegate.name,
+            surname: ticket.delegate.surname,
+            email: ticket.delegate.email,
+            phone: ticket.delegate.phone,
+            quantity: 1,
+            unitPrice: formatPrice(ticket.price),
+            total: formatPrice(ticket.price),
+          },
+        ],
+        delegateDetails: [ticket.delegate],
       },
     })
   }
@@ -215,32 +147,53 @@ const TicketsList = () => {
     navigate("/")
   }
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date not available"
+    try {
+      return new Date(dateString).toLocaleDateString("en-ZA", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    } catch (e) {
+      return "Date not available"
+    }
+  }
+
+  const formatPrice = (price) => {
+    const numPrice = Number.parseFloat(price)
+    return isNaN(numPrice) ? "R 0.00" : `R ${numPrice.toFixed(2)}`
+  }
+
+  const getEventImageUrl = (eventImage) => {
+    if (!eventImage) return "/placeholder.svg?height=200&width=300"
+
+    if (eventImage.startsWith("http://") || eventImage.startsWith("https://")) {
+      return eventImage
+    }
+
+    return `http://localhost:5000${eventImage.startsWith("/") ? "" : "/"}${eventImage}`
+  }
+
   if (loading) {
     return (
-      <div className="receipt-container2">
-        <header className="dashboard-header">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo" />
-          <div className="profile-section">
-            <button className="backbutton22" onClick={handleLogout}>
-              LogOut
-            </button>
-          </div>
-        </header>
-
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => navigate(-1)}>
-            Back
-          </button>
-        </div>
-
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <div
           style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "400px",
-            flexDirection: "column",
-            gap: "20px",
+            backgroundColor: "white",
+            borderRadius: "12px",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+            padding: "60px",
+            textAlign: "center",
           }}
         >
           <div
@@ -251,9 +204,10 @@ const TicketsList = () => {
               borderTop: "4px solid #4ca1af",
               borderRadius: "50%",
               animation: "spin 1s linear infinite",
+              margin: "0 auto 20px",
             }}
           ></div>
-          <p>Loading ticket details...</p>
+          <p style={{ color: "#4ca1af", margin: "0", fontSize: "1.1rem" }}>Loading tickets...</p>
         </div>
       </div>
     )
@@ -261,174 +215,456 @@ const TicketsList = () => {
 
   if (error) {
     return (
-      <div className="receipt-container2">
-        <header className="dashboard-header">
-          <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo" />
-          <div className="profile-section">
-            <button className="backbutton22" onClick={handleLogout}>
-              LogOut
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#f8f9fa",
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        }}
+      >
+        {/* Header */}
+        <header
+          style={{
+            background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
+            color: "white",
+            padding: "15px 20px",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              maxWidth: "1200px",
+              margin: "0 auto",
+            }}
+          >
+            <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
+            <button
+              onClick={handleLogout}
+              style={{
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.5)",
+                borderRadius: "4px",
+                padding: "5px 10px",
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <FaSignOutAlt /> Logout
             </button>
           </div>
         </header>
 
-        <div className="back-button-container1">
-          <button className="backbutton20" onClick={() => navigate(-1)}>
-            Back
-          </button>
-        </div>
-
         <div
           style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "400px",
-            flexDirection: "column",
-            gap: "20px",
-            color: "#dc2626",
+            padding: "20px 15px",
+            maxWidth: "1200px",
+            margin: "0 auto",
+            width: "100%",
           }}
         >
-          <h3>Error Loading Tickets</h3>
-          <p>{error}</p>
-          <button
-            onClick={() => navigate(-1)}
+          <div
             style={{
-              backgroundColor: "#4ca1af",
-              color: "white",
-              border: "none",
-              padding: "10px 20px",
-              borderRadius: "5px",
-              cursor: "pointer",
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
             }}
           >
-            Go Back
-          </button>
+            <h3 style={{ color: "#dc2626", margin: "0 0 10px 0" }}>Error Loading Tickets</h3>
+            <p style={{ color: "#6b7280", margin: "0 0 20px 0" }}>{error}</p>
+            <button
+              onClick={handleBackToReview}
+              style={{
+                backgroundColor: "#4ca1af",
+                color: "white",
+                border: "none",
+                padding: "12px 24px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "1rem",
+              }}
+            >
+              Back to Review
+            </button>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="receipt-container2">
-      <header className="dashboard-header">
-        <img src="/XPRESS TICKETS LOGO2.png" alt="EventXpress Logo" className="dashboard-logo" />
-        <div className="profile-section">
-          <button className="backbutton22" onClick={handleLogout}>
-            LogOut
-          </button>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#f8f9fa",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      }}
+    >
+      {/* Header */}
+      <header
+        style={{
+          background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
+          color: "white",
+          padding: "15px 20px",
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            maxWidth: "1200px",
+            margin: "0 auto",
+          }}
+        >
+          <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <button
+              onClick={handleBackToReview}
+              style={{
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.5)",
+                borderRadius: "4px",
+                padding: "5px 10px",
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <FaArrowLeft /> Back to Review
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(255, 255, 255, 0.5)",
+                borderRadius: "4px",
+                padding: "5px 10px",
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="back-button-container1">
-        <button className="backbutton20" onClick={() => navigate(-1)}>
-          Back
-        </button>
-      </div>
-      <br />
-
-      <div className="conference-info">
-        {eventInfo?.coverimage ? (
-          <img
-            src={eventInfo.coverimage || "/placeholder.svg"}
-            alt="Event Logo"
-            className="ictas-logo"
-            onError={(e) => {
-              e.target.src = "/placeholder.svg?height=100&width=100"
-            }}
-          />
-        ) : (
-          <div
-            className="ictas-logo"
+      {/* Main Content */}
+      <main
+        style={{
+          padding: "20px 15px",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
+        {/* Page Title */}
+        <div
+          style={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+            padding: "30px",
+            marginBottom: "20px",
+            textAlign: "center",
+          }}
+        >
+          <h1
             style={{
-              backgroundColor: "#f0f0f0",
+              margin: "0 0 10px 0",
+              color: "#2c3e50",
+              fontSize: "2rem",
+              fontWeight: "600",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#666",
-              fontSize: "12px",
-              border: "2px dashed #ccc",
+              gap: "15px",
             }}
           >
-            No Image
+            <FaTicketAlt style={{ color: "#4ca1af" }} />
+            Your Tickets
+          </h1>
+          <p style={{ margin: "0", color: "#6b7280", fontSize: "1.1rem" }}>
+            {tickets.length} ticket{tickets.length !== 1 ? "s" : ""} available
+          </p>
+        </div>
+
+        {/* Tickets Grid */}
+        {tickets.length === 0 ? (
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "12px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+              padding: "60px",
+              textAlign: "center",
+            }}
+          >
+            <h3 style={{ color: "#6b7280", margin: "0 0 10px 0" }}>No Tickets Found</h3>
+            <p style={{ color: "#9ca3af", margin: "0" }}>There are no tickets to display.</p>
           </div>
-        )}
-        <h3>{eventInfo?.name || eventName || "Event Details"}</h3>
-        {eventInfo?.location && (
-          <p style={{ margin: "5px 0", color: "#666", fontSize: "14px" }}>
-            <strong>Location:</strong> {eventInfo.location}
-          </p>
-        )}
-        {eventInfo?.date && (
-          <p style={{ margin: "5px 0", color: "#666", fontSize: "14px" }}>
-            <strong>Date:</strong>{" "}
-            {new Date(eventInfo.date).toLocaleDateString("en-ZA", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-        )}
-      </div>
-
-      <div className="table-container5">
-        {ticketData.length > 0 ? (
-          <table className="table">
-            <thead>
-              <tr className="bg-teal-100 text-sm">
-                <th className="p-2 border">Package Details</th>
-                <th className="p-2 border">Title</th>
-                <th className="p-2 border">Name</th>
-                <th className="p-2 border">Gender</th>
-                <th className="p-2 border">Email</th>
-                <th className="p-2 border">Phone Number</th>
-                <th className="p-2 border">Delegation</th>
-                <th className="p-2 border">IEEE Number</th>
-                <th className="p-2 border">Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {ticketData.map((ticket, index) => (
-                <tr key={ticket.id} className="bg-white">
-                  <td className="p-2 border">{ticket.packageDetails}</td>
-                  <td className="p-2 border">{ticket.title}</td>
-                  <td className="p-2 border">{ticket.name}</td>
-                  <td className="p-2 border">{ticket.gender}</td>
-                  <td className="p-2 border">{ticket.email}</td>
-                  <td className="p-2 border">{ticket.phone}</td>
-                  <td className="p-2 border">{ticket.delegation}</td>
-                  <td className="p-2 border">{ticket.ieeeNumber}</td>
-                  <td className="p-2 border">
-                    <button className="viewticket" onClick={() => handleViewTicket(ticket)}>
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         ) : (
           <div
             style={{
-              textAlign: "center",
-              padding: "40px",
-              color: "#666",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+              gap: "20px",
             }}
           >
-            <h3>No Tickets Found</h3>
-            <p>No ticket data available for this event.</p>
+            {tickets.map((ticket) => (
+              <div
+                key={ticket.id}
+                style={{
+                  backgroundColor: "white",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 15px rgba(0, 0, 0, 0.08)",
+                  overflow: "hidden",
+                  border: "1px solid #e5e7eb",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)"
+                  e.currentTarget.style.boxShadow = "0 8px 25px rgba(0, 0, 0, 0.12)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)"
+                  e.currentTarget.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.08)"
+                }}
+              >
+                {/* Event Image */}
+                <div
+                  style={{
+                    height: "150px",
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  <img
+                    src={getEventImageUrl(ticket.eventImage) || "/placeholder.svg"}
+                    alt={ticket.eventName}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                    onError={(e) => {
+                      e.target.src = "/placeholder.svg?height=150&width=350"
+                    }}
+                  />
+                  {/* Status Badge */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "10px",
+                      right: "10px",
+                      backgroundColor: "rgba(5, 150, 105, 0.9)",
+                      color: "white",
+                      padding: "4px 8px",
+                      borderRadius: "12px",
+                      fontSize: "0.75rem",
+                      fontWeight: "600",
+                      backdropFilter: "blur(10px)",
+                    }}
+                  >
+                    {ticket.status}
+                  </div>
+                </div>
+
+                {/* Card Content */}
+                <div style={{ padding: "20px" }}>
+                  {/* Event Name */}
+                  <h3
+                    style={{
+                      margin: "0 0 15px 0",
+                      color: "#2c3e50",
+                      fontSize: "1.3rem",
+                      fontWeight: "600",
+                      lineHeight: "1.3",
+                    }}
+                  >
+                    {ticket.eventName}
+                  </h3>
+
+                  {/* Event Details */}
+                  <div style={{ marginBottom: "15px" }}>
+                    {ticket.eventDate && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          marginBottom: "8px",
+                          color: "#6b7280",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        <FaCalendarAlt style={{ color: "#4ca1af", fontSize: "0.8rem" }} />
+                        {formatDate(ticket.eventDate)}
+                      </div>
+                    )}
+
+                    {ticket.eventLocation && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          marginBottom: "8px",
+                          color: "#6b7280",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        <FaMapMarkerAlt style={{ color: "#4ca1af", fontSize: "0.8rem" }} />
+                        {ticket.eventLocation}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delegate Info */}
+                  <div
+                    style={{
+                      backgroundColor: "#f8f9fa",
+                      padding: "12px",
+                      borderRadius: "8px",
+                      marginBottom: "15px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "5px",
+                        color: "#374151",
+                        fontSize: "0.9rem",
+                        fontWeight: "500",
+                      }}
+                    >
+                      <FaUser style={{ color: "#4ca1af", fontSize: "0.8rem" }} />
+                      {ticket.delegate.name} {ticket.delegate.surname}
+                    </div>
+                    <div style={{ color: "#6b7280", fontSize: "0.8rem" }}>{ticket.delegate.email}</div>
+                  </div>
+
+                  {/* Ticket Details */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "15px",
+                      paddingTop: "10px",
+                      borderTop: "1px solid #e5e7eb",
+                    }}
+                  >
+                    <div>
+                      <div style={{ color: "#6b7280", fontSize: "0.8rem" }}>Ticket Type</div>
+                      <div style={{ color: "#374151", fontSize: "0.9rem", fontWeight: "500" }}>{ticket.ticketType}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ color: "#6b7280", fontSize: "0.8rem" }}>Price</div>
+                      <div
+                        style={{
+                          color: "#059669",
+                          fontSize: "1.1rem",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {formatPrice(ticket.price)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      paddingTop: "10px",
+                      borderTop: "1px solid #e5e7eb",
+                    }}
+                  >
+                    <button
+                      onClick={() => handleViewTicket(ticket)}
+                      style={{
+                        flex: "1",
+                        backgroundColor: "#4ca1af",
+                        color: "white",
+                        border: "none",
+                        padding: "10px 20px",
+                        borderRadius: "6px",
+                        fontSize: "0.9rem",
+                        fontWeight: "500",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = "#3d8e9c"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = "#4ca1af"
+                      }}
+                    >
+                      <FaEye /> View
+                    </button>
+
+                    <button
+                      onClick={() => handleViewInvoice(ticket)}
+                      style={{
+                        flex: "1",
+                        backgroundColor: "#059669",
+                        color: "white",
+                        border: "none",
+                        padding: "10px 20px",
+                        borderRadius: "6px",
+                        fontSize: "0.9rem",
+                        fontWeight: "500",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        transition: "background-color 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = "#047857"
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = "#059669"
+                      }}
+                    >
+                      <FaDownload /> Invoice
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-      </div>
+      </main>
 
-      {ticketData.length > 0 && (
-        <div style={{ margin: "20px 0", textAlign: "center", color: "#666" }}>
-          <p>
-            <strong>Total Tickets:</strong> {ticketData.length} | <strong>Event:</strong> {eventInfo?.name || eventName}
-          </p>
-        </div>
-      )}
-
+      {/* Loading Animation Styles */}
       <style>
         {`
           @keyframes spin {
