@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { FaArrowLeft, FaSignOutAlt, FaTicketAlt, FaCalendarAlt, FaUsers, FaMapMarkerAlt } from "react-icons/fa"
+import "../shared/ModernDashboard.css"
 
-const ReviewParchase = () => {
+const ReviewPurchase = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [purchasedTickets, setPurchasedTickets] = useState([])
@@ -66,7 +67,7 @@ const ReviewParchase = () => {
 
         console.log("Filtered user purchases:", userPurchases)
 
-        // Remove duplicates based on purchase_id (in case API returns duplicates)
+        // Remove duplicates based on purchase_id
         const uniquePurchases = userPurchases.reduce((acc, current) => {
           const existingPurchase = acc.find((item) => item.purchase_id === current.purchase_id)
           if (!existingPurchase) {
@@ -87,7 +88,7 @@ const ReviewParchase = () => {
               eventName: purchase.event_name,
               eventLocation: purchase.event_location,
               eventDate: purchase.event_date,
-              eventImage: purchase.event_image,
+              eventImage: purchase.file_url || "/default-event-image.jpg", // Use file_url from backend
               purchases: [],
               totalTickets: 0,
               totalAmount: 0,
@@ -115,7 +116,6 @@ const ReviewParchase = () => {
               delegateCount = purchase.number_of_tickets || 1
             }
           } else {
-            // Fallback to number_of_tickets if delegate_details is not available
             delegateCount = purchase.number_of_tickets || 1
           }
 
@@ -214,83 +214,36 @@ const ReviewParchase = () => {
     }
   }
 
-  const getEventImageUrl = (eventImage) => {
-    if (!eventImage) return "/placeholder.svg?height=200&width=400"
-
-    // If it's already a full URL, return as is
-    if (eventImage.startsWith("http://") || eventImage.startsWith("https://")) {
-      return eventImage
+  const handleImageError = (e) => {
+    if (e.target.src !== "/default-event-image.jpg") {
+      console.warn(`Failed to load image: ${e.target.src}`)
+      e.target.src = "/default-event-image.jpg"
+      e.target.classList.add("image-error")
     }
-
-    // If it's a relative path, construct the full URL
-    return `http://localhost:5000${eventImage.startsWith("/") ? "" : "/"}${eventImage}`
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f8f9fa",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      }}
-    >
-      {/* Header */}
-      <header
-        style={{
-          background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-          color: "white",
-          padding: "15px 20px",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            maxWidth: "1200px",
-            margin: "0 auto",
-          }}
-        >
-          <img src="/XPRESS TICKETS LOGO2.png" alt="XpressTicket Logo" style={{ height: "35px" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <button
-              onClick={handleBackToDashboard}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaArrowLeft /> Back to Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              style={{
-                background: "transparent",
-                color: "white",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-                borderRadius: "4px",
-                padding: "5px 10px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-              }}
-            >
-              <FaSignOutAlt /> Logout
-            </button>
-          </div>
+    <div className="modern-dashboard-container">
+      {/* Modern Header */}
+      <header className="modern-header">
+        <img
+          src="/XPRESS TICKETS LOGO2.png"
+          alt="EventXpress Logo"
+          className="modern-logo"
+        />
+        <div className="modern-header-actions">
+          <button className="modern-logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </header>
+
+      {/* Back Button */}
+      <div className="modern-back-button-container">
+        <button className="modern-back-btn" onClick={handleBackToDashboard}>
+          <FaArrowLeft /> Back
+        </button>
+      </div>
 
       {/* Main Content */}
       <main
@@ -430,7 +383,7 @@ const ReviewParchase = () => {
                   }}
                 >
                   <img
-                    src={getEventImageUrl(eventGroup.eventImage) || "/placeholder.svg"}
+                    src={eventGroup.eventImage}
                     alt={eventGroup.eventName}
                     style={{
                       width: "100%",
@@ -438,10 +391,27 @@ const ReviewParchase = () => {
                       objectFit: "cover",
                       transition: "transform 0.3s ease",
                     }}
-                    onError={(e) => {
-                      e.target.src = "/placeholder.svg?height=200&width=400"
-                    }}
+                    onError={handleImageError}
                   />
+                  {!eventGroup.eventImage && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "0",
+                        left: "0",
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#f3f4f6",
+                        color: "#6b7280",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      <span>No Image</span>
+                    </div>
+                  )}
                   {/* Ticket Count Badge */}
                   <div
                     style={{
@@ -661,10 +631,13 @@ const ReviewParchase = () => {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
+          .image-error {
+            opacity: 0.6;
+          }
         `}
       </style>
     </div>
   )
 }
 
-export default ReviewParchase
+export default ReviewPurchase
