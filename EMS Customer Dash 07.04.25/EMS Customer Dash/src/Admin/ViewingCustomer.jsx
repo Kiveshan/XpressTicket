@@ -10,7 +10,6 @@ const ViewingCustomer = () => {
   const location = useLocation();
   const userId = location.state?.userId;
   
-  // Initialize formData state
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,15 +25,13 @@ const ViewingCustomer = () => {
   const [error, setError] = useState(null);
   const [ticketPurchases, setTicketPurchases] = useState([]);
   
-  // Define the API base URL outside the useEffect to make it accessible
-  const API_BASE_URL = 'http://localhost:5000'; // Server is running on port 5000
+  const API_BASE_URL = 'http://localhost:5000';
   
-  // Define fetchUserData with useCallback to prevent dependency cycle
   const fetchUserData = useCallback(async () => {
     try {
       console.log('Fetching customer data for ID:', userId);
       setLoading(true);
-      setError(null); // Clear any previous errors
+      setError(null);
       
       if (!userId) {
         setError('No user ID provided. Cannot fetch user data.');
@@ -42,7 +39,6 @@ const ViewingCustomer = () => {
         return;
       }
       
-      // Fetch user profile data
       const userResponse = await axios.get(`${API_BASE_URL}/api/user-profile/${userId}`);
       const userData = userResponse.data;
       console.log('Customer data received:', userData);
@@ -59,7 +55,6 @@ const ViewingCustomer = () => {
           organVAT: userData.vat_no || ''
         });
         
-        // Fetch tickets purchased by this customer
         try {
           console.log(`Fetching tickets for customer ID: ${userId}`);
           const ticketsResponse = await axios.get(`${API_BASE_URL}/api/user-tickets/${userId}`);
@@ -93,37 +88,46 @@ const ViewingCustomer = () => {
       setError(`Error loading customer data: ${error.message || 'Unknown error'}`);
       setLoading(false);
     }
-  }, [userId, API_BASE_URL, setFormData, setTicketPurchases, setError, setLoading]);
+  }, [userId, API_BASE_URL]);
 
   useEffect(() => {
     if (userId) {
       fetchUserData();
     } else {
       console.error('No userId provided in location state');
-      // Redirect back to users list with an alert
       setTimeout(() => {
         alert('Error: No user ID provided. Redirecting to users list.');
         nav('/users');
       }, 100);
     }
     
-    // Cleanup function
-    return () => {
-      // Any cleanup needed
-    }
-  }, [userId, nav, fetchUserData]); // Include fetchUserData in dependencies
+    return () => {};
+  }, [userId, nav, fetchUserData]);
 
-  // Loading state - this is now handled with an overlay
   if (loading && !error) {
     return (
       <div className="modern-dashboard-container">
-        <header className="modern-header">
+        <header className="modern-header no-print">
           <img
             src="/XPRESS TICKETS LOGO2.png"
             alt="EventXpress Logo"
             className="modern-logo"
+            onError={(e) => {
+              console.error("Failed to load logo");
+              e.target.src = "/fallback-logo.png";
+            }}
           />
+          <div className="modern-header-actions">
+            <button className="modern-logout-btn" onClick={() => nav('/')}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
         </header>
+        <div className="modern-back-button-container no-print">
+          <button className="modern-back-btn" onClick={() => nav("/users")}>
+            <FaArrowLeft /> Back
+          </button>
+        </div>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -154,12 +158,15 @@ const ViewingCustomer = () => {
   
   return (
     <div className="modern-dashboard-container">
-      {/* Modern Header */}
-      <header className="modern-header">
+      <header className="modern-header no-print">
         <img
           src="/XPRESS TICKETS LOGO2.png"
           alt="EventXpress Logo"
           className="modern-logo"
+          onError={(e) => {
+            console.error("Failed to load logo");
+            e.target.src = "/fallback-logo.png";
+          }}
         />
         <div className="modern-header-actions">
           <button className="modern-logout-btn" onClick={() => nav('/')}>
@@ -168,56 +175,50 @@ const ViewingCustomer = () => {
         </div>
       </header>
       
-      {/* Error message display */}
-      {error && (
-        <div style={{
-          margin: '10px 20px',
-          padding: '10px 15px',
-          backgroundColor: '#f8d7da',
-          color: '#721c24',
-          borderRadius: '4px',
-          border: '1px solid #f5c6cb',
-          fontSize: '0.9rem'
-        }}>
-          {error}
-          <button 
-            style={{
-              marginLeft: '10px',
-              padding: '2px 8px',
-              fontSize: '0.8rem',
-              background: 'transparent',
-              border: '1px solid #721c24',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              color: '#721c24'
-            }}
-            onClick={() => {
-              setError(null);
-              if (userId) fetchUserData();
-            }}
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Back Button */}
-      <div className="modern-back-button">
-        <button className="modern-btn modern-btn-secondary" onClick={() => nav("/users")}>
-          <FaArrowLeft /> Back to Users
+      <div className="modern-back-button-container no-print">
+        <button className="modern-back-btn" onClick={() => nav("/users")}>
+          <FaArrowLeft /> Back
         </button>
       </div>
 
-      {/* Main Content */}
       <main className="modern-main-content">
-        <h1 className="modern-page-title">Customer Profile</h1>
+        <h2 className="modern-page-title">Customer Profile</h2>
         
+        {error && (
+          <div style={{
+            margin: '10px 20px',
+            padding: '10px 15px',
+            backgroundColor: '#f8d7da',
+            color: '#721c24',
+            borderRadius: '4px',
+            border: '1px solid #f5c6cb',
+            fontSize: '0.9rem'
+          }}>
+            {error}
+            <button 
+              style={{
+                marginLeft: '10px',
+                padding: '2px 8px',
+                fontSize: '0.8rem',
+                background: 'transparent',
+                border: '1px solid #721c24',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                color: '#721c24'
+              }}
+              onClick={() => {
+                setError(null);
+                if (userId) fetchUserData();
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         <div className="modern-profile-container">
-          {/* Profile Information - Complete redesign with compact table-like layout */}
           <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', width: '100%'}}>
-            {/* Left column */}
             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-              {/* Personal Information */}
               <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
                 <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
                   <span style={{fontSize: '11px', fontWeight: 500}}><FaUser size={10} style={{marginRight: '4px'}} /> Personal Information</span>
@@ -240,7 +241,6 @@ const ViewingCustomer = () => {
                 </table>
               </div>
               
-              {/* Additional Information */}
               <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
                 <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
                   <span style={{fontSize: '11px', fontWeight: 500}}><FaIdCard size={10} style={{marginRight: '4px'}} /> Additional Information</span>
@@ -260,9 +260,7 @@ const ViewingCustomer = () => {
               </div>
             </div>
             
-            {/* Right column */}
             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-              {/* Institution Details */}
               <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden'}}>
                 <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '4px 8px', color: 'white'}}>
                   <span style={{fontSize: '11px', fontWeight: 500}}><FaBuilding size={10} style={{marginRight: '4px'}} /> Institution Details</span>
@@ -284,67 +282,64 @@ const ViewingCustomer = () => {
                   </tbody>
                 </table>
               </div>
-              
-              {/* No Actions section needed here - removed to match ViewingOrganiser */}
+            </div>
+          </div>
+        </div>
+
+        <div style={{padding: '0 15px 15px 15px'}}>
+          <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden', marginTop: '15px'}}>
+            <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '8px 15px', color: 'white'}}>
+              <h2 style={{margin: '0', fontSize: '13px', fontWeight: 500}}>Ticket Purchases</h2>
+            </div>
+            <div style={{overflowX: 'auto'}}>
+              <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                <thead>
+                  <tr style={{borderBottom: '1px solid #e9ecef', background: '#f8f9fa'}}>
+                    <th style={{padding: '8px 10px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600}}>Event Name</th>
+                    <th style={{padding: '8px 10px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600}}>Purchase Date</th>
+                    <th style={{padding: '8px 10px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600}}>Amount</th>
+                    <th style={{padding: '8px 10px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600}}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ticketPurchases.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{padding: '10px', textAlign: 'center', fontSize: '0.8rem'}}>
+                        No ticket purchases found for this customer.
+                      </td>
+                    </tr>
+                  ) : (
+                    ticketPurchases.map((ticket) => (
+                      <tr key={ticket.id} style={{borderBottom: '1px solid #f0f0f0'}}>
+                        <td style={{padding: '6px 10px', fontSize: '0.75rem'}}>{ticket.eventName}</td>
+                        <td style={{padding: '6px 10px', fontSize: '0.75rem'}}>{ticket.purchaseDate}</td>
+                        <td style={{padding: '6px 10px', fontSize: '0.75rem'}}>{ticket.amount}</td>
+                        <td style={{padding: '6px 10px', fontSize: '0.75rem'}}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              fontSize: '0.7rem',
+                              padding: '2px 6px',
+                              borderRadius: '10px',
+                              backgroundColor: ticket.status === 'Active' ? '#d1e7dd' : 
+                                              ticket.status === 'Purchased' ? '#d1e7dd' :
+                                              ticket.status === 'Pending' ? '#fff3cd' : '#f8d7da',
+                              color: ticket.status === 'Active' ? '#0f5132' :
+                                      ticket.status === 'Purchased' ? '#0f5132' :
+                                      ticket.status === 'Pending' ? '#856404' : '#721c24'
+                            }}>
+                            {ticket.status || 'Purchased'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </main>
-
-      {/* Ticket Purchases Table */}
-      <div style={{padding: '0 15px 15px 15px'}}>
-        <div style={{border: '1px solid #e0e0e0', borderRadius: '4px', overflow: 'hidden', marginTop: '15px'}}>
-          <div style={{background: 'linear-gradient(135deg, #2c3e50, #4ca1af)', padding: '8px 15px', color: 'white'}}>
-            <h2 style={{margin: '0', fontSize: '13px', fontWeight: 500}}>Ticket Purchases</h2>
-          </div>
-          <div style={{overflowX: 'auto'}}>
-            <table style={{width: '100%', borderCollapse: 'collapse'}}>
-              <thead>
-                <tr style={{borderBottom: '1px solid #e9ecef', background: '#f8f9fa'}}>
-                  <th style={{padding: '8px 10px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600}}>Event Name</th>
-                  <th style={{padding: '8px 10px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600}}>Purchase Date</th>
-                  <th style={{padding: '8px 10px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600}}>Amount</th>
-                  <th style={{padding: '8px 10px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600}}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ticketPurchases.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" style={{padding: '10px', textAlign: 'center', fontSize: '0.8rem'}}>
-                      No ticket purchases found for this customer.
-                    </td>
-                  </tr>
-                ) : (
-                  ticketPurchases.map((ticket) => (
-                    <tr key={ticket.id} style={{borderBottom: '1px solid #f0f0f0'}}>
-                      <td style={{padding: '6px 10px', fontSize: '0.75rem'}}>{ticket.eventName}</td>
-                      <td style={{padding: '6px 10px', fontSize: '0.75rem'}}>{ticket.purchaseDate}</td>
-                      <td style={{padding: '6px 10px', fontSize: '0.75rem'}}>{ticket.amount}</td>
-                      <td style={{padding: '6px 10px', fontSize: '0.75rem'}}>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            fontSize: '0.7rem',
-                            padding: '2px 6px',
-                            borderRadius: '10px',
-                            backgroundColor: ticket.status === 'Active' ? '#d1e7dd' : 
-                                            ticket.status === 'Purchased' ? '#d1e7dd' :
-                                            ticket.status === 'Pending' ? '#fff3cd' : '#f8d7da',
-                            color: ticket.status === 'Active' ? '#0f5132' :
-                                    ticket.status === 'Purchased' ? '#0f5132' :
-                                    ticket.status === 'Pending' ? '#856404' : '#721c24'
-                          }}>
-                          {ticket.status || 'Purchased'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
