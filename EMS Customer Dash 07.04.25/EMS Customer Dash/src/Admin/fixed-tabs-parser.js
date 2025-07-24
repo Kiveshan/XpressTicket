@@ -1,4 +1,4 @@
-// This function properly parses tabs from PostgreSQL array format
+// properly parses tabs from PostgreSQL array format
 const parseTabsFromPostgres = (data) => {
   if (!data.tabs || !Array.isArray(data.tabs)) {
     return data.tab_num > 0 ? [{ name: data.tab_name || 'Tab', content: data.tab_content || '' }] : [];
@@ -8,7 +8,7 @@ const parseTabsFromPostgres = (data) => {
     if (typeof tab === 'string') {
       console.log('Processing tab string:', tab);
       
-      // First check if it's the specific format from the screenshot (name and content as simple properties)
+      // First check if it's the specific format //
       const simpleFormat = /"name":"([^"]+)","content":"([^"]+)"/;
       const simpleMatch = tab.match(simpleFormat);
       if (simpleMatch) {
@@ -26,7 +26,7 @@ const parseTabsFromPostgres = (data) => {
           content: parsedTab.content || 'No content' 
         };
       } catch (e) {
-        // If direct parsing fails, try to clean the string
+        // If direct parsing fails
         try {
           // Handle PostgreSQL character varying[] format
           // Remove any PostgreSQL array formatting and escape characters

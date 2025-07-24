@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { FaSignOutAlt, FaArrowLeft, FaDownload, FaCreditCard, FaCheck } from "react-icons/fa"
+import { FaSignOutAlt, FaArrowLeft, FaEye, FaCreditCard, FaCheck } from "react-icons/fa"
 import "../shared/ModernDashboard.css"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -193,20 +193,54 @@ const Receipt = () => {
     return `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(data)}&code=Code128&dpi=96&dataseparator=`
   }
 
-  // Safe access to delegate information with fallbacks (copied from ViewTickets)
+  // Get delegate information from the package
   const getDelegateInfo = (pkg) => {
-    const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "{}")
-
-    return {
-      name: userInfo.name || "N/A",
-      surname: userInfo.surname || "",
-      email: userInfo.email || "N/A",
-      phone: userInfo.phone || userInfo.cellnumber || "N/A",
+    // First try to get delegate info directly from the package
+    if (pkg.name || pkg.email || pkg.phone) {
+      return {
+        name: pkg.name || "",
+        surname: "", // Surname might not be a separate field
+        email: pkg.email || "",
+        phone: pkg.phone || ""
+      };
     }
+    
+    // Then try to get from delegate_details if it's a string (JSON)
+    if (pkg.delegate_details && typeof pkg.delegate_details === 'string') {
+      try {
+        const delegateDetails = JSON.parse(pkg.delegate_details);
+        return {
+          name: delegateDetails.name || "",
+          surname: "",
+          email: delegateDetails.email || "",
+          phone: delegateDetails.phone || ""
+        };
+      } catch (e) {
+        console.error('Error parsing delegate_details:', e);
+      }
+    }
+    
+    // Then try to get from delegate_details if it's an object
+    if (pkg.delegate_details && typeof pkg.delegate_details === 'object') {
+      return {
+        name: pkg.delegate_details.name || "",
+        surname: "",
+        email: pkg.delegate_details.email || "",
+        phone: pkg.delegate_details.phone || ""
+      };
+    }
+    
+    // Fallback to empty strings if no delegate info is available
+    return {
+      name: "",
+      surname: "",
+      email: "",
+      phone: ""
+    };
   }
 
-  // Handle download ticket - EXACT COPY from ViewTickets.jsx handleDownloadPDF function
-  const handleDownload = async (pkg, index) => {
+  // Handle view ticket - Navigate to ViewTickets page with ticket and event data
+  const handleViewTicket = (pkg, index) => {
     if (!purchaseData || !purchaseData.packages || purchaseData.packages.length === 0) {
       alert("No ticket information available")
       return
@@ -215,238 +249,49 @@ const Receipt = () => {
     setIsDownloading((prev) => ({ ...prev, [index]: true }))
 
     try {
-      // Create a new PDF document
-      const doc = new jsPDF()
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const pageHeight = doc.internal.pageSize.getHeight()
-
-      // Set background color for the entire page
-      doc.setFillColor(249, 250, 251) // Very light gray background
-      doc.rect(0, 0, pageWidth, pageHeight, "F")
-
-      // Add header bar
-      doc.setFillColor(44, 62, 80) // #2c3e50 - dark blue
-      doc.rect(0, 0, pageWidth, 25, "F")
-
-      // Function to load image with promise
-      const loadImage = (src) => {
-        return new Promise((resolve, reject) => {
-          const img = new Image()
-          img.crossOrigin = "anonymous"
-          img.onload = () => resolve(img)
-          img.onerror = (e) => {
-            console.error("Image failed to load:", e)
-            reject(e)
-          }
-          img.src = src
-        })
-      }
-
-      // Try to add logo
-      try {
-        const logoImg = await loadImage("/XPRESS TICKETS LOGO2.png")
-        // Add logo to PDF header
-        doc.addImage(logoImg, "PNG", 10, 5, 40, 15)
-      } catch (logoErr) {
-        console.error("Error loading logo:", logoErr)
-        // Continue without logo
-      }
-
-      // Add ticket title in header
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(255, 255, 255) // White text for header
-      doc.text("EVENT TICKET", pageWidth - 20, 15, { align: "right" })
-
-      // Add ticket ID
-      doc.setFontSize(10)
-      doc.setTextColor(100, 100, 100)
-      const ticketId = `XPT-${Math.floor(Math.random() * 10000)
-        .toString()
-        .padStart(4, "0")}-${Date.now().toString().slice(-6)}`
-      doc.text(`Ticket ID: ${ticketId}`, 20, 35)
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth - 20, 35, { align: "right" })
-
-      // Add event title
-      doc.setFontSize(18)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(44, 62, 80) // #2c3e50 - dark blue
-      const eventName = purchaseData.event?.name || "Event Name"
-      doc.text(eventName, pageWidth / 2, 50, { align: "center" })
-
-      // Add event details
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(73, 80, 87) // #495057 - dark gray
-
-      let yPosition = 65
-      const eventDate =
-        purchaseData.event?.formattedDate ||
-        purchaseData.event?.startdate ||
-        purchaseData.event?.start_date ||
-        purchaseData.event?.date
-      const eventTime = purchaseData.event?.formattedTime || purchaseData.event?.time || purchaseData.event?.start_time
-      const eventLocation = purchaseData.event?.location
-
-      if (eventDate) {
-        doc.text(`Date: ${formatDate(eventDate)} at ${formatTime(eventDate)}`, pageWidth / 2, yPosition, {
-          align: "center",
-        })
-        yPosition += 8
-      }
-      if (eventLocation) {
-        doc.text(`Location: ${eventLocation}`, pageWidth / 2, yPosition, { align: "center" })
-        yPosition += 8
-      }
-
-      // Add line
-      doc.setDrawColor(76, 161, 175) // #4ca1af - teal
-      doc.setLineWidth(0.5)
-      doc.line(20, yPosition + 5, pageWidth - 20, yPosition + 5)
-
-      yPosition += 15
-
-      // Add attendee information
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(44, 62, 80) // #2c3e50 - dark blue
-      doc.text("ATTENDEE INFORMATION", 20, yPosition)
-
-      yPosition += 10
-
+      // Get delegate information
       const delegateInfo = getDelegateInfo(pkg)
-
-      // Create attendee table
-      const attendeeData = [
-        ["Full Name", `${delegateInfo.name} ${delegateInfo.surname}`],
-        ["Email", delegateInfo.email],
-        ["Phone", delegateInfo.phone !== "N/A" ? delegateInfo.phone : "Not provided"],
-        ["Ticket Type", pkg.packageDetails || "Standard Package"],
-        ["Price", pkg.amount || formatPrice(500)],
-        ["Status", "Approved"],
-      ]
-
-      autoTable(doc, {
-        body: attendeeData,
-        startY: yPosition,
-        theme: "grid",
-        styles: {
-          fontSize: 10,
-          cellPadding: 5,
+      
+      // Create ticket object in the format expected by ViewTickets
+      const ticketData = {
+        id: pkg.ticketId || `TKT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        ticketType: pkg.packageDetails || "Standard Ticket",
+        price: parseFloat(pkg.amount?.replace(/[^0-9.]/g, '')) || 0,
+        status: "Approved",
+        delegate: {
+          name: delegateInfo.name || "",
+          surname: delegateInfo.surname || "",
+          email: delegateInfo.email || "",
+          phone: delegateInfo.phone
         },
-        columnStyles: {
-          0: { cellWidth: 40, fontStyle: "bold", fillColor: [248, 249, 250] },
-          1: { cellWidth: "auto" },
-        },
-        margin: { left: 20, right: 20 },
-      })
+        eventName: purchaseData.event?.name || "Event",
+        eventDate: purchaseData.event?.startdate || purchaseData.event?.start_date || purchaseData.event?.date,
+        eventLocation: purchaseData.event?.location || "TBA",
+        eventImage: purchaseData.event?.eventImage || "",
+        quantity: pkg.tickets || 1
+      };
 
-      yPosition = doc.lastAutoTable.finalY + 20
+      // Create event info object
+      const eventInfo = {
+        ...purchaseData.event,
+        date: purchaseData.event?.startdate || purchaseData.event?.start_date || purchaseData.event?.date,
+        time: purchaseData.event?.formattedTime || purchaseData.event?.time || purchaseData.event?.start_time,
+        location: purchaseData.event?.location || "TBA"
+      };
 
-      // Add QR Code and Barcode section
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(44, 62, 80)
-      doc.text("VERIFICATION CODES", 20, yPosition)
-
-      yPosition += 15
-
-      // Try to add QR Code
-      try {
-        const qrCodeUrl = getQRCodeUrl(ticketId)
-        const qrImg = await loadImage(qrCodeUrl)
-        doc.addImage(qrImg, "PNG", 30, yPosition, 40, 40)
-
-        // QR Code label
-        doc.setFontSize(10)
-        doc.setFont("helvetica", "bold")
-        doc.text("QR Code", 50, yPosition + 45, { align: "center" })
-        doc.setFont("helvetica", "normal")
-        doc.setFontSize(8)
-        doc.text(ticketId, 50, yPosition + 50, { align: "center" })
-      } catch (qrErr) {
-        console.error("Error adding QR code:", qrErr)
-        // Add text fallback
-        doc.setFontSize(10)
-        doc.text("QR Code:", 30, yPosition)
-        doc.text(ticketId, 30, yPosition + 8)
-      }
-
-      // Try to add Barcode
-      try {
-        const barcodeUrl = getBarcodeUrl(ticketId)
-        const barcodeImg = await loadImage(barcodeUrl)
-        doc.addImage(barcodeImg, "PNG", 100, yPosition + 10, 80, 20)
-
-        // Barcode label
-        doc.setFontSize(10)
-        doc.setFont("helvetica", "bold")
-        doc.text("Barcode", 140, yPosition + 35, { align: "center" })
-        doc.setFont("helvetica", "normal")
-        doc.setFontSize(8)
-        doc.text(ticketId, 140, yPosition + 40, { align: "center" })
-      } catch (barcodeErr) {
-        console.error("Error adding barcode:", barcodeErr)
-        // Add text fallback
-        doc.setFontSize(10)
-        doc.text("Barcode:", 100, yPosition)
-        doc.text(ticketId, 100, yPosition + 8)
-      }
-
-      yPosition += 60
-
-      // Add important notes
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(44, 62, 80)
-      doc.text("IMPORTANT NOTES", 20, yPosition)
-
-      yPosition += 10
-
-      doc.setFontSize(9)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(73, 80, 87)
-
-      const notes = [
-        "• Please present this ticket at the event entrance for admission.",
-        "• This ticket is non-transferable and non-refundable.",
-        "• Arrive at least 30 minutes before the event start time.",
-        "• Keep this ticket safe and bring a valid ID for verification.",
-        "• For support, contact us at support@xpresstickets.com",
-      ]
-
-      notes.forEach((note, index) => {
-        doc.text(note, 20, yPosition + index * 6)
-      })
-
-      // Add footer
-      doc.setFillColor(44, 62, 80) // #2c3e50 - dark blue
-      doc.rect(0, pageHeight - 15, pageWidth, 15, "F")
-
-      doc.setFontSize(8)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(255, 255, 255) // White text for footer
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 10, pageHeight - 8)
-      doc.text("Powered by XpressTicket", pageWidth - 10, pageHeight - 8, { align: "right" })
-
-      // Save the PDF with sanitized filename
-      try {
-        const sanitizedEventName = eventName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")
-        const sanitizedAttendeeName = `${delegateInfo.name}_${delegateInfo.surname}`
-          .replace(/\s+/g, "_")
-          .replace(/[^a-zA-Z0-9_]/g, "")
-        doc.save(`${sanitizedEventName}_Ticket_${sanitizedAttendeeName}_${ticketId}.pdf`)
-      } catch (error) {
-        console.error("Error saving PDF with custom filename:", error)
-        // Fallback to generic filename
-        doc.save(`ticket_${ticketId}.pdf`)
-      }
-
-      setIsDownloading((prev) => ({ ...prev, [index]: false }))
+      // Navigate to ViewTickets with the ticket and event data
+      nav('/viewtickets', { 
+        state: { 
+          ticket: ticketData,
+          eventInfo: eventInfo
+        } 
+      });
+      
     } catch (error) {
-      console.error("Error generating PDF:", error)
-      setIsDownloading((prev) => ({ ...prev, [index]: false }))
-      alert("Error generating PDF. Please try again.")
+      console.error("Error preparing ticket data:", error);
+      alert("Error loading ticket. Please try again.")
+    } finally {
+      setIsDownloading((prev) => ({ ...prev, [index]: false }));
     }
   }
 
@@ -912,7 +757,7 @@ const Receipt = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDownload(pkg, index)}
+                    onClick={() => handleViewTicket(pkg, index)}
                     disabled={isDownloading[index]}
                     style={{
                       display: "flex",
@@ -928,11 +773,11 @@ const Receipt = () => {
                     }}
                   >
                     {isDownloading[index] ? (
-                      <span>Downloading...</span>
+                      <span>Loading...</span>
                     ) : (
                       <>
-                        <FaDownload style={{ marginRight: "5px" }} />
-                        Download
+                        <FaEye style={{ marginRight: "5px" }} />
+                        View
                       </>
                     )}
                   </button>
