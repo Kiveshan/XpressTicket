@@ -819,7 +819,7 @@ app.get("/api/events/available", async (req, res) => {
         capacity,
         type as event_type
       FROM events 
-      WHERE status = 'Approved'
+      WHERE LOWER(status) = 'approved'
       ORDER BY startdate ASC
     `)
     const events = await Promise.all(

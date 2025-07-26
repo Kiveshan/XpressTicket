@@ -12,7 +12,6 @@ import {
   FaUsers,
   FaInfoCircle,
   FaFileAlt,
-  FaCommentAlt,
   FaCheck,
   FaPencilAlt,
   FaTimes,
@@ -214,7 +213,7 @@ const AdminViewEventRequest = () => {
         },
         body: JSON.stringify({
           status,
-          comment: comment || "",
+          comment: "",
         }),
       })
 
@@ -736,52 +735,6 @@ const AdminViewEventRequest = () => {
 
       {event.status !== "Approved" && (
         <>
-          <div style={{ marginBottom: "12px" }}>
-            <h3 style={{ fontSize: "0.95rem", margin: "8px 0", color: "#2d3748" }}>Admin Comments</h3>
-            <div
-              style={{
-                background: "#fff",
-                border: "1px solid #edf2f7",
-                borderRadius: "6px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                padding: "8px",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  padding: "6px 10px",
-                  background: "linear-gradient(135deg, #2c3e50, #4ca1af)",
-                  color: "white",
-                  marginBottom: "8px",
-                  borderRadius: "4px",
-                  fontSize: "0.8rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}
-              >
-                <FaCommentAlt size={12} /> Add feedback or instructions
-              </div>
-              <textarea
-                style={{
-                  width: "100%",
-                  minHeight: "60px",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  border: "1px solid #e2e8f0",
-                  fontSize: "0.75rem",
-                  boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.05)",
-                  resize: "vertical",
-                  fontFamily: "inherit",
-                }}
-                placeholder="Add your comments here..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              ></textarea>
-            </div>
-          </div>
-
           <div style={{ marginBottom: "12px" }}>
             <h3 style={{ fontSize: "0.95rem", margin: "8px 0", color: "#2d3748" }}>Action Center</h3>
             <div

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { FaSignOutAlt, FaArrowLeft, FaDownload, FaCreditCard, FaCheck } from "react-icons/fa"
+import { FaSignOutAlt, FaArrowLeft, FaEye, FaCreditCard, FaCheck } from "react-icons/fa"
 import "../shared/ModernDashboard.css"
 import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 const Receipt = () => {
   const nav = useNavigate()
@@ -152,321 +153,145 @@ const Receipt = () => {
     return url
   }
 
-  // Handle download ticket
-  const handleDownload = async (pkg, index) => {
+  // Format date helper functions (copied from ViewTickets)
+  const formatDate = (dateString) => {
+    if (!dateString) return "Date not available"
+    try {
+      return new Date(dateString).toLocaleDateString("en-ZA", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    } catch (e) {
+      return "Date not available"
+    }
+  }
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "Time not available"
+    try {
+      return new Date(dateString).toLocaleTimeString("en-ZA", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    } catch (e) {
+      return "Time not available"
+    }
+  }
+
+  const formatPrice = (price) => {
+    const numPrice = Number.parseFloat(price)
+    return isNaN(numPrice) ? "R 0.00" : `R ${numPrice.toFixed(2)}`
+  }
+
+  const getQRCodeUrl = (data) => {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}`
+  }
+
+  const getBarcodeUrl = (data) => {
+    return `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(data)}&code=Code128&dpi=96&dataseparator=`
+  }
+
+  // Get delegate information from the package
+  const getDelegateInfo = (pkg) => {
+    // First try to get delegate info directly from the package
+    if (pkg.name || pkg.email || pkg.phone) {
+      return {
+        name: pkg.name || "",
+        surname: "", // Surname might not be a separate field
+        email: pkg.email || "",
+        phone: pkg.phone || ""
+      };
+    }
+    
+    // Then try to get from delegate_details if it's a string (JSON)
+    if (pkg.delegate_details && typeof pkg.delegate_details === 'string') {
+      try {
+        const delegateDetails = JSON.parse(pkg.delegate_details);
+        return {
+          name: delegateDetails.name || "",
+          surname: "",
+          email: delegateDetails.email || "",
+          phone: delegateDetails.phone || ""
+        };
+      } catch (e) {
+        console.error('Error parsing delegate_details:', e);
+      }
+    }
+    
+    // Then try to get from delegate_details if it's an object
+    if (pkg.delegate_details && typeof pkg.delegate_details === 'object') {
+      return {
+        name: pkg.delegate_details.name || "",
+        surname: "",
+        email: pkg.delegate_details.email || "",
+        phone: pkg.delegate_details.phone || ""
+      };
+    }
+    
+    // Fallback to empty strings if no delegate info is available
+    return {
+      name: "",
+      surname: "",
+      email: "",
+      phone: ""
+    };
+  }
+
+  // Handle view ticket - Navigate to ViewTickets page with ticket and event data
+  const handleViewTicket = (pkg, index) => {
     if (!purchaseData || !purchaseData.packages || purchaseData.packages.length === 0) {
       alert("No ticket information available")
       return
     }
 
+    setIsDownloading((prev) => ({ ...prev, [index]: true }))
+
     try {
-      // Set the specific package as downloading
-      setIsDownloading((prev) => ({ ...prev, [index]: true }))
+      // Get delegate information
+      const delegateInfo = getDelegateInfo(pkg)
+      
+      // Create ticket object in the format expected by ViewTickets
+      const ticketData = {
+        id: pkg.ticketId || `TKT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        ticketType: pkg.packageDetails || "Standard Ticket",
+        price: parseFloat(pkg.amount?.replace(/[^0-9.]/g, '')) || 0,
+        status: "Approved",
+        delegate: {
+          name: delegateInfo.name || "",
+          surname: delegateInfo.surname || "",
+          email: delegateInfo.email || "",
+          phone: delegateInfo.phone
+        },
+        eventName: purchaseData.event?.name || "Event",
+        eventDate: purchaseData.event?.startdate || purchaseData.event?.start_date || purchaseData.event?.date,
+        eventLocation: purchaseData.event?.location || "TBA",
+        eventImage: purchaseData.event?.eventImage || "",
+        quantity: pkg.tickets || 1
+      };
 
-      // Use the provided package
+      // Create event info object
+      const eventInfo = {
+        ...purchaseData.event,
+        date: purchaseData.event?.startdate || purchaseData.event?.start_date || purchaseData.event?.date,
+        time: purchaseData.event?.formattedTime || purchaseData.event?.time || purchaseData.event?.start_time,
+        location: purchaseData.event?.location || "TBA"
+      };
 
-      // Create new PDF document in landscape format for modern ticket style
-      const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4",
-      })
-
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const pageHeight = doc.internal.pageSize.getHeight()
-
-      // Generate a unique ticket ID
-      const generateTicketId = () => {
-        const randomPart = Math.floor(Math.random() * 10000)
-          .toString()
-          .padStart(4, "0")
-        return `XPT-${randomPart}-${Date.now().toString().slice(-6)}`
-      }
-
-      const ticketId = generateTicketId()
-
-      // Set background color for the entire page
-      doc.setFillColor(255, 255, 255)
-      doc.rect(0, 0, pageWidth, pageHeight, "F")
-
-      // Add header with gradient
-      doc.setFillColor(44, 62, 80) // #2c3e50 - dark blue from our design system
-      doc.rect(0, 0, pageWidth, 30, "F")
-
-      // Add logo
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(22)
-      doc.setFont("helvetica", "bold")
-      doc.text("XpressTicket", 15, 20)
-
-      doc.setFontSize(10)
-      doc.setFont("helvetica", "normal")
-      doc.text("Your Official Event Ticket", 15, 25)
-
-      // Add ticket type badge
-      doc.setFillColor(76, 161, 175) // #4ca1af - teal from our design system
-      doc.roundedRect(pageWidth - 60, 10, 45, 15, 3, 3, "F")
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "bold")
-
-      // Get package name from the purchaseData
-      const packageName = pkg.packageName || pkg.package || "Standard Package"
-      doc.text(packageName.toUpperCase(), pageWidth - 38, 20, { align: "center" })
-
-      // Extract event information
-      const eventName = purchaseData.event?.name || "Event"
-      const venue = purchaseData.event?.venue || ""
-      const location = purchaseData.event?.location || ""
-
-      // Extract date and time information if available
-      const eventDate =
-        purchaseData.event?.formattedDate ||
-        purchaseData.event?.startdate ||
-        purchaseData.event?.start_date ||
-        purchaseData.event?.date ||
-        "TBA"
-
-      const eventTime =
-        purchaseData.event?.formattedTime || purchaseData.event?.time || purchaseData.event?.start_time || "TBA"
-
-      // Try to add event cover image if available
-      const coverImageHeight = 50
-      let imageAdded = false
-
-      try {
-        // Check for event image
-        let eventImageUrl = purchaseData.event?.coverImage
-
-        // Fix the URL if it has duplicated base URLs
-        eventImageUrl = fixImageUrl(eventImageUrl)
-
-        if (eventImageUrl) {
-          // Create a promise to handle image loading
-          const loadImage = () => {
-            return new Promise((resolve, reject) => {
-              const img = new Image()
-              img.onload = () => resolve(img)
-              img.onerror = (e) => {
-                console.error("Image failed to load:", e)
-                reject(e)
-              }
-              img.src = eventImageUrl
-            })
-          }
-
-          // Try to load and add the image
-          try {
-            const img = await loadImage()
-            // Add event image below header
-            doc.addImage(img, "JPEG", 10, 40, 50, coverImageHeight, undefined, "FAST")
-            imageAdded = true
-          } catch (imgErr) {
-            console.error("Error adding event image to PDF:", imgErr)
-            // Continue without the image
-          }
-        }
-      } catch (err) {
-        console.error("Error processing event cover image:", err)
-        // Continue without the image
-      }
-
-      // Add event name
-      doc.setFontSize(18)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(44, 62, 80) // #2c3e50 - dark blue from our design system
-
-      // Position event name based on whether image was added
-      const eventNameX = imageAdded ? 70 : pageWidth / 2
-      const eventNameAlign = imageAdded ? "left" : "center"
-      doc.text(eventName, eventNameX, 50, { align: eventNameAlign, maxWidth: pageWidth - 80 })
-
-      // Add event date and time
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(73, 80, 87) // #495057 - dark gray from our design system
-
-      if (eventDate) {
-        doc.text(`Date: ${eventDate}`, eventNameX, 60, { align: eventNameAlign, maxWidth: pageWidth - 80 })
-      }
-
-      if (eventTime) {
-        doc.text(`Time: ${eventTime}`, eventNameX, 67, { align: eventNameAlign })
-      }
-
-      // Add venue and location
-      if (venue) {
-        doc.text(`Venue: ${venue}`, eventNameX, 74, { align: eventNameAlign, maxWidth: pageWidth - 80 })
-      }
-
-      if (location) {
-        doc.text(`Location: ${location}`, eventNameX, 81, { align: eventNameAlign, maxWidth: pageWidth - 80 })
-      }
-
-      // Add horizontal divider
-      doc.setDrawColor(222, 226, 230) // #dee2e6 - light gray
-      doc.setLineWidth(0.3)
-      doc.line(10, 95, pageWidth - 10, 95)
-
-      // Two columns layout
-      const leftCol = 42
-      const rightCol = pageWidth / 2 + 10
-      const startY = 110
-      const lineHeight = 7
-
-      // ATTENDEE INFORMATION section
-      doc.setFontSize(14)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(44, 62, 80) // #2c3e50 - dark blue from our design system
-      doc.text("ATTENDEE INFORMATION", 20, 105)
-
-      // TICKET INFORMATION section
-      doc.text("TICKET INFORMATION", rightCol, 105)
-
-      // Extract user details from purchaseData
-      const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "{}")
-      const name = userInfo.name || "Attendee"
-      const email = userInfo.email || ""
-      const phone = userInfo.phone || ""
-
-      // Attendee details
-      doc.setFontSize(11)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(73, 80, 87) // #495057 - dark gray from our design system
-
-      // Name
-      doc.setFont("helvetica", "bold")
-      doc.text("Name:", 20, startY)
-      doc.setFont("helvetica", "normal")
-      doc.text(name, leftCol, startY)
-
-      // Email
-      doc.setFont("helvetica", "bold")
-      doc.text("Email:", 20, startY + lineHeight)
-      doc.setFont("helvetica", "normal")
-      doc.text(email, leftCol, startY + lineHeight)
-
-      // Phone
-      doc.setFont("helvetica", "bold")
-      doc.text("Phone:", 20, startY + lineHeight * 2)
-      doc.setFont("helvetica", "normal")
-      doc.text(phone || "N/A", leftCol, startY + lineHeight * 2)
-
-      // Ticket information
-      doc.setFont("helvetica", "bold")
-      doc.text("Ticket ID:", rightCol, startY)
-      doc.setFont("helvetica", "normal")
-      doc.text(ticketId, rightCol + 30, startY)
-
-      // Package
-      doc.setFont("helvetica", "bold")
-      doc.text("Package:", rightCol, startY + lineHeight)
-      doc.setFont("helvetica", "normal")
-      doc.text(packageName, rightCol + 30, startY + lineHeight)
-
-      // Number of tickets
-      doc.setFont("helvetica", "bold")
-      doc.text("Tickets:", rightCol, startY + lineHeight * 2)
-      doc.setFont("helvetica", "normal")
-      // Check multiple possible field names for ticket count
-      const ticketCountValue = pkg.ticketCount || pkg.quantity || pkg.count || pkg.tickets || 1
-      doc.text(ticketCountValue.toString(), rightCol + 30, startY + lineHeight * 2)
-
-      // Amount
-      doc.setFont("helvetica", "bold")
-      doc.text("Amount:", rightCol, startY + lineHeight * 3)
-      doc.setFont("helvetica", "normal")
-      doc.text(pkg.amount || formatCurrency(totals.total), rightCol + 30, startY + lineHeight * 3)
-
-      // Add QR code placeholder
-      const qrSize = 40
-      const qrX = pageWidth - qrSize - 20
-      const qrY = startY - 5
-
-      // Draw QR code placeholder with black squares
-      doc.setFillColor(0, 0, 0)
-
-      // Draw a border for the QR code
-      doc.setDrawColor(0, 0, 0)
-      doc.setLineWidth(0.5)
-      doc.rect(qrX, qrY, qrSize, qrSize)
-
-      // Create a simple pattern to simulate a QR code
-      const cellSize = qrSize / 10
-      const margin = 0
-
-      // Create a simple pattern to simulate a QR code
-      for (let i = 0; i < 10; i++) {
-        for (let j = 0; j < 10; j++) {
-          // Random pattern to simulate QR code
-          if (
-            Math.random() > 0.5 ||
-            // Always draw the position markers in corners
-            (i < 3 && j < 3) ||
-            (i < 3 && j > 6) ||
-            (i > 6 && j < 3)
-          ) {
-            doc.rect(qrX + margin + i * cellSize, qrY + margin + j * cellSize, cellSize, cellSize, "F")
-          }
-        }
-      }
-
-      // Add ticket number under QR code
-      doc.setFontSize(8)
-      doc.setTextColor(73, 80, 87) // #495057 - dark gray from our design system
-      doc.text("SCAN QR CODE AT EVENT", qrX + qrSize / 2, qrY + qrSize + 10, { align: "center" })
-      doc.setFontSize(9)
-      doc.setFont("helvetica", "bold")
-      doc.text(ticketId, qrX + qrSize / 2, qrY + qrSize + 16, { align: "center" })
-
-      // Add bottom section with important notes
-      doc.setDrawColor(76, 161, 175) // #4ca1af - teal from our design system
-      doc.setLineWidth(0.5)
-      doc.line(10, pageHeight - 40, pageWidth - 10, pageHeight - 40)
-
-      doc.setFontSize(12)
-      doc.setFont("helvetica", "bold")
-      doc.setTextColor(44, 62, 80) // #2c3e50 - dark blue from our design system
-      doc.text("IMPORTANT INFORMATION", pageWidth / 2, pageHeight - 35, { align: "center" })
-
-      doc.setFontSize(9)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(73, 80, 87) // #495057 - dark gray from our design system
-      doc.text(
-        "• This e-ticket must be presented at the event entrance either printed or on a mobile device.",
-        20,
-        pageHeight - 28,
-      )
-      doc.text(
-        `• Event Date: ${eventDate}. Please arrive at least 30 minutes before the event starts.`,
-        20,
-        pageHeight - 23,
-      )
-      doc.text("• This ticket is non-transferable and valid only for the named attendee.", 20, pageHeight - 18)
-
-      // Add footer
-      doc.setFillColor(44, 62, 80) // #2c3e50 - dark blue from our design system
-      doc.rect(0, pageHeight - 10, pageWidth, 10, "F")
-
-      doc.setFontSize(8)
-      doc.setFont("helvetica", "normal")
-      doc.setTextColor(255, 255, 255) // White text for footer
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 10, pageHeight - 4)
-      doc.text("Powered by XpressTicket", pageWidth - 10, pageHeight - 4, { align: "right" })
-
-      // Generate filename and save the PDF
-      const dateStr = new Date().toISOString().slice(0, 10)
-      const sanitizedEvent = eventName.replace(/[^a-z0-9]/gi, "-")
-      const filename = `${sanitizedEvent}_ticket_${dateStr}.pdf`
-
-      // Save the PDF
-      doc.save(filename)
+      // Navigate to ViewTickets with the ticket and event data
+      nav('/viewtickets', { 
+        state: { 
+          ticket: ticketData,
+          eventInfo: eventInfo
+        } 
+      });
+      
     } catch (error) {
-      console.error("Error generating PDF:", error)
-      alert("Failed to download ticket. Please try again.")
+      console.error("Error preparing ticket data:", error);
+      alert("Error loading ticket. Please try again.")
     } finally {
-      // Reset downloading state for this specific package
-      setIsDownloading((prev) => ({ ...prev, [index]: false }))
+      setIsDownloading((prev) => ({ ...prev, [index]: false }));
     }
   }
 
@@ -932,7 +757,7 @@ const Receipt = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDownload(pkg, index)}
+                    onClick={() => handleViewTicket(pkg, index)}
                     disabled={isDownloading[index]}
                     style={{
                       display: "flex",
@@ -948,11 +773,11 @@ const Receipt = () => {
                     }}
                   >
                     {isDownloading[index] ? (
-                      <span>Downloading...</span>
+                      <span>Loading...</span>
                     ) : (
                       <>
-                        <FaDownload style={{ marginRight: "5px" }} />
-                        Download
+                        <FaEye style={{ marginRight: "5px" }} />
+                        View
                       </>
                     )}
                   </button>
