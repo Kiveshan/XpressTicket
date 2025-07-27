@@ -3762,93 +3762,93 @@ app.get("/api/user-ticket-purchases/:userId", authenticateToken, async (req, res
   }
 });
 
-// Get single event by ID
-// app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
-//   console.log(`[${new Date().toISOString()}] GET /api/events/${req.params.eventId}`);
+//Get single event by ID
+app.get('/api/events/:eventId', authenticateToken, async (req, res) => {
+  console.log(`[${new Date().toISOString()}] GET /api/events/${req.params.eventId}`);
 
-//   try {
-//     const eventId = req.params.eventId;
+  try {
+    const eventId = req.params.eventId;
 
-//     // Query to get event details
-//     const eventQuery = `
-//       SELECT 
-//         e.event_id,
-//         e.name,
-//         e.description,
-//         e.terms_and_conditions,
-//         e.location,
-//         TO_CHAR(e.startdate, 'YYYY-MM-DD') as start_date,
-//         TO_CHAR(e.enddate, 'YYYY-MM-DD') as end_date,
-//         TO_CHAR(e.deadlinedate, 'YYYY-MM-DD') as registration_deadline_date,
-//         e.time as start_time,
-//         e.endtime as end_time,
-//         e.deadlinetime as registration_deadline_time,
-//         e.type as event_type,
-//         e.coverimage as cover_image,
-//         e.status,
-//         e.user_id,
-//         u.firstname as organizer_name,
-//         u.email as organizer_email
-//       FROM events e
-//       JOIN user_profiles u ON e.user_id = u.user_id
-//       WHERE e.event_id = $1
-//       AND e.status = 'approved'  -- Only return approved events
-//     `;
+    // Query to get event details
+    const eventQuery = `
+      SELECT 
+        e.event_id,
+        e.name,
+        e.description,
+        e.terms_and_conditions,
+        e.location,
+        TO_CHAR(e.startdate, 'YYYY-MM-DD') as start_date,
+        TO_CHAR(e.enddate, 'YYYY-MM-DD') as end_date,
+        TO_CHAR(e.deadlinedate, 'YYYY-MM-DD') as registration_deadline_date,
+        e.time as start_time,
+        e.endtime as end_time,
+        e.deadlinetime as registration_deadline_time,
+        e.type as event_type,
+        e.coverimage as cover_image,
+        e.status,
+        e.user_id,
+        u.firstname as organizer_name,
+        u.email as organizer_email
+      FROM events e
+      JOIN user_profiles u ON e.user_id = u.user_id
+      WHERE e.event_id = $1
+      AND e.status = 'approved'  -- Only return approved events
+    `;
 
-//     const eventResult = await pool.query(eventQuery, [eventId]);
+    const eventResult = await pool.query(eventQuery, [eventId]);
 
-//     if (eventResult.rows.length === 0) {
-//       return res.status(404).json({ error: 'Event not found' });
-//     }
+    if (eventResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
 
-//     const event = eventResult.rows[0];
+    const event = eventResult.rows[0];
 
-//     // Get packages for this event
-//     const packagesQuery = `
-//       SELECT 
-//         package_id as id,
-//         name,
-//         type,
-//         description as details,
-//         price,
-//         quantity_available as available,
-//         TO_CHAR(start_date, 'YYYY-MM-DD') as start_date,
-//         TO_CHAR(end_date, 'YYYY-MM-DD') as end_date
-//       FROM packages
-//       WHERE event_id = $1
-//       AND status = 'active'
-//     `;
+    // Get packages for this event
+    const packagesQuery = `
+      SELECT 
+        package_id as id,
+        name,
+        type,
+        description as details,
+        price,
+        quantity_available as available,
+        TO_CHAR(start_date, 'YYYY-MM-DD') as start_date,
+        TO_CHAR(end_date, 'YYYY-MM-DD') as end_date
+      FROM packages
+      WHERE event_id = $1
+      AND status = 'active'
+    `;
 
-//     const packagesResult = await pool.query(packagesQuery, [eventId]);
+    const packagesResult = await pool.query(packagesQuery, [eventId]);
 
-//     // Generate presigned URL for cover image if it exists
-//     if (event.cover_image) {
-//       try {
-//         const params = {
-//           Bucket: process.env.S3_BUCKET_NAME,
-//           Key: event.cover_image,
-//           Expires: 3600 // URL expires in 1 hour
-//         };
-//         event.cover_image_url = await s3.getSignedUrlPromise('getObject', params);
-//       } catch (s3Error) {
-//         console.error('Error generating presigned URL:', s3Error);
-//         event.cover_image_url = null;
-//       }
-//     }
+    // Generate presigned URL for cover image if it exists
+    if (event.cover_image) {
+      try {
+        const params = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: event.cover_image,
+          Expires: 3600 // URL expires in 1 hour
+        };
+        event.cover_image_url = await s3.getSignedUrlPromise('getObject', params);
+      } catch (s3Error) {
+        console.error('Error generating presigned URL:', s3Error);
+        event.cover_image_url = null;
+      }
+    }
 
-//     // Combine event data with packages
-//     const response = {
-//       ...event,
-//       packages: packagesResult.rows
-//     };
+    // Combine event data with packages
+    const response = {
+      ...event,
+      packages: packagesResult.rows
+    };
 
-//     res.json(response);
+    res.json(response);
 
-//   } catch (error) {
-//     console.error('Error fetching event details:', error);
-//     res.status(500).json({ error: 'Failed to fetch event details' });
-//   }
-// });
+  } catch (error) {
+    console.error('Error fetching event details:', error);
+    res.status(500).json({ error: 'Failed to fetch event details' });
+  }
+});
 
 // Start the server
 app.listen(port, () => {
