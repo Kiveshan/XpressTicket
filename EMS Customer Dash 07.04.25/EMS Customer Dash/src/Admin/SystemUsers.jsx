@@ -90,6 +90,9 @@ const SystemUsers = () => {
 
     if (generalUsers.length > 0) {
       const filtered = generalUsers.filter((user) => {
+        // Skip users with Admin role
+        if (user.role === "Admin") return false;
+        
         const fullName = `${user.firstname} ${user.surname}`.toLowerCase()
         const email = user.email.toLowerCase()
         const role = user.role?.toLowerCase() || ""

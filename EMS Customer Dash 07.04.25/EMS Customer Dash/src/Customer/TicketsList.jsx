@@ -108,7 +108,7 @@ const TicketsList = () => {
           }
 
           const ticket = {
-            id: `${purchase.id}-${delegateIndex + 1}`,
+            id: `${purchase.id || purchase.purchase_id}-${delegateIndex + 1}`,
             purchaseId: purchase.id || purchase.purchase_id,
             eventName: purchase.eventName || eventInfo?.eventName || purchase.event_name || "Event",
             eventDate: purchase.eventDate || eventInfo?.eventDate || purchase.event_date,
