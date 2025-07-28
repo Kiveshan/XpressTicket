@@ -94,7 +94,7 @@ function App() {
           <Route path="/tickets-event-list" element={<TicketsEventList />} />
           <Route path="/event-form" element={<EventForm />} />
           <Route path="/event-request" element={<EventRequest />} />
-          <Route path="/viewereventrequest" element={<ViewEventRequest />} />
+          <Route path="/vieweventrequest" element={<ViewEventRequest />} />
           <Route path="/event-list" element={<EventList />} />
           <Route path="/event-guest/:eventId" element={<EventGuestList />} />
           <Route path="/analytics" element={<Analytics />} />

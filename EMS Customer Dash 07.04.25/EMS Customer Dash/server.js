@@ -420,8 +420,8 @@ app.get("/api/admin/events", authenticateToken, authenticateAdmin, async (req, r
 // Admin endpoint to get event details by ID
 app.get("/api/admin/events/:eventId", authenticateToken, authenticateAdmin, async (req, res) => {
   try {
-    const { eventId } = req.params
-    console.log(`Fetching event details for ID: ${eventId}`)
+    const { eventId } = req.params;
+    console.log(`Fetching event details for ID: ${eventId}`);
 
     const result = await pool.query(
       `
@@ -431,257 +431,222 @@ app.get("/api/admin/events/:eventId", authenticateToken, authenticateAdmin, asyn
       JOIN user_profiles u ON e.user_id = u.user_id
       WHERE e.event_id = $1
     `,
-      [eventId],
-    )
+      [eventId]
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Event not found" })
+      return res.status(404).json({ error: "Event not found" });
     }
 
-    const event = result.rows[0]
+    const event = result.rows[0];
 
-    if (event.startdate) event.start_date = event.startdate
-    if (event.enddate) event.end_date = event.enddate
-    if (event.deadlinedate) event.deadline = event.deadlinedate
-    event.event_name = event.name
-    if (event.type) event.event_type = event.type
+    if (event.startdate) event.start_date = event.startdate;
+    if (event.enddate) event.end_date = event.enddate;
+    if (event.deadlinedate) event.deadline = event.deadlinedate;
+    event.event_name = event.name;
+    if (event.type) event.event_type = event.type;
 
-    let file_url = "/default-event-image.png"
+    let file_url = "/default-event-image.png";
     if (event.coverimage && event.coverimage.trim() !== "") {
       try {
-        console.log(`Processing coverimage for event ${event.event_id}: ${event.coverimage}`)
-        const presignedUrl = await generatePresignedUrl(event.coverimage)
+        console.log(`Processing coverimage for event ${event.event_id}: ${event.coverimage}`);
+        const presignedUrl = await generatePresignedUrl(event.coverimage);
         if (presignedUrl) {
-          file_url = presignedUrl
+          file_url = presignedUrl;
           console.log(
-            `Successfully generated presigned URL for event ${event.event_id}: ${file_url.substring(0, 50)}...`,
-          )
+            `Successfully generated presigned URL for event ${event.event_id}: ${file_url.substring(0, 50)}...`
+          );
         } else {
-          console.warn(`Failed to generate presigned URL for event ${event.event_id}, falling back to default`)
+          console.warn(`Failed to generate presigned URL for event ${event.event_id}, falling back to default`);
         }
       } catch (err) {
-        console.error(`Error generating presigned URL for event ${event.event_id}:`, err)
+        console.error(`Error generating presigned URL for event ${event.event_id}:`, err);
       }
-    } else {
-      console.log(`No coverimage for event ${event.event_id}`)
     }
-    event.file_url = file_url
+    event.file_url = file_url;
 
     if (event.attendees && Array.isArray(event.attendees)) {
-      event.client_type = event.attendees
+      event.client_type = event.attendees;
     } else if (typeof event.attendees === "string") {
       try {
-        event.client_type = JSON.parse(event.attendees)
+        event.client_type = JSON.parse(event.attendees);
       } catch (e) {
         event.client_type = event.attendees.includes(",")
           ? event.attendees.split(",").map((item) => item.trim())
-          : [event.attendees]
+          : [event.attendees];
       }
     } else {
-      event.client_type = []
+      event.client_type = [];
     }
 
-    if (event.tabs && Array.isArray(event.tabs)) {
-      console.log("Original tabs:", event.tabs)
-      event.tabs = event.tabs.map((tab, index) => {
+    // Parse tabs
+    console.log("Original tabs from database:", event.tabs);
+    if (event.tabs) {
+      let tabsArray = [];
+      if (typeof event.tabs === "string") {
+        try {
+          const parsed = JSON.parse(event.tabs);
+          tabsArray = Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+          console.error("Error parsing tabs string:", event.tabs, e);
+          tabsArray = [{ name: "Tab 1", content: event.tabs }];
+        }
+      } else if (Array.isArray(event.tabs)) {
+        tabsArray = event.tabs;
+      } else if (typeof event.tabs === "object" && event.tabs !== null) {
+        tabsArray = [event.tabs];
+      } else {
+        tabsArray = [];
+      }
+
+      event.tabs = tabsArray.map((tab, index) => {
         if (typeof tab === "string") {
-          const content = tab.trim()
-          if (!content.includes(":") && !content.includes("=") && !content.includes(" ")) {
-            const name = content.charAt(0).toUpperCase() + content.slice(1)
-            return { name, content }
-          }
-          const separators = ["=", ":", "-", "–"]
-          for (const separator of separators) {
-            if (content.includes(separator)) {
-              const parts = content.split(separator)
-              const name = parts[0].trim()
-              const tabContent = parts.slice(1).join(separator).trim()
-              if (name.length > 0 && name.length < 20) {
-                return {
-                  name: name.charAt(0).toUpperCase() + name.slice(1),
-                  content: tabContent || content,
+          try {
+            const parsedTab = JSON.parse(tab);
+            return {
+              name: parsedTab.name || `Tab ${index + 1}`,
+              content: parsedTab.content || tab,
+            };
+          } catch (e) {
+            console.error("Error parsing tab string:", tab, e);
+            const content = tab.trim();
+            let name = `Tab ${index + 1}`;
+            if (!content.includes(":") && !content.includes("=") && !content.includes(" ")) {
+              name = content.charAt(0).toUpperCase() + content.slice(1);
+              return { name, content };
+            }
+            const separators = ["=", ":", "-", "–"];
+            for (const separator of separators) {
+              if (content.includes(separator)) {
+                const parts = content.split(separator);
+                const nameStr = parts[0].trim();
+                const tabContent = parts.slice(1).join(separator).trim();
+                if (nameStr.length > 0 && nameStr.length < 20) {
+                  return {
+                    name: nameStr.charAt(0).toUpperCase() + nameStr.slice(1),
+                    content: tabContent || content,
+                  };
                 }
               }
             }
+            if (content.toLowerCase().includes("exhibit")) name = "Exhibits";
+            else if (content.toLowerCase().includes("schedule")) name = "Schedule";
+            else if (content.toLowerCase().includes("speaker")) name = "Speakers";
+            else if (content.toLowerCase().includes("program")) name = "Program";
+            else if (content.toLowerCase().includes("agenda")) name = "Agenda";
+            else if (content.toLowerCase().includes("venue")) name = "Venue";
+            else if (content.toLowerCase().includes("contact")) name = "Contact";
+            return { name, content };
           }
-          let name = "Tab"
-          if (content.toLowerCase().includes("exhibit")) name = "Exhibits"
-          else if (content.toLowerCase().includes("schedule")) name = "Schedule"
-          else if (content.toLowerCase().includes("speaker")) name = "Speakers"
-          else if (content.toLowerCase().includes("program")) name = "Program"
-          else if (content.toLowerCase().includes("agenda")) name = "Agenda"
-          else if (content.toLowerCase().includes("venue")) name = "Venue"
-          else if (content.toLowerCase().includes("contact")) name = "Contact"
-          else name = `Tab ${index + 1}`
-          return { name, content }
         }
         if (typeof tab === "object" && tab !== null) {
           return {
             name: tab.name || `Tab ${index + 1}`,
             content: tab.content || "",
-          }
+          };
         }
         return {
           name: `Tab ${index + 1}`,
           content: typeof tab === "string" ? tab : `Tab ${index + 1} Content`,
-        }
-      })
-      console.log("Processed tabs:", event.tabs)
+        };
+      });
+      console.log("Processed tabs:", event.tabs);
+    } else {
+      event.tabs = [];
     }
 
+    // Parse packages with startDate and endDate
     if (event.packages && Array.isArray(event.packages)) {
-      console.log("Original packages:", event.packages)
+      console.log("Original packages:", event.packages);
       event.packages = event.packages.map((pkg, index) => {
         if (typeof pkg === "string") {
-          console.log(`Processing package string: ${pkg}`)
+          console.log(`Processing package string: ${pkg}`);
           let cleanedStr = pkg
             .replace(/^\{\\"/, '{"')
             .replace(/\\"\}$/, '"}')
             .replace(/\\"/g, '"')
-            .replace(/\\\\/g, "\\")
-          if (!cleanedStr.startsWith("{")) cleanedStr = "{" + cleanedStr
-          if (!cleanedStr.endsWith("}")) cleanedStr = cleanedStr + "}"
-          console.log("Cleaned package string:", cleanedStr)
+            .replace(/\\\\/g, "\\");
+          if (!cleanedStr.startsWith("{")) cleanedStr = "{" + cleanedStr;
+          if (!cleanedStr.endsWith("}")) cleanedStr = cleanedStr + "}";
+          console.log("Cleaned package string:", cleanedStr);
           try {
-            const parsed = JSON.parse(cleanedStr)
-            console.log("Parsed package:", parsed)
+            const parsed = JSON.parse(cleanedStr);
+            console.log("Parsed package:", parsed);
+            // Format dateChoices as a string combining startDate and endDate
+            const dateChoices = parsed.startDate && parsed.endDate
+              ? `${formatDate(parsed.startDate)} - ${formatDate(parsed.endDate)}`
+              : parsed.startDate
+                ? formatDate(parsed.startDate)
+                : parsed.endDate
+                  ? formatDate(parsed.endDate)
+                  : "N/A";
             return {
               selectType: parsed.selectType || "Full Package",
               packageType: parsed.packageType || "Standard",
               location: parsed.location || "",
               duration: parsed.duration || "",
-              dateChoices: parsed.dateChoices || "",
+              dateChoices,
               pricing: parsed.pricing || "N/A",
               details: parsed.details || "",
               typeOptions: Array.isArray(parsed.typeOptions) ? parsed.typeOptions : ["Full Package", "Day"],
-            }
+            };
           } catch (parseError) {
-            console.log("JSON parse failed, trying alternative parsing methods")
-            const detailsMatch =
-              pkg.match(/["']?details["']?\s*[:=]\s*["']?([^,}"']+)/i) || pkg.match(/details\s*[:=]\s*([^,}]+)/i)
-            const pricingMatch =
-              pkg.match(/["']?pricing["']?\s*[:=]\s*["']?([^,}"']+)/i) || pkg.match(/pricing\s*[:=]\s*([^,}]+)/i)
-            const durationMatch =
-              pkg.match(/["']?duration["']?\s*[:=]\s*["']?([^,}"']+)/i) || pkg.match(/duration\s*[:=]\s*([^,}]+)/i)
-            const locationMatch =
-              pkg.match(/["']?location["']?\s*[:=]\s*["']?([^,}"']+)/i) || pkg.match(/location\s*[:=]\s*([^,}]+)/i)
-            const packageTypeMatch =
-              pkg.match(/["']?packageType["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
-              pkg.match(/packageType\s*[:=]\s*([^,}]+)/i) ||
-              pkg.match(/package[_\s-]?type\s*[:=]\s*([^,}]+)/i)
-            const selectTypeMatch =
-              pkg.match(/["']?selectType["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
-              pkg.match(/selectType\s*[:=]\s*([^,}]+)/i) ||
-              pkg.match(/select[_\s-]?type\s*[:=]\s*([^,}]+)/i)
-            const dateChoicesMatch =
-              pkg.match(/["']?dateChoices["']?\s*[:=]\s*["']?([^,}"']+)/i) ||
-              pkg.match(/dateChoices\s*[:=]\s*([^,}]+)/i) ||
-              pkg.match(/date[_\s-]?choices\s*[:=]\s*([^,}]+)/i)
-            if (
-              detailsMatch ||
-              pricingMatch ||
-              durationMatch ||
-              locationMatch ||
-              packageTypeMatch ||
-              selectTypeMatch ||
-              dateChoicesMatch
-            ) {
-              console.log("Extracted package fields using regex")
-              return {
-                selectType: selectTypeMatch ? selectTypeMatch[1].trim().replace(/["']/g, "") : "Full Package",
-                packageType: packageTypeMatch ? packageTypeMatch[1].trim().replace(/["']/g, "") : "Standard",
-                location: locationMatch ? locationMatch[1].trim().replace(/["']/g, "") : "",
-                duration: durationMatch ? durationMatch[1].trim().replace(/["']/g, "") : "",
-                dateChoices: dateChoicesMatch ? dateChoicesMatch[1].trim().replace(/["']/g, "") : "",
-                pricing: pricingMatch ? pricingMatch[1].trim().replace(/["']/g, "") : "N/A",
-                details: detailsMatch ? detailsMatch[1].trim().replace(/["']/g, "") : pkg,
-                typeOptions: ["Full Package", "Day"],
-              }
-            }
-            if (pkg.includes(":") || pkg.includes("=")) {
-              const lines = pkg.split(/[,;\n]/).filter((line) => line.trim())
-              const packageData = {}
-              lines.forEach((line) => {
-                const separators = [":", "="]
-                for (const separator of separators) {
-                  if (line.includes(separator)) {
-                    const [key, value] = line.split(separator).map((part) => part.trim())
-                    if (key && value) {
-                      const normalizedKey = key.toLowerCase().replace(/[\s-_]/g, "")
-                      if (
-                        normalizedKey === "details" ||
-                        normalizedKey === "pricing" ||
-                        normalizedKey === "duration" ||
-                        normalizedKey === "location" ||
-                        normalizedKey === "packagetype" ||
-                        normalizedKey === "selecttype" ||
-                        normalizedKey === "datechoices"
-                      ) {
-                        packageData[normalizedKey] = value.replace(/["']/g, "")
-                      }
-                    }
-                    break
-                  }
-                }
-              })
-              if (Object.keys(packageData).length > 0) {
-                console.log("Extracted package from key-value format:", packageData)
-                return {
-                  selectType: packageData.selecttype || "Full Package",
-                  packageType: packageData.packagetype || "Standard",
-                  location: packageData.location || "",
-                  duration: packageData.duration || "",
-                  dateChoices: packageData.datechoices || "",
-                  pricing: packageData.pricing || "N/A",
-                  details: packageData.details || pkg,
-                  typeOptions: ["Full Package", "Day"],
-                }
-              }
-            }
+            console.error("Error parsing package:", parseError);
             return {
               selectType: "Full Package",
               packageType: "Standard",
               location: "",
               duration: "",
-              dateChoices: "",
+              dateChoices: "N/A",
               pricing: "N/A",
-              details: pkg,
+              details: `Package ${index + 1}`,
               typeOptions: ["Full Package", "Day"],
-            }
+            };
           }
         }
+        // Handle object case
         if (typeof pkg === "object" && pkg !== null) {
+          const dateChoices = pkg.startDate && pkg.endDate
+            ? `${formatDate(pkg.startDate)} - ${formatDate(pkg.endDate)}`
+            : pkg.startDate
+              ? formatDate(pkg.startDate)
+              : pkg.endDate
+                ? formatDate(pkg.endDate)
+                : "N/A";
           return {
             selectType: pkg.selectType || "Full Package",
             packageType: pkg.packageType || "Standard",
             location: pkg.location || "",
             duration: pkg.duration || "",
-            dateChoices: pkg.dateChoices || "",
+            dateChoices,
             pricing: pkg.pricing || "N/A",
             details: pkg.details || "",
             typeOptions: Array.isArray(pkg.typeOptions) ? pkg.typeOptions : ["Full Package", "Day"],
-          }
+          };
         }
+        // Default fallback
         return {
           selectType: "Full Package",
           packageType: "Standard",
           location: "",
           duration: "",
-          dateChoices: "",
+          dateChoices: "N/A",
           pricing: "N/A",
           details: `Package ${index + 1}`,
           typeOptions: ["Full Package", "Day"],
-        }
-      })
-      console.log("Processed packages:", event.packages)
+        };
+      });
+      console.log("Processed packages:", event.packages);
+    } else {
+      event.packages = [];
     }
 
-    res.json(event)
+    res.json(event);
   } catch (error) {
-    console.error("Error fetching event details:", error)
-    res.status(500).json({ error: "Failed to fetch event details" })
+    console.error("Error fetching event details:", error);
+    res.status(500).json({ error: "Failed to fetch event details" });
   }
-})
+});
 
 // Endpoint to update event status (approve/reject)
 app.put("/api/admin/event/:eventId/status", authenticateToken, authenticateAdmin, async (req, res) => {
@@ -3849,6 +3814,42 @@ app.get("/api/user-ticket-purchases/:userId", authenticateToken, async (req, res
 //     res.status(500).json({ error: 'Failed to fetch event details' });
 //   }
 // });
+
+
+
+
+app.get("/api/generate-presigned-url", authenticateToken, async (req, res) => {
+    const { key } = req.query;
+    if (!key) {
+        return res.status(400).json({ error: "S3 key is required" });
+    }
+    try {
+        const presignedUrl = await generatePresignedUrl(key);
+        if (!presignedUrl) {
+            return res.status(500).json({ error: "Failed to generate presigned URL" });
+        }
+        res.json({ url: presignedUrl });
+    } catch (error) {
+        console.error("Error generating presigned URL:", error);
+        res.status(500).json({ error: "Server error", details: error.message });
+    }
+});
+
+async function generatePresignedUrl(key) {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: key,
+    });
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    return url;
+  } catch (error) {
+    console.error("Error generating presigned URL:", error);
+    return null;
+  }}
+
+
+
 
 // Start the server
 app.listen(port, () => {

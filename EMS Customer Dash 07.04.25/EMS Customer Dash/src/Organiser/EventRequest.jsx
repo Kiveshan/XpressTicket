@@ -388,7 +388,7 @@ const EventRequest = () => {
                 <span className={`status ${event.status.replace(" ", "-").toLowerCase()}`}>
                   Status: {event.status}
                 </span>
-                <button className="view-btn" onClick={() => navigate("/viewerequest", { state: { eventid: event.id } })}>
+                <button className="view-btn" onClick={() => navigate("/ViewEventRequest", { state: { eventid: event.id } })}>
                   View
                 </button>
               </div>
