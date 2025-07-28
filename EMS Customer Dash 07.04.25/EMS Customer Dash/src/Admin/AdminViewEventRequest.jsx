@@ -31,155 +31,184 @@ const AdminViewEventRequest = () => {
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (!eventid) {
-      setError("No event ID provided")
-      setLoading(false)
-      return
-    }
+ useEffect(() => {
+  if (!eventid) {
+    setError("No event ID provided")
+    setLoading(false)
+    return
+  }
 
-    const fetchEvent = async () => {
-      try {
-        setLoading(true)
-        const token = sessionStorage.getItem("token")
-        if (!token) {
-          console.error("No token found in sessionStorage")
+  const fetchEvent = async () => {
+    try {
+      setLoading(true)
+      const token = sessionStorage.getItem("token")
+      if (!token) {
+        console.error("No token found in sessionStorage")
+        nav("/login")
+        return
+      }
+
+      const response = await fetch(`http://localhost:5000/api/admin/events/${eventid}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        if (response.status === 401 || response.status === 403) {
+          sessionStorage.removeItem("token")
+          sessionStorage.removeItem("user")
           nav("/login")
           return
         }
+        throw new Error(`Failed to fetch event: ${errorData.error || response.statusText}`)
+      }
 
-        const response = await fetch(`http://localhost:5000/api/admin/events/${eventid}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+      const data = await response.json()
+      console.log("Event data from API:", data)
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          if (response.status === 401 || response.status === 403) {
-            sessionStorage.removeItem("token")
-            sessionStorage.removeItem("user")
-            nav("/login")
-            return
-          }
-          throw new Error(`Failed to fetch event: ${errorData.error || response.statusText}`)
-        }
-
-        const data = await response.json()
-        console.log("Event data from API:", data)
-        setEvent({
-          ...data,
-          event_name: data.event_name || data.name || "Untitled Event",
-          file_url: data.file_url || DEFAULT_IMAGE_DATA_URI,
-          client_type: (() => {
-            if (data.attendees && Array.isArray(data.attendees)) {
-              return data.attendees
-            }
-            if (data.attendees && typeof data.attendees === "string") {
+      // Parse tabs robustly
+      const parseTabs = (tabsData) => {
+        if (!tabsData) return []
+        if (Array.isArray(tabsData)) {
+          return tabsData.map((tab) => {
+            if (typeof tab === "string") {
               try {
-                const parsed = JSON.parse(data.attendees)
-                if (Array.isArray(parsed)) return parsed
+                const parsedTab = JSON.parse(tab)
+                return {
+                  name: parsedTab.name || "",
+                  content: parsedTab.content || "",
+                }
               } catch (e) {
-                console.error("Error parsing attendees:", e)
+                console.error("Error parsing tab:", tab, e)
+                // If parsing fails, treat the string as content with a default name
+                return { name: "Unnamed Tab", content: tab }
               }
             }
-            return data.client_type || []
-          })(),
-          tabs:
-            data.tabs && Array.isArray(data.tabs)
-              ? data.tabs.map((tab) => {
-                  if (typeof tab === "string") {
-                    try {
-                      const parsedTab = JSON.parse(tab)
-                      return { name: parsedTab.name || "", content: parsedTab.content || "" }
-                    } catch (e) {
-                      console.error("Error parsing tab:", e)
-                      return { name: "", content: "" }
-                    }
-                  }
-                  return { name: tab.name || "", content: tab.content || "" }
-                })
-              : data.tab_num > 0
-                ? [{ name: data.tab_name, content: data.tab_content }]
-                : [],
-          packages:
-            data.packages && Array.isArray(data.packages)
-              ? data.packages.map((pkg) => {
-                  if (typeof pkg === "string") {
-                    try {
-                      const parsedPkg = JSON.parse(pkg)
-                      return {
-                        selectType: parsedPkg.selectType || "",
-                        packageType: parsedPkg.packageType || "",
-                        location: parsedPkg.location || "",
-                        duration: parsedPkg.duration || "",
-                        dateChoices: parsedPkg.dateChoices || "",
-                        pricing: parsedPkg.pricing ? parsedPkg.pricing : "N/A",
-                        details: parsedPkg.details || "",
-                        typeOptions: [parsedPkg.selectType, "Day"].filter(Boolean),
-                      }
-                    } catch (e) {
-                      console.error("Error parsing package:", e)
-                      return {
-                        selectType: "",
-                        packageType: "",
-                        location: "",
-                        duration: "",
-                        dateChoices: "",
-                        pricing: "N/A",
-                        details: "",
-                        typeOptions: ["Day"],
-                      }
-                    }
-                  }
-                  return {
-                    selectType: pkg.selectType || "",
-                    packageType: pkg.packageType || "",
-                    location: pkg.location || "",
-                    duration: pkg.duration || "",
-                    dateChoices: pkg.dateChoices || "",
-                    pricing: pkg.pricing ? pkg.pricing : "N/A",
-                    details: pkg.details || "",
-                    typeOptions: [pkg.selectType, "Day"].filter(Boolean),
-                  }
-                })
-              : data.package_num > 0
-                ? [
-                    {
-                      selectType: data.select_type,
-                      packageType: data.package_type,
-                      location: data.loc_ation,
-                      duration: data.duration,
-                      dateChoices: data.date_choices,
-                      pricing: data.pricing ? `R${Number.parseFloat(data.pricing).toFixed(2)}` : "N/A",
-                      details: data.package_details,
-                      typeOptions: [data.select_type, "Day"].filter(Boolean),
-                    },
-                  ]
-                : [],
-          sponsor: {
-            name: data.sponser_name || "",
-            phone: data.cell_num || "",
-            email: data.email || "",
-            amount: data.amount && data.payment_type === "Sponsor" ? data.amount : "",
-          },
-          payment_type: data.payment_type || "",
-          amount: data.amount || "N/A",
-          start_date: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
-          end_date: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
-          deadline: data.deadline ? new Date(data.deadline).toISOString().split("T")[0] : "",
-        })
-        setComment(data.admin_comment || "")
-      } catch (err) {
-        console.error("Error fetching event:", err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
+            return {
+              name: tab.name || "",
+              content: tab.content || "",
+            }
+          })
+        }
+        if (typeof tabsData === "string") {
+          try {
+            const parsedTabs = JSON.parse(tabsData)
+            return Array.isArray(parsedTabs)
+              ? parsedTabs.map((tab) => ({
+                  name: tab.name || "",
+                  content: tab.content || "",
+                }))
+              : [{ name: "Unnamed Tab", content: tabsData }]
+          } catch (e) {
+            console.error("Error parsing tabs string:", tabsData, e)
+            return [{ name: "Unnamed Tab", content: tabsData }]
+          }
+        }
+        if (data.tab_num > 0) {
+          return [{ name: data.tab_name || "Unnamed Tab", content: data.tab_content || "" }]
+        }
+        return []
       }
-    }
 
-    fetchEvent()
-  }, [eventid, nav])
+      setEvent({
+        ...data,
+        event_name: data.event_name || data.name || "Untitled Event",
+        file_url: data.file_url || DEFAULT_IMAGE_DATA_URI,
+        client_type: (() => {
+          if (data.attendees && Array.isArray(data.attendees)) {
+            return data.attendees
+          }
+          if (data.attendees && typeof data.attendees === "string") {
+            try {
+              const parsed = JSON.parse(data.attendees)
+              if (Array.isArray(parsed)) return parsed
+            } catch (e) {
+              console.error("Error parsing attendees:", e)
+            }
+          }
+          return data.client_type || []
+        })(),
+        tabs: parseTabs(data.tabs),
+        packages:
+          data.packages && Array.isArray(data.packages)
+            ? data.packages.map((pkg) => {
+                if (typeof pkg === "string") {
+                  try {
+                    const parsedPkg = JSON.parse(pkg)
+                    return {
+                      selectType: parsedPkg.selectType || "",
+                      packageType: parsedPkg.packageType || "",
+                      location: parsedPkg.location || "",
+                      duration: parsedPkg.duration || "",
+                      dateChoices: parsedPkg.dateChoices || "",
+                      pricing: parsedPkg.pricing ? parsedPkg.pricing : "N/A",
+                      details: parsedPkg.details || "",
+                      typeOptions: [parsedPkg.selectType, "Day"].filter(Boolean),
+                    }
+                  } catch (e) {
+                    console.error("Error parsing package:", e)
+                    return {
+                      selectType: "",
+                      packageType: "",
+                      location: "",
+                      duration: "",
+                      dateChoices: "",
+                      pricing: "N/A",
+                      details: "",
+                      typeOptions: ["Day"],
+                    }
+                  }
+                }
+                return {
+                  selectType: pkg.selectType || "",
+                  packageType: pkg.packageType || "",
+                  location: pkg.location || "",
+                  duration: pkg.duration || "",
+                  dateChoices: pkg.dateChoices || "",
+                  pricing: pkg.pricing ? pkg.pricing : "N/A",
+                  details: pkg.details || "",
+                  typeOptions: [pkg.selectType, "Day"].filter(Boolean),
+                }
+              })
+            : data.package_num > 0
+              ? [
+                  {
+                    selectType: data.select_type,
+                    packageType: data.package_type,
+                    location: data.loc_ation,
+                    duration: data.duration,
+                    dateChoices: data.date_choices,
+                    pricing: data.pricing ? `R${Number.parseFloat(data.pricing).toFixed(2)}` : "N/A",
+                    details: data.package_details,
+                    typeOptions: [data.select_type, "Day"].filter(Boolean),
+                  },
+                ]
+              : [],
+        sponsor: {
+          name: data.sponser_name || "",
+          phone: data.cell_num || "",
+          email: data.email || "",
+          amount: data.amount && data.payment_type === "Sponsor" ? data.amount : "",
+        },
+        payment_type: data.payment_type || "",
+        amount: data.amount || "N/A",
+        start_date: data.start_date ? new Date(data.start_date).toISOString().split("T")[0] : "",
+        end_date: data.end_date ? new Date(data.end_date).toISOString().split("T")[0] : "",
+        deadline: data.deadline ? new Date(data.deadline).toISOString().split("T")[0] : "",
+      })
+      setComment(data.admin_comment || "")
+    } catch (err) {
+      console.error("Error fetching event:", err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  fetchEvent()
+}, [eventid, nav])
 
   const handleStatusUpdate = async (status) => {
     if (!eventid) {
